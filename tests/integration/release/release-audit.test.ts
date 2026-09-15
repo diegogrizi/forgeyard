@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -109,6 +109,30 @@ describe("non-leaking release audit", () => {
     expect(result.stdout).toContain("183 skills");
     expect(result.stdout).toContain("105 commands");
   }, 30_000);
+
+  test("keeps public documentation aligned with generated catalog and profile counts", async () => {
+    const [readme, contextGuide, sourceGuide] = await Promise.all([
+      readFile(path.join(repositoryRoot, "README.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "guides", "catalog-and-context.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "provenance", "catalog-sources.md"), "utf8"),
+    ]);
+    const publicDocs = `${readme}\n${contextGuide}\n${sourceGuide}`;
+
+    for (const requiredClaim of [
+      "1,007 source files",
+      "211,594 physical lines",
+      "202 catalog agents",
+      "183 native skills",
+      "105 commands",
+      "203 agent files",
+      "290 skill entrypoints",
+      "52 agent files",
+      "119 skill entrypoints",
+      "maximum concurrency remains 4",
+    ]) expect(publicDocs).toContain(requiredClaim);
+    expect(readme).not.toMatch(/M1 supports .*hackathon.*Codex adapter/i);
+    expect(readme).not.toContain("Forgeyard M1 launches no worker fleet");
+  });
 
   test("reports generic rules for unfinished, unresolved, logged, remote, and identity-bearing content", async () => {
     const root = await freshRoot();

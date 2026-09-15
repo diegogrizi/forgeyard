@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-15-forgeyard-full-factory-expansion-design.md`
 
+**Status:** Complete on 2026-09-15. Tasks 1–7 were implemented in commits `abcd63a` through the documentation commit that closes this plan; the clean release gate passes with the attested catalog in the npm package.
+
 ## Global Constraints
 
 - Repository and generated content are English.
@@ -346,4 +348,3 @@ git commit -m "docs: describe the complete Forgeyard catalog"
 ## Execution choice
 
 The product owner already authorized continued local work without additional confirmations. Execute inline in this session with `superpowers:executing-plans`; do not dispatch subagents, push, publish, or mutate repositories outside Forgeyard and the dedicated research directory.
-

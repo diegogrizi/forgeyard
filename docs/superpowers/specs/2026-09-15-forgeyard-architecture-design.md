@@ -1,7 +1,7 @@
 # Forgeyard: Open Agentic Development Factory
 
 **Date:** 2026-09-15  
-**Status:** Architecture proposal ready for owner review  
+**Status:** Kernel and licensed Codex catalog implemented; native orchestration and additional adapters remain staged work
 **Working name:** Forgeyard  
 **Tagline:** Build the development system before it builds the product.
 
@@ -16,6 +16,10 @@ The central architectural choice is:
 > Author each capability once in a portable canonical format, then generate native artifacts for each supported agent harness through tested adapters.
 
 Forgeyard will be small at runtime even when the `full` profile is installed. A large catalog on disk is not the same as a large prompt. Hosts initially see only compact metadata; full skill instructions and references load only when needed.
+
+### Implemented catalog checkpoint
+
+The catalog expansion described in the companion [full-factory specification](2026-09-15-forgeyard-full-factory-expansion-design.md) is now implemented for Codex. Forgeyard vendors an attested MIT snapshot with 1,007 files and 211,594 physical lines, parses its portable plugin model, and deterministically renders curated or complete project-scoped output. This checkpoint does not imply that the scheduler or the Claude Code and Cursor adapters described later in this document are already complete.
 
 ## 2. Why this architecture
 
@@ -441,7 +445,7 @@ Snapshot taken 2026-09-15. Adoption still requires a per-file license and revisi
 | Upstream | Current role in Forgeyard | License posture | Decision |
 |---|---|---|---|
 | [Agent Skills specification](https://github.com/agentskills/agentskills) | Canonical portable skill shape and progressive disclosure | Apache-2.0 code/spec; CC-BY-4.0 documentation | Adopt the format; do not copy documentation wholesale |
-| [wshobson/agents](https://github.com/wshobson/agents) | Single-source multi-harness adapters, capability matrix, validation patterns | MIT | Primary architecture and selected-code candidate with attribution |
+| [wshobson/agents](https://github.com/wshobson/agents) | Pinned portable catalog for agents, skills, commands, references, and adapter inputs | MIT | Vendored `plugins/` snapshot at `4236bb91f8395b0435f1d8b8baf9e8e4c69a8620`, byte-attested with attribution |
 | [Superpowers](https://github.com/obra/superpowers) | Disciplined discovery, planning, TDD, debugging, verification, and review workflows | MIT | Optional pinned methodology pack or declared dependency |
 | [Matt Pocock's engineering skills](https://github.com/mattpocock/skills) | Small composable interview, domain-model, prototype, TDD, debugging, and review workflows | MIT | Curated per-skill candidate; preserve upstream notices and avoid duplicate installation |
 | [GitHub Spec Kit](https://github.com/github/spec-kit) | Mature spec-driven workflow and broad client integration | MIT | Supported external planning provider; not co-active with another planner |
@@ -595,7 +599,7 @@ This proves the factory before we expand the catalog.
 
 ### M2 — Canonical packs and three adapters
 
-Complete `foundation`, `planning`, `development`, `quality`, `browser`, and `presentation` for Codex, Claude Code, and Cursor. Add adversarial installer tests and public provenance output.
+The licensed portable catalog, curated/full profile selection, Codex rendering, adversarial tree tests, and public provenance output are complete. Claude Code and Cursor native rendering remain before this milestone closes.
 
 ### M3 — Real orchestration
 
@@ -603,13 +607,13 @@ Implement DAG state, worktree isolation, native/process/guided execution, bounde
 
 ### M4 — Full profile and wider harness matrix
 
-Add remaining packs and adapters, external planning providers, multi-repository mode, offline registry mirror, and real-client smoke tests.
+The offline `full` catalog profile landed earlier than originally sequenced. Remaining work is the wider harness matrix, external planning providers, multi-repository mode, and real-client smoke tests.
 
 ### M5 — Public release
 
 Polish documentation, contribution workflow, security policy, examples, reproducible release pipeline, SBOM, signed artifacts, and a public demo built with Forgeyard itself.
 
-Each milestone receives its own implementation plan. M1 must be usable before M2 grows the catalog.
+Each milestone receives its own implementation plan. The trusted M1 lifecycle kernel was completed before the catalog expansion, and later layers continue to build on its file-level ownership and transaction contracts.
 
 ## 21. Version 1 acceptance criteria
 
@@ -629,7 +633,7 @@ Forgeyard v1 is ready when:
 
 ## 22. Immediate next design boundary
 
-The first implementation plan must cover only M1. It must specify exact files, schemas, CLI commands, tests, fixtures, and verification steps. Catalog expansion, extra adapters, and the full scheduler remain follow-on plans so the project earns a working core before accumulating breadth.
+The kernel and Codex catalog expansion are complete checkpoints. The next plans cover Claude Code and Cursor rendering, followed by executable task-graph orchestration, resumability, work scopes, and pre-tool guards. Those plans must retain the existing offline install, provenance, context-budget, ownership, evidence, and rollback contracts instead of bypassing them.
 
 ## 23. Primary references
 
