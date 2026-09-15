@@ -90,11 +90,12 @@ describe("transactional installation", () => {
     const root = await freshRoot();
     await applyInstallPlan(await makePlan(root));
     const before = await readFile(path.join(root, ".forgeyard", "manifest.json"), "utf8");
+    const next = await makePlan(root, "20260915T120100000Z-d4e5f6");
 
-    const result = await applyInstallPlan(await makePlan(root, "20260915T120100000Z-d4e5f6"));
+    const result = await applyInstallPlan(next);
 
     expect(result.applied).toBe(false);
-    expect(result.unchanged).toHaveLength(7);
+    expect(result.unchanged).toEqual(next.files.map((file) => file.path));
     expect(await readFile(path.join(root, ".forgeyard", "manifest.json"), "utf8")).toBe(before);
   });
 

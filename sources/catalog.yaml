@@ -32,14 +32,6 @@ sources:
     provenance: dependency
     retrievedAt: 2026-09-15
     notes: Direct runtime dependency used for command-line parsing.
-  - id: npm.diff
-    name: diff
-    url: https://github.com/kpdecker/jsdiff
-    revision: 9.0.0
-    license: BSD-3-Clause
-    provenance: dependency
-    retrievedAt: 2026-09-15
-    notes: Direct runtime dependency used for human-readable install plans.
   - id: npm.execa
     name: execa
     url: https://github.com/sindresorhus/execa
@@ -48,14 +40,6 @@ sources:
     provenance: dependency
     retrievedAt: 2026-09-15
     notes: Direct runtime dependency used for shell-free command execution.
-  - id: npm.picocolors
-    name: picocolors
-    url: https://github.com/alexeyraspopov/picocolors
-    revision: 1.1.1
-    license: ISC
-    provenance: dependency
-    retrievedAt: 2026-09-15
-    notes: Direct runtime dependency used for optional terminal emphasis.
   - id: npm.smol-toml
     name: smol-toml
     url: https://github.com/squirrelchat/smol-toml

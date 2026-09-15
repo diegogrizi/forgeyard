@@ -40,6 +40,11 @@ describe("install metadata", () => {
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
       ".forgeyard/tasks/T001.yaml",
+      ".agents/skills/forgeyard-showcase/SKILL.md",
+      "presentation/index.html",
+      "presentation/styles.css",
+      "presentation/app.js",
+      "presentation/README.md",
     ]);
     expect(first.plan.files[0]).toEqual(
       expect.objectContaining({

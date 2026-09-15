@@ -39,12 +39,14 @@ export async function runProcess(
   executable: string,
   args: readonly string[],
   cwd: string,
+  options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<CliProcessResult> {
   const result = await execa(executable, [...args], {
     cwd,
     shell: false,
     reject: false,
     stdin: "ignore",
+    ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
   });
   return { exitCode: result.exitCode ?? 1, stdout: result.stdout, stderr: result.stderr };
 }

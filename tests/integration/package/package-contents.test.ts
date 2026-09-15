@@ -1,0 +1,77 @@
+import path from "node:path";
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { buildCli, runProcess } from "../../helpers/cli.js";
+
+interface PackFile {
+  path: string;
+  size: number;
+}
+
+interface PackResult {
+  id: string;
+  name: string;
+  version: string;
+  files: PackFile[];
+}
+
+const repositoryRoot = path.resolve(".");
+let packed: PackResult;
+
+function allowed(filePath: string): boolean {
+  if ([
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md",
+    "SBOM.spdx.json",
+  ].includes(filePath)) return true;
+  return ["dist/", "schemas/", "profiles/", "packs/", "sources/"].some((prefix) => filePath.startsWith(prefix));
+}
+
+beforeAll(async () => {
+  await buildCli(repositoryRoot);
+  const result = await runProcess("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], repositoryRoot);
+  if (result.exitCode !== 0) throw new Error(`npm pack failed.\n${result.stdout}\n${result.stderr}`);
+  const parsed = JSON.parse(result.stdout) as PackResult[];
+  packed = parsed[0]!;
+}, 60_000);
+
+describe("public npm package contents", () => {
+  test("contains every required runtime and provenance surface", () => {
+    const paths = packed.files.map((file) => file.path);
+
+    expect(paths).toEqual(expect.arrayContaining([
+      "package.json",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "THIRD_PARTY_NOTICES.md",
+      "SBOM.spdx.json",
+      "dist/cli/main.js",
+      "schemas/forgeyard-config.schema.json",
+      "profiles/hackathon.yaml",
+      "packs/foundation/pack.yaml",
+      "packs/presentation/pack.yaml",
+      "sources/catalog.yaml",
+    ]));
+  });
+
+  test("contains only allow-listed publish paths", () => {
+    const unexpected = packed.files.map((file) => file.path).filter((filePath) => !allowed(filePath));
+
+    expect(unexpected).toEqual([]);
+  });
+
+  test("excludes source-only, forensic, generated-state, and media inputs", () => {
+    const paths = packed.files.map((file) => file.path);
+    const forbidden = paths.filter((filePath) =>
+      /^(?:src|tests|fixtures|docs|scripts|coverage|\.forgeyard)\//.test(filePath)
+      || /^(?:evidence|state|screenshots?)(?:\/|$)/i.test(filePath)
+      || /\.(?:log|png|jpe?g|webp|gif|mp4|mov)$/i.test(filePath));
+
+    expect(forbidden).toEqual([]);
+  });
+});
