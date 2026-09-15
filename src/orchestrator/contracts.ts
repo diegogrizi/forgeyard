@@ -63,6 +63,10 @@ export interface TaskRuntimeState {
   receiptId?: string;
   completedAt?: string;
   lastFailureSha256?: string;
+  guard?: {
+    writeScopes: readonly string[];
+    protectedPaths: readonly string[];
+  };
 }
 
 export interface RunStop {

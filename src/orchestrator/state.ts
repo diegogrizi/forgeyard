@@ -186,3 +186,19 @@ export function createFileRunStateStore(rootInput: string): RunStateStore {
     },
   };
 }
+
+export async function readPersistedRunState(rootInput: string, graph: TaskGraph): Promise<RunState> {
+  const root = path.resolve(rootInput);
+  const statePath = resolveInsideRoot(root, ".forgeyard/state/run.json");
+  let state: RunState;
+  try {
+    state = parseRunState(await readFile(statePath, "utf8"), statePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw stateError("FY_STATE_INVALID", "No run state exists; claim the task before checking a write.", [statePath]);
+    }
+    throw error;
+  }
+  assertMatchesGraph(state, graph, statePath);
+  return state;
+}

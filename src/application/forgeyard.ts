@@ -24,8 +24,10 @@ import {
   type UsageCommandInput,
   type UsageCommandResult,
 } from "./orchestration.js";
+import { runGuardCommand, type GuardCommandInput, type GuardCommandResult } from "./guard.js";
 
 export type { TaskCommandInput, TaskCommandResult, UsageCommandInput, UsageCommandResult } from "./orchestration.js";
+export type { GuardCommandInput, GuardCommandResult } from "./guard.js";
 
 export type WriteStatus = "applied" | "preview" | "declined" | "no-op";
 
@@ -142,7 +144,8 @@ export type ForgeyardCommandResult =
   | UpdateCommandResult
   | RollbackCommandResult
   | TaskCommandResult
-  | UsageCommandResult;
+  | UsageCommandResult
+  | GuardCommandResult;
 
 export interface ForgeyardService {
   init(input: InitCommandInput): Promise<InitCommandResult>;
@@ -152,6 +155,7 @@ export interface ForgeyardService {
   rollback(input: RollbackCommandInput): Promise<RollbackCommandResult>;
   task(input: TaskCommandInput): Promise<TaskCommandResult>;
   recordUsage(input: UsageCommandInput): Promise<UsageCommandResult>;
+  guard(input: GuardCommandInput): Promise<GuardCommandResult>;
 }
 
 export interface ForgeyardApplicationOptions {
@@ -470,5 +474,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
     task: runTaskCommand,
 
     recordUsage: recordUsageCommand,
+
+    guard: runGuardCommand,
   };
 }

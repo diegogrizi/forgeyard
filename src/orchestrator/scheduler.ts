@@ -147,6 +147,7 @@ function clearClaim(runtime: TaskRuntimeState): void {
   delete runtime.sessionId;
   delete runtime.claimedAt;
   delete runtime.deadlineAt;
+  delete runtime.guard;
 }
 
 export function createFilesystemEvidencePort(rootInput: string): EvidencePort {
@@ -204,6 +205,7 @@ export function createTaskScheduler(options: TaskSchedulerOptions): TaskSchedule
       if (input.sessionId !== undefined) runtime.sessionId = input.sessionId;
       runtime.claimedAt = now.toISOString();
       runtime.deadlineAt = new Date(now.getTime() + task.limits.minutes * 60_000).toISOString();
+      runtime.guard = { writeScopes: task.writeScopes, protectedPaths: graph.protectedPaths };
       return { value: runtime, changed: true };
     }),
 

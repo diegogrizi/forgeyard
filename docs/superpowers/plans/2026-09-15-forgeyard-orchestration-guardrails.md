@@ -33,12 +33,12 @@
 
 ## Task 4: Install deterministic write guards
 
-- [ ] Implement a reusable path-decision engine for task mutable scopes and project protected paths.
-- [ ] Add `forgeyard guard` for explicit checks in every adapter.
-- [ ] Generate a dependency-free Claude Code `PreToolUse` hook for `Write`, `Edit`, and `NotebookEdit`, bound to the claimed task through state or `FORGEYARD_TASK_ID`.
-- [ ] Deny ambiguous identity, missing paths, project escape, protected paths, and out-of-scope writes before the file tool runs.
-- [ ] Report shell mutation coverage and unsupported host hooks honestly.
-- [ ] Commit as `feat: enforce project write scopes before file tools`.
+- [x] Implement a reusable path-decision engine for task mutable scopes and project protected paths.
+- [x] Add `forgeyard guard` for explicit checks in every adapter.
+- [x] Generate a dependency-free Claude Code `PreToolUse` hook for `Write`, `Edit`, and `NotebookEdit`, bound to the claimed task through state or `FORGEYARD_TASK_ID`.
+- [x] Deny ambiguous identity, missing paths, project escape, protected paths, and out-of-scope writes before the file tool runs.
+- [x] Report shell mutation coverage and unsupported host hooks honestly.
+- [x] Commit as `feat: enforce project write scopes before file tools`.
 
 ## Task 5: Add isolated Git workspaces and serialized integration
 

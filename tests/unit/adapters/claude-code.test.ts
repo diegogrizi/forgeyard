@@ -29,21 +29,32 @@ describe("Claude Code adapter", () => {
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 10)).toEqual([
+    expect(paths.slice(0, 11)).toEqual([
       "CLAUDE.md",
       ".claude/settings.json",
       ".claude/skills/forgeyard-workflow/SKILL.md",
       ".claude/agents/forgeyard-reviewer.md",
       ".forgeyard/tasks/T001.yaml",
+      ".forgeyard/bin/write-guard.mjs",
       ".claude/skills/forgeyard-showcase/SKILL.md",
       "presentation/index.html",
       "presentation/styles.css",
       "presentation/app.js",
       "presentation/README.md",
     ]);
-    expect(JSON.parse(byPath.get(".claude/settings.json")!)).toEqual({
+    expect(JSON.parse(byPath.get(".claude/settings.json")!)).toEqual(expect.objectContaining({
       disableSkillShellExecution: true,
-    });
+      hooks: {
+        PreToolUse: [{
+          matcher: "Edit|Write|NotebookEdit",
+          hooks: [{
+            type: "command",
+            command: 'node "$CLAUDE_PROJECT_DIR/.forgeyard/bin/write-guard.mjs"',
+          }],
+        }],
+      },
+    }));
+    expect(byPath.get(".forgeyard/bin/write-guard.mjs")).toContain("permissionDecision");
     expect(byPath.get("CLAUDE.md")).toContain(".claude/skills/forgeyard-workflow/SKILL.md");
     expect(byPath.get("CLAUDE.md")).not.toContain(".agents/skills/");
   });
@@ -75,10 +86,11 @@ describe("Claude Code adapter", () => {
       projectSkills: "native",
       reviewerAgents: "native",
       importedHooks: "unsupported",
+      projectWriteGuard: "native",
       skillShellExpansion: "unsupported",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
     });
   });
 

@@ -23,11 +23,12 @@ describe("Codex adapter", () => {
   test("maps the canonical foundation and presentation slots to project paths", async () => {
     const { files } = await renderedFoundation();
 
-    expect(files.map((file) => file.path).slice(0, 9)).toEqual([
+    expect(files.map((file) => file.path).slice(0, 10)).toEqual([
       "AGENTS.md",
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
       ".forgeyard/tasks/T001.yaml",
+      ".forgeyard/bin/write-guard.mjs",
       ".agents/skills/forgeyard-showcase/SKILL.md",
       "presentation/index.html",
       "presentation/styles.css",
@@ -70,7 +71,8 @@ describe("Codex adapter", () => {
       reviewerAgents: "native",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
+      projectWriteGuard: "advisory",
     });
   });
 

@@ -40,3 +40,12 @@ components:
     requires:
       - foundation.workflow-skill
     conflicts: []
+  - id: foundation.write-guard
+    kind: hook
+    entry: templates/write-guard.mjs
+    slot: guard.file-tools
+    template: false
+    ownership: managed
+    requires:
+      - foundation.initial-task
+    conflicts: []

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type {
   InitCommandResult,
+  GuardCommandResult,
   TaskCommandResult,
   UpdateCommandResult,
   VerifyCommandResult,
@@ -88,7 +89,7 @@ describe("built Forgeyard CLI round trip", () => {
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output).toEqual(expect.objectContaining({ command: "init", applied: false, status: "preview" }));
-    expect(output.changes.created).toHaveLength(333);
+    expect(output.changes.created).toHaveLength(334);
     expect(await exists(targetRoot)).toBe(false);
   });
 
@@ -134,9 +135,9 @@ describe("built Forgeyard CLI round trip", () => {
       ".forgeyard/catalog/ecosystem.json",
       ".forgeyard/licenses/wshobson-agents.LICENSE",
     ]));
-    expect(installedTree).toHaveLength(335);
+    expect(installedTree).toHaveLength(336);
     const manifest = await loadInstallManifest(targetRoot);
-    expect(manifest.files).toHaveLength(333);
+    expect(manifest.files).toHaveLength(334);
     expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
     expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(119);
 
@@ -208,7 +209,7 @@ describe("built Forgeyard CLI round trip", () => {
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
     expect(manifest.profile).toBe("minimal");
-    expect(manifest.files).toHaveLength(7);
+    expect(manifest.files).toHaveLength(8);
     expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/"))).toHaveLength(1);
     expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(1);
     expect(manifest.files.some((file) => file.path.startsWith("presentation/"))).toBe(false);
@@ -282,6 +283,20 @@ describe("built Forgeyard CLI round trip", () => {
       status: "active",
       checkpoint: expect.objectContaining({ note: "Visible slice implemented" }),
     }));
+
+    const allowedGuard = await runBuiltCli(repositoryRoot, [
+      "guard", "T001", "src/feature.ts", "presentation/demo.html", "--root", targetRoot, "--json",
+    ], sandboxRoot);
+    expect(allowedGuard).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(parseJson<GuardCommandResult>(allowedGuard.stdout)).toEqual(expect.objectContaining({
+      allowed: true,
+      paths: ["src/feature.ts", "presentation/demo.html"],
+    }));
+    const deniedGuard = await runBuiltCli(repositoryRoot, [
+      "guard", "T001", ".env", "--root", targetRoot, "--json",
+    ], sandboxRoot);
+    expect(deniedGuard.exitCode).toBe(9);
+    expect(parseJson<{ ok: false; error: { code: string } }>(deniedGuard.stdout).error.code).toBe("FY_SCOPE_DENIED");
 
     const completedProcess = await runBuiltCli(repositoryRoot, [
       "task", "complete", "T001", "--worker", "roundtrip-worker", "--receipt", verificationReceiptId,

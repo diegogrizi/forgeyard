@@ -25,6 +25,7 @@ const CORE_SLOT_ORDER = [
   "workflow.primary",
   "review.readonly",
   "task.initial",
+  "guard.file-tools",
 ] as const;
 
 const PRESENTATION_SLOT_ORDER = [
@@ -73,6 +74,8 @@ function targetForSlot(slot: CursorSlot, config: ForgeyardConfig): string {
       return ".cursor/rules/forgeyard-reviewer.mdc";
     case "task.initial":
       return ".forgeyard/tasks/T001.yaml";
+    case "guard.file-tools":
+      return ".forgeyard/bin/write-guard.mjs";
     case "presentation.skill":
       return ".cursor/rules/forgeyard-showcase.mdc";
     case "presentation.index":
@@ -178,6 +181,7 @@ function variablesFor(slot: CursorSlot, config: ForgeyardConfig): Readonly<Recor
     case "presentation.skill":
     case "presentation.styles":
     case "presentation.script":
+    case "guard.file-tools":
       return {};
   }
 }
@@ -251,7 +255,8 @@ export function createCursorAdapter(): HarnessAdapter {
       importedHooks: "unsupported",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
+      projectWriteGuard: "advisory",
     },
     validateConfig(config) {
       if (
@@ -309,6 +314,7 @@ export function createCursorAdapter(): HarnessAdapter {
         ".cursor/rules/forgeyard-workflow.mdc",
         ".cursor/rules/forgeyard-reviewer.mdc",
         ".forgeyard/tasks/T001.yaml",
+        ".forgeyard/bin/write-guard.mjs",
       ];
       const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
       if (presentationRoot !== undefined) required.push(

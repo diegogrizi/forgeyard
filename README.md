@@ -13,7 +13,7 @@ The distributed catalog is real, pinned content—not a line-count placeholder. 
 | Profile | Intended use | Codex output |
 |---|---|---|
 | `minimal` | Small trusted lifecycle kernel | 1 reviewer, 1 workflow skill, task/evidence state |
-| `hackathon` | Curated idea-to-demo team plus offline presentation | 52 agent files, 119 skill entrypoints, 333 managed files |
+| `hackathon` | Curated idea-to-demo team plus offline presentation | 52 agent files, 119 skill entrypoints, 334 managed files |
 | `full` | Entire local capability library | 203 agent files, 290 skill entrypoints |
 
 The totals include Forgeyard-native components. In `full`, 202 agent files and 288 skill entrypoints come from the catalog; Forgeyard adds its reviewer and two workflow/presentation skills.
@@ -97,6 +97,18 @@ git -C ./my-project commit -m "freeze verification candidate"
 forgeyard verify T001 --root ./my-project --json
 ```
 
+Drive the persistent task graph through separate CLI processes:
+
+```sh
+forgeyard task status --root ./my-project
+forgeyard task claim T001 --worker implementer-1 --root ./my-project
+forgeyard task checkpoint T001 --worker implementer-1 --note "RED test captured" --root ./my-project
+forgeyard task resume T001 --worker implementer-1 --root ./my-project
+forgeyard task complete T001 --worker implementer-1 --receipt <receipt-id> --root ./my-project
+```
+
+`claim` enforces dependency readiness, the configured concurrency cap, retry/time budgets, and overlapping write scopes. `checkpoint` and `resume` persist through process interruption. Check a proposed write explicitly with `forgeyard guard T001 src/feature.ts --root ./my-project`. Claude Code projects also invoke the installed guard automatically before native `Write`, `Edit`, and `NotebookEdit` tools.
+
 Preview or apply an update from the human-owned configuration and packaged registry:
 
 ```sh
@@ -124,6 +136,7 @@ AGENTS.md
 .forgeyard/catalog/ecosystem.json
 .forgeyard/licenses/wshobson-agents.LICENSE
 .forgeyard/tasks/T001.yaml
+.forgeyard/bin/write-guard.mjs
 presentation/index.html
 presentation/styles.css
 presentation/app.js
@@ -141,7 +154,8 @@ Claude Code uses `.claude/agents`, `.claude/skills`, and `.claude/commands`; Cur
 - Verification executes the exact task argv array with shell expansion disabled and records hashes and byte counts, never stdout or stderr bodies.
 - Catalog trees reject path traversal, symbolic links, case-fold collisions, and byte drift before rendering.
 - Generated paths are project-confined; installs and updates are transactional and reversible.
-- Vendored hooks and scripts are content, not implicitly executable behavior. The Codex adapter leaves unsupported hooks disabled and reports that boundary.
+- Vendored hooks remain disabled content. Forgeyard's original Claude Code hook checks native file-tool paths against the active task before execution; it does not claim to parse arbitrary shell mutations.
+- Codex and Cursor expose the same deterministic path decision through `forgeyard guard`, but their project adapters report it as advisory because they do not offer the same project `PreToolUse` contract.
 - Prompt permissions express intent; they are not operating-system isolation. Run the host with appropriate repository permissions.
 - Automatic deployment, publishing, purchases, account changes, and messaging remain outside the installed workflow unless a future explicit project policy adds them.
 - Presentation output is local HTML/CSS/JavaScript with no remote assets, analytics, tracking, or inherited event identity.

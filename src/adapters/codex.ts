@@ -24,6 +24,7 @@ const CORE_SLOT_ORDER = [
   "workflow.primary",
   "review.readonly",
   "task.initial",
+  "guard.file-tools",
 ] as const;
 
 const PRESENTATION_SLOT_ORDER = [
@@ -43,6 +44,7 @@ const FOUNDATION_TARGET_BY_SLOT: Readonly<Record<(typeof SLOT_ORDER)[number], st
   "workflow.primary": ".agents/skills/forgeyard-workflow/SKILL.md",
   "review.readonly": ".codex/agents/reviewer.toml",
   "task.initial": ".forgeyard/tasks/T001.yaml",
+  "guard.file-tools": ".forgeyard/bin/write-guard.mjs",
   "presentation.skill": ".agents/skills/forgeyard-showcase/SKILL.md",
   "presentation.index": undefined,
   "presentation.styles": undefined,
@@ -186,6 +188,7 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
     case "presentation.skill":
     case "presentation.styles":
     case "presentation.script":
+    case "guard.file-tools":
       return {};
     default:
       throw adapterError(`Codex has no mapping for logical slot '${slot}'.`);
@@ -244,7 +247,8 @@ export function createCodexAdapter(): HarnessAdapter {
       reviewerAgents: "native",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
+      projectWriteGuard: "advisory",
     },
     validateConfig(config) {
       if (
@@ -301,6 +305,7 @@ export function createCodexAdapter(): HarnessAdapter {
         ".agents/skills/forgeyard-workflow/SKILL.md",
         ".codex/agents/reviewer.toml",
         ".forgeyard/tasks/T001.yaml",
+        ".forgeyard/bin/write-guard.mjs",
       ];
       const presentationRoot = files
         .find((file) => file.componentId === "presentation.index")

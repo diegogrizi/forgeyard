@@ -29,11 +29,12 @@ describe("Cursor adapter", () => {
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 9)).toEqual([
+    expect(paths.slice(0, 10)).toEqual([
       "AGENTS.md",
       ".cursor/rules/forgeyard-workflow.mdc",
       ".cursor/rules/forgeyard-reviewer.mdc",
       ".forgeyard/tasks/T001.yaml",
+      ".forgeyard/bin/write-guard.mjs",
       ".cursor/rules/forgeyard-showcase.mdc",
       "presentation/index.html",
       "presentation/styles.css",
@@ -79,7 +80,8 @@ describe("Cursor adapter", () => {
       importedHooks: "unsupported",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
+      projectWriteGuard: "advisory",
     });
   });
 

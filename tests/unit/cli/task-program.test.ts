@@ -43,6 +43,15 @@ function dependencies() {
   const service = {
     task: vi.fn(async (input: { action: string }) => ({ ...taskResult, action: input.action })),
     recordUsage: vi.fn(async () => ledgerResult),
+    guard: vi.fn(async () => ({
+      schemaVersion: 1,
+      ok: true,
+      command: "guard",
+      root: "C:/fixture",
+      taskId: "T001",
+      allowed: true,
+      paths: ["src/feature.ts"],
+    })),
   } as unknown as ForgeyardService;
   return { version: "0.1.0", service, interactive: false } satisfies CliDependencies;
 }
@@ -103,5 +112,18 @@ describe("task and ledger CLI", () => {
       durationMs: 2400,
     });
     expect(capture.read().stderr).toBe("");
+  });
+
+  test("maps explicit guard paths to the service", async () => {
+    const deps = dependencies();
+    const capture = captureIo();
+    expect(await runCli([
+      "guard", "T001", "src/feature.ts", "src/other.ts", "--root", "fixture", "--json",
+    ], deps, capture.io)).toBe(0);
+    expect(deps.service.guard).toHaveBeenCalledWith({
+      root: "fixture",
+      taskId: "T001",
+      paths: ["src/feature.ts", "src/other.ts"],
+    });
   });
 });

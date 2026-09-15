@@ -98,6 +98,8 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
       ].join("\n")}\n`;
     case "ledger":
       return `Forgeyard ledger: recorded\nEvent: ${result.eventId}\n`;
+    case "guard":
+      return `Forgeyard guard: allowed\nTask: ${result.taskId}\n${lineList("Paths", result.paths)}\n`;
   }
 }
 
@@ -331,6 +333,21 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
         outputTokens: Number(stringOption(options, "outputTokens")),
         costUsd: Number(stringOption(options, "costUsd")),
         durationMs: Number(stringOption(options, "durationMs")),
+      });
+      writeResult(result, json);
+    });
+
+  program.command("guard")
+    .argument("<task-id>", "active task identifier")
+    .argument("<paths...>", "candidate project paths")
+    .option("--root <target>", "project directory", ".")
+    .option("--json", "emit machine-readable output")
+    .action(async (taskId: string, paths: string[], options: Record<string, unknown>) => {
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.guard({
+        root: stringOption(options, "root") ?? ".",
+        taskId,
+        paths,
       });
       writeResult(result, json);
     });

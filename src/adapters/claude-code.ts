@@ -25,6 +25,7 @@ const CORE_SLOT_ORDER = [
   "workflow.primary",
   "review.readonly",
   "task.initial",
+  "guard.file-tools",
 ] as const;
 
 const PRESENTATION_SLOT_ORDER = [
@@ -73,6 +74,8 @@ function targetForSlot(slot: ClaudeSlot, config: ForgeyardConfig): string {
       return ".claude/agents/forgeyard-reviewer.md";
     case "task.initial":
       return ".forgeyard/tasks/T001.yaml";
+    case "guard.file-tools":
+      return ".forgeyard/bin/write-guard.mjs";
     case "presentation.skill":
       return ".claude/skills/forgeyard-showcase/SKILL.md";
     case "presentation.index":
@@ -178,6 +181,7 @@ function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig): Readonly<Recor
     case "presentation.skill":
     case "presentation.styles":
     case "presentation.script":
+    case "guard.file-tools":
       return {};
   }
 }
@@ -236,10 +240,11 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
       projectSkills: "native",
       reviewerAgents: "native",
       importedHooks: "unsupported",
+      projectWriteGuard: "native",
       skillShellExpansion: "unsupported",
       taskExecution: "emulated",
       evidenceReceipts: "emulated",
-      dagScheduling: "unsupported",
+      dagScheduling: "emulated",
     },
     validateConfig(config) {
       if (
@@ -277,7 +282,18 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
             rendered.content.replaceAll(".agents/skills/forgeyard-workflow/SKILL.md", ".claude/skills/forgeyard-workflow/SKILL.md"),
           );
           files.push(rendered);
-          const settings = `${JSON.stringify({ disableSkillShellExecution: true }, null, 2)}\n`;
+          const settings = `${JSON.stringify({
+            disableSkillShellExecution: true,
+            hooks: {
+              PreToolUse: [{
+                matcher: "Edit|Write|NotebookEdit",
+                hooks: [{
+                  type: "command",
+                  command: 'node "$CLAUDE_PROJECT_DIR/.forgeyard/bin/write-guard.mjs"',
+                }],
+              }],
+            },
+          }, null, 2)}\n`;
           files.push(withContent(
             { ...rendered, path: ".claude/settings.json" },
             settings,
@@ -305,6 +321,7 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         ".claude/skills/forgeyard-workflow/SKILL.md",
         ".claude/agents/forgeyard-reviewer.md",
         ".forgeyard/tasks/T001.yaml",
+        ".forgeyard/bin/write-guard.mjs",
       ];
       const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
       if (presentationRoot !== undefined) required.push(
@@ -318,7 +335,16 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         if (!byPath.has(filePath)) throw adapterError(`Required Claude Code output '${filePath}' is missing.`, [filePath]);
       }
       const settings = JSON.parse(byPath.get(".claude/settings.json")!) as Record<string, unknown>;
-      if (settings.disableSkillShellExecution !== true || Object.keys(settings).length !== 1) {
+      const hook = ((settings.hooks as { PreToolUse?: unknown[] } | undefined)?.PreToolUse?.[0] ?? {}) as Record<string, unknown>;
+      const hookCommands = (hook.hooks ?? []) as Array<Record<string, unknown>>;
+      if (
+        settings.disableSkillShellExecution !== true ||
+        Object.keys(settings).sort().join(",") !== "disableSkillShellExecution,hooks" ||
+        hook.matcher !== "Edit|Write|NotebookEdit" ||
+        hookCommands.length !== 1 ||
+        hookCommands[0]?.type !== "command" ||
+        hookCommands[0]?.command !== 'node "$CLAUDE_PROJECT_DIR/.forgeyard/bin/write-guard.mjs"'
+      ) {
         throw adapterError("Claude Code project settings do not disable dynamic skill shell expansion.", [".claude/settings.json"]);
       }
       const authored = files.filter((file) => !file.componentId.startsWith("ecosystem."));

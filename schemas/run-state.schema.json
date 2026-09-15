@@ -59,7 +59,25 @@
         },
         "receiptId": { "type": "string", "minLength": 2, "maxLength": 128 },
         "completedAt": { "type": "string", "format": "date-time" },
-        "lastFailureSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        "lastFailureSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "guard": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["writeScopes", "protectedPaths"],
+          "properties": {
+            "writeScopes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": { "type": "string", "minLength": 1, "maxLength": 4096 }
+            },
+            "protectedPaths": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "type": "string", "minLength": 1, "maxLength": 4096 }
+            }
+          }
+        }
       }
     }
   }

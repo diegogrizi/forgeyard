@@ -13,6 +13,7 @@ const expectedPaths = [
   ".agents/skills/forgeyard-workflow/SKILL.md",
   ".codex/agents/reviewer.toml",
   ".forgeyard/tasks/T001.yaml",
+  ".forgeyard/bin/write-guard.mjs",
   ".agents/skills/forgeyard-showcase/SKILL.md",
   "presentation/index.html",
   "presentation/styles.css",
@@ -30,7 +31,12 @@ describe("Codex hackathon golden output", () => {
 
     expect([...actual.keys()].slice(0, expectedPaths.length)).toEqual(expectedPaths);
     for (const relativePath of expectedPaths) {
-      const expected = await readFile(path.join("fixtures", "golden", "codex-hackathon", relativePath), "utf8");
+      const expected = await readFile(
+        relativePath === ".forgeyard/bin/write-guard.mjs"
+          ? path.join("packs", "foundation", "templates", "write-guard.mjs")
+          : path.join("fixtures", "golden", "codex-hackathon", relativePath),
+        "utf8",
+      );
       expect(actual.get(relativePath), relativePath).toBe(expected.replaceAll("\r\n", "\n"));
     }
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
