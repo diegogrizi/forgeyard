@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 
-import { loadConfig } from "../../../src/config/config.js";
+import { loadConfig, validateConfig } from "../../../src/config/config.js";
 import { createCodexAdapter } from "../../../src/adapters/codex.js";
 import { loadRegistry } from "../../../src/registry/load.js";
 import { resolveProfile } from "../../../src/registry/resolve.js";
@@ -23,7 +23,7 @@ describe("Codex adapter", () => {
   test("maps the canonical foundation and presentation slots to project paths", async () => {
     const { files } = await renderedFoundation();
 
-    expect(files.map((file) => file.path)).toEqual([
+    expect(files.map((file) => file.path).slice(0, 9)).toEqual([
       "AGENTS.md",
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
@@ -34,6 +34,8 @@ describe("Codex adapter", () => {
       "presentation/app.js",
       "presentation/README.md",
     ]);
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
+    expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
     expect(files.every((file) => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true);
   });
 
@@ -72,28 +74,18 @@ describe("Codex adapter", () => {
     });
   });
 
-  test("integrates a portable catalog with the foundation output", async () => {
-    const config = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+  test("integrates the full portable catalog with the foundation output", async () => {
+    const baseConfig = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+    const config = validateConfig({
+      ...baseConfig,
+      profile: "full",
+      catalog: { selection: "all", plugins: [] },
+    });
     const registry = await loadRegistry(path.resolve("."));
-    const resolved = resolveProfile(registry, "hackathon", "codex");
-    const ecosystem = registry.packs.get("ecosystem")!;
-    const declaration = ecosystem.manifest.components.find(
-      (component) => component.id === "ecosystem.portable-catalog",
-    )!;
-    const entry = ecosystem.entries.get(declaration.id)!;
+    const resolved = resolveProfile(registry, "full", "codex", config.catalog);
     const adapter = createCodexAdapter();
 
-    const files = await adapter.render([
-      ...resolved.components,
-      {
-        ...declaration,
-        packId: ecosystem.manifest.id,
-        packVersion: ecosystem.manifest.version,
-        sourcePath: entry.sourcePath,
-        sha256: entry.sha256,
-        treeFiles: entry.files!,
-      },
-    ], config);
+    const files = await adapter.render(resolved.components, config);
 
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(203);
     expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(290);

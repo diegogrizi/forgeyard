@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { createCodexAdapter } from "../adapters/codex.js";
 import { loadConfig } from "../config/config.js";
-import type { CheckResult, DoctorReport, PlannedFile } from "../core/contracts.js";
+import type { CheckResult, DoctorReport, PlannedFile, ProfileId } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
@@ -13,6 +13,7 @@ import { auditPresentationBundle } from "./presentation-audit.js";
 
 interface LockComponent {
   id: string;
+  sourceComponentId?: string;
   targetPath: string;
   targetSha256: string;
 }
@@ -20,7 +21,7 @@ interface LockComponent {
 interface LockDocument {
   schemaVersion: 1;
   forgeyardVersion: string;
-  profile: { id: "hackathon"; version: string };
+  profile: { id: ProfileId; version: string };
   adapter: "codex";
   components: LockComponent[];
 }
@@ -111,7 +112,10 @@ async function checkManagedFiles(root: string, manifest: InstallManifest, lock: 
 async function checkCodexOutput(root: string, manifest: InstallManifest): Promise<CheckResult> {
   try {
     const adapterFiles = manifest.files.filter(
-      (record) => record.componentId.startsWith("foundation.") || record.componentId.startsWith("presentation."),
+      (record) =>
+        record.componentId.startsWith("foundation.") ||
+        record.componentId.startsWith("presentation.") ||
+        record.componentId.startsWith("ecosystem."),
     );
     const files: PlannedFile[] = await Promise.all(
       adapterFiles.map(async (record) => {
@@ -201,12 +205,23 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     checks.push(
       config === undefined
         ? failed("presentation-output", "Presentation output cannot be located because configuration is invalid.")
-        : await checkPresentationOutput(root, config.paths.presentation, input.denyTerms ?? []),
+        : config.presentation.enabled
+          ? await checkPresentationOutput(root, config.paths.presentation, input.denyTerms ?? [])
+          : {
+              id: "presentation-output",
+              status: "skipped",
+              required: false,
+              message: "The selected profile does not install a presentation bundle.",
+            },
     );
+    const importedPaths = manifest.files
+      .filter((record) => record.componentId.startsWith("ecosystem."))
+      .map((record) => record.path);
     const findings = await scanGeneratedContent({
       root,
       paths: manifest.files.map((record) => record.path),
       denyTerms: input.denyTerms ?? [],
+      importedPaths,
     });
     checks.push(
       findings.length === 0

@@ -342,14 +342,14 @@ export async function renderCodexCatalog(
         skill.body,
         skill.supportingFiles.map((file) => file.relativeToSkill),
       );
-      files.push(plannedFile(component, `${root}/SKILL.md`, rendered.primary, `ecosystem.skill.${id}`));
+      files.push(plannedFile(component, `${root}/SKILL.md`, rendered.primary, `${component.id}.skill.${id}`));
       for (const supporting of skill.supportingFiles) {
         const relativePath = normalizePortablePath(supporting.relativeToSkill);
         files.push(plannedFile(
           component,
           `${root}/${relativePath}`,
           await readTreeText(supporting),
-          `ecosystem.skill-support.${id}`,
+          `${component.id}.skill-support.${id}.${sha256Text(supporting.relativeToSkill).slice(0, 12)}`,
         ));
       }
       if (rendered.overflow !== undefined) {
@@ -357,7 +357,7 @@ export async function renderCodexCatalog(
           component,
           `${root}/${rendered.overflow.relativePath}`,
           rendered.overflow.content,
-          `ecosystem.skill-overflow.${id}`,
+          `${component.id}.skill-overflow.${id}`,
         ));
       }
     }
@@ -366,13 +366,13 @@ export async function renderCodexCatalog(
       const id = commandId(plugin, command, skillIds);
       const root = `.agents/skills/${id}`;
       const rendered = renderBoundedSkill(commandMetadata(command, id), command.body, []);
-      files.push(plannedFile(component, `${root}/SKILL.md`, rendered.primary, `ecosystem.command.${id}`));
+      files.push(plannedFile(component, `${root}/SKILL.md`, rendered.primary, `${component.id}.command.${id}`));
       if (rendered.overflow !== undefined) {
         files.push(plannedFile(
           component,
           `${root}/${rendered.overflow.relativePath}`,
           rendered.overflow.content,
-          `ecosystem.command-overflow.${id}`,
+          `${component.id}.command-overflow.${id}`,
         ));
       }
     }
@@ -383,7 +383,7 @@ export async function renderCodexCatalog(
         component,
         `.codex/agents/${rendered.id}.toml`,
         rendered.content,
-        `ecosystem.agent.${rendered.id}`,
+        `${component.id}.agent.${rendered.id}`,
       ));
     }
   }
@@ -424,13 +424,13 @@ export async function renderCodexCatalog(
       counts,
       unsupported: { hooks },
     }, null, 2)}\n`,
-    "ecosystem.catalog-index",
+    `${component.id}.catalog-index`,
   ));
   files.push(plannedFile(
     component,
     ".forgeyard/licenses/wshobson-agents.LICENSE",
     await readTreeText(licenseFile),
-    "ecosystem.license.wshobson-agents",
+    `${component.id}.license.wshobson-agents`,
   ));
 
   assertUniqueOutputPaths(files);

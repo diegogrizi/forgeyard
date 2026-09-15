@@ -19,17 +19,22 @@ import {
   quoteYamlString,
 } from "./strict-template.js";
 
-const SLOT_ORDER = [
+const CORE_SLOT_ORDER = [
   "project.instructions",
   "workflow.primary",
   "review.readonly",
   "task.initial",
+] as const;
+
+const PRESENTATION_SLOT_ORDER = [
   "presentation.skill",
   "presentation.index",
   "presentation.styles",
   "presentation.script",
   "presentation.readme",
 ] as const;
+
+const SLOT_ORDER = [...CORE_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
 
 type CodexSlot = (typeof SLOT_ORDER)[number];
 
@@ -240,8 +245,12 @@ export function createCodexAdapter(): HarnessAdapter {
       dagScheduling: "unsupported",
     },
     validateConfig(config) {
-      if (config.profile !== "hackathon" || config.harnesses.length !== 1 || config.harnesses[0] !== "codex") {
-        throw adapterError("Codex adapter received unsupported M1 configuration.");
+      if (
+        !["minimal", "hackathon", "full"].includes(config.profile) ||
+        config.harnesses.length !== 1 ||
+        config.harnesses[0] !== "codex"
+      ) {
+        throw adapterError("Codex adapter received an unsupported configuration.");
       }
     },
     async render(components: readonly ResolvedComponent[], config: ForgeyardConfig): Promise<readonly PlannedFile[]> {
@@ -252,6 +261,7 @@ export function createCodexAdapter(): HarnessAdapter {
       }
       const foundationComponents = components.filter((component) => component.kind !== "catalog");
       const bySlot = new Map(foundationComponents.map((component) => [component.slot, component]));
+      const requiredSlots = config.presentation.enabled ? SLOT_ORDER : CORE_SLOT_ORDER;
       for (const component of components) {
         if (component.kind === "catalog") {
           if (
@@ -269,32 +279,39 @@ export function createCodexAdapter(): HarnessAdapter {
       }
 
       const files: PlannedFile[] = [];
-      for (const slot of SLOT_ORDER) {
+      for (const slot of requiredSlots) {
         const component = bySlot.get(slot);
         if (component === undefined) throw adapterError(`Required Codex component slot '${slot}' is missing.`);
         const target = targetForSlot(slot, config);
         files.push(await renderComponent(component, target, variablesFor(slot, config)));
       }
-      for (const catalog of catalogComponents) files.push(...await renderCodexCatalog(catalog, "all"));
+      for (const catalog of catalogComponents) {
+        files.push(...await renderCodexCatalog(catalog, catalog.catalogSelection ?? "all"));
+      }
       assertUniquePaths(files);
       return files;
     },
     async validateOutput(files: readonly PlannedFile[]): Promise<void> {
       assertUniquePaths(files);
       const byPath = new Map(files.map((file) => [file.path, file.content]));
-      const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
-      if (presentationRoot === undefined) throw adapterError("Generated presentation index is missing.");
       const required = [
         "AGENTS.md",
         ".agents/skills/forgeyard-workflow/SKILL.md",
         ".codex/agents/reviewer.toml",
         ".forgeyard/tasks/T001.yaml",
-        ".agents/skills/forgeyard-showcase/SKILL.md",
-        `${presentationRoot}/index.html`,
-        `${presentationRoot}/styles.css`,
-        `${presentationRoot}/app.js`,
-        `${presentationRoot}/README.md`,
       ];
+      const presentationRoot = files
+        .find((file) => file.componentId === "presentation.index")
+        ?.path.replace(/\/index\.html$/, "");
+      if (presentationRoot !== undefined) {
+        required.push(
+          ".agents/skills/forgeyard-showcase/SKILL.md",
+          `${presentationRoot}/index.html`,
+          `${presentationRoot}/styles.css`,
+          `${presentationRoot}/app.js`,
+          `${presentationRoot}/README.md`,
+        );
+      }
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Codex output '${filePath}' is missing.`, [filePath]);
       }
@@ -303,11 +320,16 @@ export function createCodexAdapter(): HarnessAdapter {
         throw adapterError("Generated Codex output contains an unresolved template expression.");
       }
       validateSkill(byPath.get(".agents/skills/forgeyard-workflow/SKILL.md")!, ".agents/skills/forgeyard-workflow/SKILL.md", "forgeyard-workflow");
-      validateSkill(byPath.get(".agents/skills/forgeyard-showcase/SKILL.md")!, ".agents/skills/forgeyard-showcase/SKILL.md", "forgeyard-showcase");
+      if (presentationRoot !== undefined) {
+        validateSkill(byPath.get(".agents/skills/forgeyard-showcase/SKILL.md")!, ".agents/skills/forgeyard-showcase/SKILL.md", "forgeyard-showcase");
+      }
       validateReviewer(byPath.get(".codex/agents/reviewer.toml")!, ".codex/agents/reviewer.toml");
       validateTask(byPath.get(".forgeyard/tasks/T001.yaml")!, ".forgeyard/tasks/T001.yaml");
       for (const file of files.filter(
-        (candidate) => candidate.componentId.startsWith("ecosystem.agent.") && candidate.path.endsWith(".toml"),
+        (candidate) =>
+          candidate.componentId.startsWith("ecosystem.") &&
+          candidate.componentId.includes(".agent.") &&
+          candidate.path.endsWith(".toml"),
       )) {
         const parsed = parseToml(file.content);
         if (
@@ -333,17 +355,19 @@ export function createCodexAdapter(): HarnessAdapter {
           throw adapterError("Generated catalog skill is invalid or exceeds the 8 KB limit.", [file.path]);
         }
       }
-      const presentationFindings = auditPresentationSources({
-        directory: presentationRoot,
-        html: byPath.get(`${presentationRoot}/index.html`)!,
-        css: byPath.get(`${presentationRoot}/styles.css`)!,
-        javascript: byPath.get(`${presentationRoot}/app.js`)!,
-      });
-      if (presentationFindings.length > 0) {
-        throw adapterError(
-          "Generated presentation output violates the offline or accessibility contract.",
-          [...new Set(presentationFindings.map((finding) => finding.path))].sort(),
-        );
+      if (presentationRoot !== undefined) {
+        const presentationFindings = auditPresentationSources({
+          directory: presentationRoot,
+          html: byPath.get(`${presentationRoot}/index.html`)!,
+          css: byPath.get(`${presentationRoot}/styles.css`)!,
+          javascript: byPath.get(`${presentationRoot}/app.js`)!,
+        });
+        if (presentationFindings.length > 0) {
+          throw adapterError(
+            "Generated presentation output violates the offline or accessibility contract.",
+            [...new Set(presentationFindings.map((finding) => finding.path))].sort(),
+          );
+        }
       }
       if (byPath.get("AGENTS.md")!.trim().length === 0) throw adapterError("Generated AGENTS.md is empty.", ["AGENTS.md"]);
     },

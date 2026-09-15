@@ -7,6 +7,7 @@ export interface ContentAuditInput {
   root: string;
   paths: readonly string[];
   denyTerms?: readonly string[];
+  importedPaths?: readonly string[];
 }
 
 export interface ContentFinding {
@@ -82,6 +83,9 @@ async function collectFiles(root: string, requested: string): Promise<{ files: s
 export async function scanGeneratedContent(input: ContentAuditInput): Promise<readonly ContentFinding[]> {
   const root = path.resolve(input.root);
   const denyTerms = (input.denyTerms ?? []).map(normalizedText).filter((term) => term.length > 0);
+  const importedPaths = new Set(
+    (input.importedPaths ?? []).map((candidate) => normalizePortablePath(candidate).toLocaleLowerCase("en-US")),
+  );
   const files = new Set<string>();
   const findings: ContentFinding[] = [];
 
@@ -96,14 +100,15 @@ export async function scanGeneratedContent(input: ContentAuditInput): Promise<re
     if (bytes.includes(0)) continue;
     const source = bytes.toString("utf8");
     const relative = portableRelative(root, filePath);
+    const imported = importedPaths.has(normalizePortablePath(relative).toLocaleLowerCase("en-US"));
     const normalized = normalizedText(source);
     if (denyTerms.some((term) => normalized.includes(term))) {
       findings.push({ ruleId: "content.deny-term", path: relative });
     }
-    if (/\{\{[^}]*\}\}/.test(source)) {
+    if (!imported && /\{\{[^}]*\}\}/.test(source)) {
       findings.push({ ruleId: "content.unresolved-template", path: relative });
     }
-    if (/\.(?:html|css|js|mjs|cjs)$/i.test(relative) && /(?:https?:)?\/\//i.test(source)) {
+    if (!imported && /\.(?:html|css|js|mjs|cjs)$/i.test(relative) && /(?:https?:)?\/\//i.test(source)) {
       findings.push({ ruleId: "presentation.remote-asset", path: relative });
     }
   }

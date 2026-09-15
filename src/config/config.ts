@@ -5,7 +5,7 @@ import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
 import * as formatsModule from "ajv-formats";
 import { parse, stringify } from "yaml";
 
-import type { ForgeyardConfig } from "../core/contracts.js";
+import type { ForgeyardConfig, ProfileId } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { normalizePortablePath } from "../core/paths.js";
 
@@ -26,7 +26,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'hackathon' with adapter 'codex' for Forgeyard M1.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
     exitCode: 2,
   });
 }
@@ -39,6 +39,15 @@ function withDefaults(value: unknown): unknown {
   if (!isRecord(value)) return value;
   const copy = structuredClone(value);
   if (copy.timeboxMinutes === undefined) copy.timeboxMinutes = 300;
+  if (!isRecord(copy.catalog)) {
+    copy.catalog = copy.profile === "minimal"
+      ? { selection: "none", plugins: [] }
+      : copy.profile === "full"
+        ? { selection: "all", plugins: [] }
+        : { selection: "curated", plugins: [] };
+  } else if (copy.catalog.plugins === undefined) {
+    copy.catalog.plugins = [];
+  }
 
   if (!isRecord(copy.orchestration)) {
     copy.orchestration = { mode: "guided", maxConcurrency: 4 };
@@ -48,7 +57,7 @@ function withDefaults(value: unknown): unknown {
   }
 
   if (isRecord(copy.presentation)) {
-    if (copy.presentation.enabled === undefined) copy.presentation.enabled = true;
+    if (copy.presentation.enabled === undefined) copy.presentation.enabled = copy.profile !== "minimal";
     if (copy.presentation.durationMinutes === undefined) copy.presentation.durationMinutes = 7;
     if (copy.presentation.offline === undefined) copy.presentation.offline = true;
   }
@@ -123,20 +132,26 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
 
   return {
     ...config,
+    catalog: {
+      ...config.catalog,
+      plugins: [...config.catalog.plugins].sort((left, right) => left.localeCompare(right, "en")),
+    },
     paths: { mutableRoots, protectedPaths, presentation },
   };
 }
 
+const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "full"]);
+
 export function validateConfig(value: unknown): ForgeyardConfig {
   if (isRecord(value)) {
-    if (value.profile !== undefined && value.profile !== "hackathon") {
-      throw selectionError(`Profile '${String(value.profile)}' is not supported by Forgeyard M1.`);
+    if (value.profile !== undefined && !SUPPORTED_PROFILES.has(value.profile as ProfileId)) {
+      throw selectionError(`Profile '${String(value.profile)}' is not supported by Forgeyard.`);
     }
     if (
       value.harnesses !== undefined &&
       (!Array.isArray(value.harnesses) || value.harnesses.length !== 1 || value.harnesses[0] !== "codex")
     ) {
-      throw selectionError("The selected adapter set is not supported by Forgeyard M1.");
+      throw selectionError("The selected adapter set is not supported by Forgeyard.");
     }
   }
 

@@ -26,6 +26,7 @@ async function registryFixture(options: { unknownPackKey?: boolean; provenanceMo
       id: "hackathon",
       version: "1.0.0",
       packs: ["foundation"],
+      catalog: { selection: "curated", plugins: ["fixture"] },
       defaults: {
         timeboxMinutes: 300,
         orchestration: { mode: "guided", maxConcurrency: 4 },

@@ -51,6 +51,7 @@ describe("initialization wizard", () => {
       expect.objectContaining({
         profile: "hackathon",
         harnesses: ["codex"],
+        catalog: { selection: "curated", plugins: [] },
         orchestration: { mode: "guided", maxConcurrency: 4 },
         quality: { commands: [{ name: "test", argv: ["npm", "test"] }] },
       }),
@@ -73,6 +74,36 @@ describe("initialization wizard", () => {
 
     expect(request.targetRoot).toBe(path.resolve("fixture-target"));
     expect(request.config.project.name).toBe("Signal Garden");
+  });
+
+  test("offers the full profile and selects its complete local catalog", async () => {
+    const request = await collectInitRequest(
+      { targetRoot: ".", nonInteractive: false },
+      promptDriver({
+        profile: "full",
+        adapter: "codex",
+        "project.name": "Complete Factory",
+        "project.purpose": "Install every local capability.",
+        "project.mode": "existing",
+        timeboxMinutes: 300,
+        qualityCommandName: "test",
+        qualityCommandArgv: '["npm","test"]',
+        mutableRoots: '["src","presentation"]',
+        protectedPaths: '[".git",".env"]',
+        presentationPath: "presentation",
+        orchestrationMode: "guided",
+        maxConcurrency: 4,
+        presentationAudience: "Product reviewers",
+        presentationDurationMinutes: 7,
+        presentationOffline: true,
+      }),
+    );
+
+    expect(request.config).toEqual(expect.objectContaining({
+      profile: "full",
+      catalog: { selection: "all", plugins: [] },
+      orchestration: { mode: "guided", maxConcurrency: 4 },
+    }));
   });
 
   test("rejects missing answers in non-interactive mode", async () => {

@@ -28,10 +28,13 @@ describe("Codex hackathon golden output", () => {
     const files = await createCodexAdapter().render(resolved.components, config);
     const actual = new Map(files.map((file) => [file.path, file.content]));
 
-    expect([...actual.keys()]).toEqual(expectedPaths);
+    expect([...actual.keys()].slice(0, expectedPaths.length)).toEqual(expectedPaths);
     for (const relativePath of expectedPaths) {
       const expected = await readFile(path.join("fixtures", "golden", "codex-hackathon", relativePath), "utf8");
       expect(actual.get(relativePath), relativePath).toBe(expected.replaceAll("\r\n", "\n"));
     }
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(119);
+    expect(actual.has(".forgeyard/catalog/ecosystem.json")).toBe(true);
   });
 });

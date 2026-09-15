@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -6,7 +8,9 @@ import type {
   ProfileManifest,
 } from "../../../src/core/contracts.js";
 import type { LoadedPack, RegistrySnapshot } from "../../../src/registry/load.js";
+import { loadRegistry } from "../../../src/registry/load.js";
 import { resolveProfile } from "../../../src/registry/resolve.js";
+import { loadPortableMarketplace } from "../../../src/catalog/load-portable-marketplace.js";
 
 function component(
   id: string,
@@ -56,6 +60,7 @@ function snapshot(packs: readonly LoadedPack[]): RegistrySnapshot {
     id: "hackathon",
     version: "1.0.0",
     packs: packs.map((item) => item.manifest.id),
+    catalog: { selection: "none", plugins: [] },
     defaults: {
       timeboxMinutes: 300,
       orchestration: { mode: "guided", maxConcurrency: 4 },
@@ -149,11 +154,40 @@ describe("profile resolver", () => {
   test("rejects unsupported profile and adapter selections", () => {
     const registry = snapshot([pack("one", [component("one.item", "one.item")])]);
 
-    expect(() => resolveProfile(registry, "full", "codex")).toThrowError(
+    expect(() => resolveProfile(registry, "unknown", "codex")).toThrowError(
       expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }),
     );
     expect(() => resolveProfile(registry, "hackathon", "cursor")).toThrowError(
       expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }),
     );
+  });
+
+  test("resolves minimal, curated hackathon, and full catalog selections", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+    const minimal = resolveProfile(registry, "minimal", "codex");
+    const hackathon = resolveProfile(registry, "hackathon", "codex");
+    const full = resolveProfile(registry, "full", "codex");
+    const catalog = hackathon.components.find((component) => component.kind === "catalog")!;
+    const marketplace = await loadPortableMarketplace(catalog.treeFiles!, { defaultLicense: "MIT" });
+    const selected = new Set(catalog.catalogSelection === "all" ? marketplace.plugins.map((plugin) => plugin.name) : catalog.catalogSelection);
+    const roleCount = marketplace.plugins
+      .filter((plugin) => selected.has(plugin.name))
+      .reduce((sum, plugin) => sum + plugin.agents.length, 0);
+
+    expect(minimal.packIds).toEqual(["foundation"]);
+    expect(minimal.components.some((component) => component.kind === "catalog")).toBe(false);
+    expect(hackathon.packIds).toContain("ecosystem");
+    expect(catalog.catalogSelection).not.toBe("all");
+    expect(roleCount).toBeGreaterThanOrEqual(32);
+    expect(full.components.find((component) => component.kind === "catalog")?.catalogSelection).toBe("all");
+    expect(full.defaults.orchestration.maxConcurrency).toBe(4);
+  });
+
+  test("rejects an explicit catalog plugin that is not in the pinned snapshot", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+    expect(() => resolveProfile(registry, "hackathon", "codex", {
+      selection: "curated",
+      plugins: ["missing-plugin"],
+    })).toThrowError(expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }));
   });
 });

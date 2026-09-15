@@ -32,7 +32,7 @@ describe("install metadata", () => {
     const first = await makePlan("20260915T120000000Z-a1b2c3");
     const second = await makePlan("20260915T120001000Z-d4e5f6");
 
-    expect(first.plan.files.map((file) => file.path)).toEqual([
+    expect(first.plan.files.map((file) => file.path).slice(0, 12)).toEqual([
       "forgeyard.yaml",
       "forgeyard.lock",
       ".forgeyard/.gitignore",
@@ -46,6 +46,8 @@ describe("install metadata", () => {
       "presentation/app.js",
       "presentation/README.md",
     ]);
+    expect(first.plan.files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
+    expect(first.plan.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
     expect(first.plan.files[0]).toEqual(
       expect.objectContaining({
         componentId: "forgeyard.config",

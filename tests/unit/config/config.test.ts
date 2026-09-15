@@ -20,6 +20,7 @@ function validConfig(): ForgeyardConfig {
     },
     harnesses: ["codex"],
     profile: "hackathon",
+    catalog: { selection: "curated", plugins: [] },
     timeboxMinutes: 300,
     quality: { commands: [{ name: "test", argv: ["npm", "test"] }] },
     paths: {
@@ -73,6 +74,7 @@ describe("Forgeyard configuration", () => {
       durationMinutes: 7,
       offline: true,
     });
+    expect(result.catalog).toEqual({ selection: "curated", plugins: [] });
     expect(candidate).not.toHaveProperty("timeboxMinutes");
     expect(candidate.orchestration).toEqual({});
   });
@@ -85,13 +87,40 @@ describe("Forgeyard configuration", () => {
     expect(() => validateConfig({ ...validConfig(), ...override })).toThrow(ForgeyardError);
   });
 
-  test("rejects unsupported M1 profile and adapter with the selection error", () => {
+  test("accepts minimal, hackathon, and full profile catalog contracts", () => {
+    expect(validateConfig(validConfig()).profile).toBe("hackathon");
+    expect(validateConfig({
+      ...validConfig(),
+      profile: "minimal",
+      catalog: { selection: "none", plugins: [] },
+      presentation: { ...validConfig().presentation, enabled: false },
+    }).profile).toBe("minimal");
+    expect(validateConfig({
+      ...validConfig(),
+      profile: "full",
+      catalog: { selection: "all", plugins: [] },
+    }).profile).toBe("full");
+  });
+
+  test("rejects unknown profiles and adapters with the selection error", () => {
     for (const candidate of [
-      { ...validConfig(), profile: "full" },
+      { ...validConfig(), profile: "unknown" },
       { ...validConfig(), harnesses: ["cursor"] },
     ]) {
       expect(() => validateConfig(candidate)).toThrowError(
         expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION", exitCode: 2 }),
+      );
+    }
+  });
+
+  test("rejects catalog modes that contradict the selected profile", () => {
+    for (const candidate of [
+      { ...validConfig(), profile: "minimal", catalog: { selection: "all", plugins: [] } },
+      { ...validConfig(), profile: "full", catalog: { selection: "curated", plugins: [] } },
+      { ...validConfig(), catalog: { selection: "all", plugins: ["ui-design"] } },
+    ]) {
+      expect(() => validateConfig(candidate)).toThrowError(
+        expect.objectContaining({ code: "FY_CONFIG_INVALID", exitCode: 2 }),
       );
     }
   });

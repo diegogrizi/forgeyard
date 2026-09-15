@@ -32,26 +32,44 @@ function plannedFile(
 }
 
 function lockContent(input: BuildInstallPlanInput): string {
-  const targets = new Map(input.renderedFiles.map((file) => [file.componentId, file]));
+  const sourceByTarget = new Map<string, ResolvedProfile["components"][number]>();
+  for (const target of input.renderedFiles) {
+    const matches = input.resolved.components.filter(
+      (component) => target.componentId === component.id || target.componentId.startsWith(`${component.id}.`),
+    );
+    if (matches.length !== 1) {
+      throw new ForgeyardError({
+        code: "FY_REGISTRY_INVALID",
+        message: `Rendered target '${target.componentId}' does not map to exactly one resolved component.`,
+        remediation: "Namespace every derived output under its source component ID.",
+        exitCode: 3,
+        components: [target.componentId, ...matches.map((component) => component.id)],
+      });
+    }
+    sourceByTarget.set(target.componentId, matches[0]!);
+  }
+  for (const component of input.resolved.components) {
+    if (![...sourceByTarget.values()].some((candidate) => candidate.id === component.id)) {
+      throw new ForgeyardError({
+        code: "FY_REGISTRY_INVALID",
+        message: `Resolved component '${component.id}' has no rendered target.`,
+        remediation: "Render every resolved component before building an install plan.",
+        exitCode: 3,
+        components: [component.id],
+      });
+    }
+  }
   const value = {
     schemaVersion: 1,
     forgeyardVersion: input.forgeyardVersion,
     profile: { id: input.resolved.profileId, version: input.resolved.profileVersion },
     adapter: input.resolved.adapter,
     packs: input.resolved.packIds,
-    components: input.resolved.components.map((component) => {
-      const target = targets.get(component.id);
-      if (target === undefined) {
-        throw new ForgeyardError({
-          code: "FY_REGISTRY_INVALID",
-          message: `Resolved component '${component.id}' has no rendered target.`,
-          remediation: "Render every resolved component before building an install plan.",
-          exitCode: 3,
-          components: [component.id],
-        });
-      }
+    components: input.renderedFiles.map((target) => {
+      const component = sourceByTarget.get(target.componentId)!;
       return {
-        id: component.id,
+        id: target.componentId,
+        sourceComponentId: component.id,
         packId: component.packId,
         packVersion: component.packVersion,
         sourceSha256: component.sha256,

@@ -1,9 +1,14 @@
-import type { ProfileManifest, ResolvedComponent } from "../core/contracts.js";
+import type {
+  CatalogSelection,
+  ProfileId,
+  ProfileManifest,
+  ResolvedComponent,
+} from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import type { LoadedPack, RegistrySnapshot } from "./load.js";
 
 export interface ResolvedProfile {
-  profileId: "hackathon";
+  profileId: ProfileId;
   profileVersion: string;
   adapter: "codex";
   packIds: readonly string[];
@@ -15,7 +20,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'hackathon' with adapter 'codex' for Forgeyard M1.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
     exitCode: 2,
   });
 }
@@ -58,13 +63,24 @@ export function resolveProfile(
   registry: RegistrySnapshot,
   profileId: string,
   adapterId: string,
+  catalogOverride?: CatalogSelection,
 ): ResolvedProfile {
-  if (profileId !== "hackathon") throw selectionError(`Profile '${profileId}' is not supported by Forgeyard M1.`);
-  if (adapterId !== "codex") throw selectionError(`Adapter '${adapterId}' is not supported by Forgeyard M1.`);
+  if (!["minimal", "hackathon", "full"].includes(profileId)) {
+    throw selectionError(`Profile '${profileId}' is not supported by Forgeyard.`);
+  }
+  if (adapterId !== "codex") throw selectionError(`Adapter '${adapterId}' is not supported by Forgeyard.`);
 
   const profile = registry.profiles.get(profileId);
   if (profile === undefined) throw registryError(`Profile '${profileId}' is missing from the registry.`);
   const packs = selectedPacks(registry, profile);
+  const requestedCatalog = catalogOverride ?? profile.catalog;
+  const catalogSelection: readonly string[] | "all" = requestedCatalog.selection === "all"
+    ? "all"
+    : requestedCatalog.selection === "none"
+      ? []
+      : requestedCatalog.plugins.length > 0
+        ? requestedCatalog.plugins
+        : profile.catalog.plugins;
 
   const nodes = new Map<string, ResolvedComponent>();
   const slots = new Map<string, string>();
@@ -81,13 +97,26 @@ export function resolveProfile(
       }
       const entry = loadedPack.entries.get(declaration.id);
       if (entry === undefined) throw registryError(`Component '${declaration.id}' has no loaded entry.`, [declaration.id]);
+      const treeFiles = entry.files;
+      if (declaration.kind === "catalog" && catalogSelection !== "all") {
+        const available = new Set(
+          (treeFiles ?? [])
+            .map((file) => /^plugins\/([^/]+)\//.exec(file.relativePath)?.[1])
+            .filter((name): name is string => name !== undefined),
+        );
+        const missing = catalogSelection.filter((name) => !available.has(name));
+        if (missing.length > 0) {
+          throw selectionError(`Catalog plugin '${missing[0]}' is not available in the pinned snapshot.`);
+        }
+      }
       nodes.set(declaration.id, {
         ...declaration,
         packId: loadedPack.manifest.id,
         packVersion: loadedPack.manifest.version,
         sourcePath: entry.sourcePath,
         sha256: entry.sha256,
-        ...(entry.files === undefined ? {} : { treeFiles: entry.files }),
+        ...(treeFiles === undefined ? {} : { treeFiles }),
+        ...(declaration.kind === "catalog" ? { catalogSelection } : {}),
       });
       slots.set(slotKey, declaration.id);
     }
@@ -126,7 +155,7 @@ export function resolveProfile(
   }
 
   return {
-    profileId: "hackathon",
+    profileId: profile.id,
     profileVersion: profile.version,
     adapter: "codex",
     packIds: packs.map((pack) => pack.manifest.id),

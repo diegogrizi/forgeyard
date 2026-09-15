@@ -1,0 +1,20 @@
+schemaVersion: 1
+id: full
+version: 1.0.0
+packs:
+  - foundation
+  - presentation
+  - ecosystem
+catalog:
+  selection: all
+  plugins: []
+defaults:
+  timeboxMinutes: 300
+  orchestration:
+    mode: guided
+    maxConcurrency: 4
+  presentation:
+    enabled: true
+    audience: Product reviewers
+    durationMinutes: 7
+    offline: true

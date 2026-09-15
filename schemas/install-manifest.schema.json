@@ -8,7 +8,7 @@
   "properties": {
     "schemaVersion": { "const": 1 },
     "forgeyardVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
-    "profile": { "const": "hackathon" },
+    "profile": { "enum": ["minimal", "hackathon", "full"] },
     "adapter": { "const": "codex" },
     "latestOperationId": { "type": "string", "minLength": 6, "maxLength": 128 },
     "files": {

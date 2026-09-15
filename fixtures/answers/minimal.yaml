@@ -1,13 +1,13 @@
 schemaVersion: 1
 project:
-  name: Signal Garden
-  purpose: Help a small team demonstrate one trustworthy user journey.
+  name: Minimal Factory
+  purpose: Install only the trusted project workflow kernel.
   mode: new
 harnesses:
   - codex
-profile: hackathon
+profile: minimal
 catalog:
-  selection: curated
+  selection: none
   plugins: []
 timeboxMinutes: 300
 quality:
@@ -29,7 +29,7 @@ orchestration:
   mode: guided
   maxConcurrency: 4
 presentation:
-  enabled: true
-  audience: Product reviewers
+  enabled: false
+  audience: Not installed
   durationMinutes: 7
   offline: true

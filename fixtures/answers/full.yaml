@@ -1,13 +1,13 @@
 schemaVersion: 1
 project:
-  name: Signal Garden
-  purpose: Help a small team demonstrate one trustworthy user journey.
+  name: Complete Factory
+  purpose: Install the complete local capability catalog without loading every instruction at once.
   mode: new
 harnesses:
   - codex
-profile: hackathon
+profile: full
 catalog:
-  selection: curated
+  selection: all
   plugins: []
 timeboxMinutes: 300
 quality:

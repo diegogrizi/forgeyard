@@ -5,6 +5,14 @@ export interface QualityCommand {
   argv: NonEmptyArgv;
 }
 
+export type ProfileId = "minimal" | "hackathon" | "full";
+export type CatalogSelectionMode = "none" | "curated" | "all";
+
+export interface CatalogSelection {
+  selection: CatalogSelectionMode;
+  plugins: readonly string[];
+}
+
 export interface ForgeyardConfig {
   schemaVersion: 1;
   project: {
@@ -13,7 +21,8 @@ export interface ForgeyardConfig {
     mode: "new" | "existing";
   };
   harnesses: readonly ["codex"];
-  profile: "hackathon";
+  profile: ProfileId;
+  catalog: CatalogSelection;
   timeboxMinutes: number;
   quality: {
     commands: readonly QualityCommand[];
@@ -28,7 +37,7 @@ export interface ForgeyardConfig {
     maxConcurrency: number;
   };
   presentation: {
-    enabled: true;
+    enabled: boolean;
     audience: string;
     durationMinutes: number;
     offline: true;
@@ -91,9 +100,10 @@ export interface PackManifest {
 
 export interface ProfileManifest {
   schemaVersion: 1;
-  id: "hackathon";
+  id: ProfileId;
   version: string;
   packs: readonly string[];
+  catalog: CatalogSelection;
   defaults: Pick<ForgeyardConfig, "timeboxMinutes" | "orchestration" | "presentation">;
 }
 
@@ -114,6 +124,7 @@ export interface ResolvedComponent extends ComponentDeclaration {
   sourcePath: string;
   sha256: string;
   treeFiles?: readonly ComponentTreeFile[];
+  catalogSelection?: readonly string[] | "all";
 }
 
 export interface ComponentTreeFile {
@@ -136,7 +147,7 @@ export interface InstallPlan {
   schemaVersion: 1;
   operationId: string;
   targetRoot: string;
-  profile: "hackathon";
+  profile: ProfileId;
   adapter: "codex";
   files: readonly PlannedFile[];
 }

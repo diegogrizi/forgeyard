@@ -7,7 +7,7 @@ import {
   select as promptSelect,
 } from "@inquirer/prompts";
 
-import type { ForgeyardConfig, InitRequest, NonEmptyArgv } from "../core/contracts.js";
+import type { ForgeyardConfig, InitRequest, NonEmptyArgv, ProfileId } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { loadConfig, validateConfig } from "./config.js";
 
@@ -67,7 +67,7 @@ function unsupported(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'hackathon' with adapter 'codex' for Forgeyard M1.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
     exitCode: 2,
   });
 }
@@ -84,12 +84,12 @@ function parseStringArray(value: string, field: string): string[] {
   }
 }
 
-function assertM1Selection(profile: string | undefined, adapter: string | undefined): void {
-  if (profile !== undefined && profile !== "hackathon") {
-    throw unsupported(`Profile '${profile}' is not supported by Forgeyard M1.`);
+function assertSupportedSelection(profile: string | undefined, adapter: string | undefined): void {
+  if (profile !== undefined && !["minimal", "hackathon", "full"].includes(profile)) {
+    throw unsupported(`Profile '${profile}' is not supported by Forgeyard.`);
   }
   if (adapter !== undefined && adapter !== "codex") {
-    throw unsupported(`Adapter '${adapter}' is not supported by Forgeyard M1.`);
+    throw unsupported(`Adapter '${adapter}' is not supported by Forgeyard.`);
   }
 }
 
@@ -97,7 +97,7 @@ export async function collectInitRequest(
   input: WizardInput,
   prompts: PromptDriver,
 ): Promise<InitRequest> {
-  assertM1Selection(input.profile, input.adapter);
+  assertSupportedSelection(input.profile, input.adapter);
   const targetRoot = path.resolve(input.targetRoot);
 
   if (input.answersPath !== undefined) {
@@ -115,9 +115,15 @@ export async function collectInitRequest(
     throw invalid("Non-interactive initialization requires --answers.");
   }
 
-  const profile = input.profile ?? (await prompts.select("profile", "Profile", ["hackathon"], "hackathon"));
+  const profile = input.profile ?? (await prompts.select(
+    "profile",
+    "Profile",
+    ["minimal", "hackathon", "full"],
+    "hackathon",
+  ));
   const adapter = input.adapter ?? (await prompts.select("adapter", "Adapter", ["codex"], "codex"));
-  assertM1Selection(profile, adapter);
+  assertSupportedSelection(profile, adapter);
+  const profileId = profile as ProfileId;
 
   const commandArgv = parseStringArray(
     await prompts.input("qualityCommandArgv", "Quality command as a JSON argv array", '["npm","test"]'),
@@ -134,7 +140,12 @@ export async function collectInitRequest(
         | "existing",
     },
     harnesses: ["codex"],
-    profile: "hackathon",
+    profile: profileId,
+    catalog: profileId === "minimal"
+      ? { selection: "none", plugins: [] }
+      : profileId === "full"
+        ? { selection: "all", plugins: [] }
+        : { selection: "curated", plugins: [] },
     timeboxMinutes: await prompts.number("timeboxMinutes", "Timebox in minutes", 300),
     quality: {
       commands: [
@@ -165,7 +176,7 @@ export async function collectInitRequest(
       maxConcurrency: await prompts.number("maxConcurrency", "Maximum active work items", 4),
     },
     presentation: {
-      enabled: true,
+      enabled: profileId !== "minimal",
       audience: await prompts.input("presentationAudience", "Presentation audience"),
       durationMinutes: await prompts.number(
         "presentationDurationMinutes",
