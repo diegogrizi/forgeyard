@@ -51,12 +51,20 @@ function componentOrder(left: { packId: string; id: string }, right: { packId: s
   return left.packId.localeCompare(right.packId, "en") || left.id.localeCompare(right.id, "en");
 }
 
-function selectedPacks(registry: RegistrySnapshot, profile: ProfileManifest): LoadedPack[] {
-  return [...profile.packs]
+function selectedPacks(
+  registry: RegistrySnapshot,
+  profile: ProfileManifest,
+  packOverride?: readonly string[],
+): LoadedPack[] {
+  const requested = packOverride ?? profile.packs;
+  if (requested.length === 0) throw selectionError("A profile must select at least one pack.");
+  const duplicate = requested.find((id, index) => requested.indexOf(id) !== index);
+  if (duplicate !== undefined) throw selectionError(`Pack selection repeats '${duplicate}'.`);
+  return [...requested]
     .sort((left, right) => left.localeCompare(right, "en"))
     .map((id) => {
       const loaded = registry.packs.get(id);
-      if (loaded === undefined) throw registryError(`Profile '${profile.id}' references missing pack '${id}'.`);
+      if (loaded === undefined) throw selectionError(`Pack '${id}' is not available in the pinned registry.`);
       return loaded;
     });
 }
@@ -66,8 +74,9 @@ export function resolveProfile(
   profileId: string,
   adapterId: string,
   catalogOverride?: CatalogSelection,
+  packOverride?: readonly string[],
 ): ResolvedProfile {
-  if (!["minimal", "hackathon", "full"].includes(profileId)) {
+  if (!["minimal", "hackathon", "full", "tailored"].includes(profileId)) {
     throw selectionError(`Profile '${profileId}' is not supported by Forgeyard.`);
   }
   if (!HARNESS_IDS.includes(adapterId as HarnessId)) {
@@ -76,7 +85,7 @@ export function resolveProfile(
 
   const profile = registry.profiles.get(profileId);
   if (profile === undefined) throw registryError(`Profile '${profileId}' is missing from the registry.`);
-  const packs = selectedPacks(registry, profile);
+  const packs = selectedPacks(registry, profile, packOverride);
   const requestedCatalog = catalogOverride ?? profile.catalog;
   const catalogSelection: readonly string[] | "all" = requestedCatalog.selection === "all"
     ? "all"

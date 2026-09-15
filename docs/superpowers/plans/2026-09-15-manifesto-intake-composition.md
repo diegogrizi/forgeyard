@@ -296,7 +296,7 @@ git commit -m "feat: compose minimal project capabilities"
 - Consumes: `config.composition?.packs` from `renderPlan`.
 - Preserves: static profile behavior when no override exists.
 
-- [ ] **Step 1: Write failing resolver tests**
+- [x] **Step 1: Write failing resolver tests**
 
 ```ts
 test("resolves only the stored tailored packs", async () => {
@@ -312,23 +312,23 @@ test("resolves only the stored tailored packs", async () => {
 
 Also reject duplicate, missing, empty, and dependency-incomplete pack overrides.
 
-- [ ] **Step 2: Run and observe that the override is ignored/unsupported**
+- [x] **Step 2: Run and observe that the override is ignored/unsupported**
 
 Run: `npx vitest run tests/unit/registry/resolve.test.ts`
 
 Expected: FAIL.
 
-- [ ] **Step 3: Implement stable validated pack overrides**
+- [x] **Step 3: Implement stable validated pack overrides**
 
 Sort pack IDs, reject duplicates/missing packs, then let the existing component dependency checks reject incomplete graphs. Pass the stored override from application rendering.
 
-- [ ] **Step 4: Run the resolver tests until green**
+- [x] **Step 4: Run the resolver tests until green**
 
 Run: `npx vitest run tests/unit/registry/resolve.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```sh
 git add src/registry/resolve.ts src/application/forgeyard.ts tests/unit/registry/resolve.test.ts

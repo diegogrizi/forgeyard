@@ -198,4 +198,49 @@ describe("profile resolver", () => {
       plugins: ["missing-plugin"],
     })).toThrowError(expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }));
   });
+
+  test("resolves only the exact stored tailored pack set", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+
+    const resolved = resolveProfile(
+      registry,
+      "tailored",
+      "codex",
+      { selection: "curated", plugins: ["developer-essentials"] },
+      ["foundation", "ecosystem"],
+    );
+
+    expect(resolved.packIds).toEqual(["ecosystem", "foundation"]);
+    expect(resolved.components.some((component) => component.packId === "delivery")).toBe(false);
+    expect(resolved.components.find((component) => component.kind === "catalog")?.catalogSelection)
+      .toEqual(["developer-essentials"]);
+  });
+
+  test.each([
+    ["empty", []],
+    ["duplicate", ["foundation", "foundation"]],
+    ["missing", ["foundation", "missing-pack"]],
+  ] as const)("rejects a %s stored pack set", async (_name, packIds) => {
+    const registry = await loadRegistry(path.resolve("."));
+
+    expect(() => resolveProfile(
+      registry,
+      "tailored",
+      "codex",
+      { selection: "curated", plugins: ["developer-essentials"] },
+      packIds,
+    )).toThrowError(expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }));
+  });
+
+  test("rejects a stored pack set whose component dependencies are incomplete", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+
+    expect(() => resolveProfile(
+      registry,
+      "tailored",
+      "codex",
+      { selection: "curated", plugins: ["developer-essentials"] },
+      ["delivery"],
+    )).toThrowError(expect.objectContaining({ code: "FY_COMPONENT_CONFLICT" }));
+  });
 });

@@ -280,7 +280,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
   async function renderPlan(root: string, config: Awaited<ReturnType<typeof loadConfig>>, nextOperationId: string) {
     const registry = await loadRegistry(registryRoot);
     const adapterId = config.harnesses[0];
-    const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog);
+    const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog, config.composition?.packs);
     const adapter = createHarnessAdapter(adapterId);
     const renderedFiles = await adapter.render(resolved.components, config);
     await adapter.validateOutput(renderedFiles);
