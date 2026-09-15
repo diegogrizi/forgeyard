@@ -17,13 +17,24 @@ The displayed minutes use the default 300-minute horizon. Forgeyard scales each 
 
 After preparation, speak in product language: for example, “Implement this feature,” “Fix this without changing the public API,” or “Resume the current work.” The generated host instructions route the request through the project brief, task graph, evidence rules, review, and handoff state. The commands below remain the inspectable control plane and recovery surface; they are not a vocabulary the project owner must memorize for every change.
 
+The generated `forgeyard-workflow` skill acts as the controller. It reads existing project evidence first and asks only about unresolved product or constraint decisions that would materially change the result. It does not ask the project owner to choose skill authors, roles, orchestrators, or lifecycle commands.
+
+`forgeyard task next --root . --json` returns host-executable work orders. Each order contains the project-specific objective, acceptance criteria, role, selected capabilities, write scopes, verification argv, remaining time, cost state, stable worker ID, and an exact `hostPrompt`. Creating an order is read-only with respect to task ownership: it does not claim a task, launch a model client, or spend provider credit.
+
+- `guided` mode returns one order.
+- `native` mode returns at most the remaining configured claim capacity. A compatible host may dispatch each prompt through its own worker/subagent facility; without that facility, it proceeds serially.
+- `unmeasured` means the host has supplied no explicit cost observation. It is not treated as zero.
+- `measured` is the ledger-backed task total. A task at its ceiling is withheld, and the scheduler persists a cost-budget stop if a claim or completion crosses the gate.
+
+If stored intake questions or the new request expose a material product ambiguity, the controller stops for that product decision. Push, deploy, publish, messages, purchases, and other external effects remain separate actions requiring authorization.
+
 Task definitions live in `.forgeyard/tasks/`. Runtime claims, checkpoints, deadlines, failures, evidence IDs, and workspace metadata live separately in `.forgeyard/state/run.json`, so editing a definition cannot silently rewrite history.
 
 ## Operator loop
 
 ```sh
 forgeyard task status --root .
-forgeyard task next --root .
+forgeyard task next --root . --json
 forgeyard task claim T001 --worker implementer-1 --session local-session --root .
 forgeyard task checkpoint T001 --worker implementer-1 --note "Journey works; freeze the revision" --root .
 forgeyard task resume T001 --worker implementer-1 --root .

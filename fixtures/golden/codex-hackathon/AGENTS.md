@@ -8,7 +8,7 @@ This is a new project initialized with a 300-minute delivery horizon.
 
 - Treat `forgeyard.yaml` as the human-owned project intent.
 - Read `.forgeyard/COMPOSITION.md` to understand the factory's selected capabilities, exclusions, evidence, and operating limits.
-- Run `forgeyard task status --root .` before selecting work.
+- Run `forgeyard task status --root . --json`, then `forgeyard task next --root . --json`; execute the returned bounded `hostPrompt` rather than asking the user to sequence internal steps.
 - Read the selected file in `.forgeyard/tasks/` before changing code.
 - Load `.agents/skills/forgeyard-workflow/SKILL.md` when planning or executing work.
 - Read `PROJECT.md` for the visible journey and `.forgeyard/handoffs/CURRENT.md` when resuming another session.
@@ -27,7 +27,7 @@ This is a new project initialized with a 300-minute delivery horizon.
 
 Prioritize the smallest visible user outcome before generalized infrastructure. Claim only dependency-ready tasks and keep no more than 4 independent work items active. Use isolated Git worktrees for concurrent writes. Installed agents and skills are a catalog of capabilities; they are not running workers and should be loaded only when relevant.
 
-Use `forgeyard task claim`, `checkpoint`, `resume`, `verify`, and `complete` to make progress resumable. Use `forgeyard guard` before uncertain writes. For isolated work, use `forgeyard workspace create`, `validate`, and `integrate`; successful integration removes the registered worktree and merged worker branch. If that cleanup is interrupted, retry `forgeyard workspace cleanup`; integration remains serialized and never pushes.
+The generated workflow skill is the ordinary controller. It clarifies only material product ambiguity, maps the request to returned work orders, and uses host-native workers only when available. `task next` neither claims work nor launches model clients. Use `forgeyard task claim`, `checkpoint`, `resume`, `verify`, and `complete` as the inspectable lifecycle. Use `forgeyard guard` before uncertain writes. For isolated work, use `forgeyard workspace create`, `validate`, and `integrate`; successful integration removes the registered worktree and merged worker branch. If that cleanup is interrupted, retry `forgeyard workspace cleanup`; integration remains serialized and never pushes.
 
 Required quality commands:
 

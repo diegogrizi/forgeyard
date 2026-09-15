@@ -71,11 +71,11 @@
 - Modify: `docs/guides/delivery-workflow.md`
 - Create: `tests/roundtrip/controller-work-orders.test.ts`
 
-- [ ] Add a failing round-trip that prepares a project and proves the generated controller routes a natural-language request through questions, work orders, claims, verification, integration/cleanup, and evidence-backed reporting without asking the user to choose skills.
-- [ ] Document guided/native dispatch, cost measurement semantics, ambiguity stops, and external-effect authorization.
-- [ ] Verify existing host-instruction preservation and no client-launch claim.
-- [ ] Run the packaged round-trip and release audit.
-- [ ] Commit as `feat: make the host skill the workflow controller`.
+- [x] Add a failing round-trip that prepares a project and proves the generated controller routes a natural-language request through questions, work orders, claims, verification, integration/cleanup, and evidence-backed reporting without asking the user to choose skills.
+- [x] Document guided/native dispatch, cost measurement semantics, ambiguity stops, and external-effect authorization.
+- [x] Verify existing host-instruction preservation and no client-launch claim.
+- [x] Run the packaged round-trip and release audit.
+- [x] Commit as `feat: make the host skill the workflow controller`.
 
 ## Task 5: Close the governed-work-order milestone
 

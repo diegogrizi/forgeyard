@@ -1,36 +1,37 @@
 ---
 name: forgeyard-workflow
-description: Use when planning, implementing, verifying, reviewing, or rehearsing delivery work in this Forgeyard project.
+description: Use when the user asks to build, change, fix, resume, review, verify, or demonstrate software in this prepared Forgeyard project.
 ---
 
 # Forgeyard workflow for {{project.name}}
 
-Project purpose: {{project.purpose}}
+Start from the user's product-language request, not from the internal catalog. Forgeyard's job is to convert that request into a bounded, resumable, evidence-backed delivery loop.
 
-Read `forgeyard.yaml`, `PROJECT.md` when installed, the selected task under `.forgeyard/tasks/`, the current handoff, and Git status before acting. The configured horizon is {{workflow.timeboxMinutes}} minutes and no more than {{workflow.maxConcurrency}} independent claims may be active. Installed catalog entries are discoverable capabilities, not pre-running workers.
+## Orient and clarify
 
-Follow this sequence:
+Read `forgeyard.yaml`, `.forgeyard/COMPOSITION.md`, `PROJECT.md` when present, `.forgeyard/handoffs/CURRENT.md`, and Git status. The prepared project purpose is: {{project.purpose}}
 
-1. **Orient:** run `forgeyard task status --root .`; identify the current revision, mutable roots, protected paths, evidence, and open risks.
-2. **Select:** run `forgeyard task next --root .` and choose only a dependency-ready task.
-3. **Claim:** run `forgeyard task claim <task-id> --worker <worker-id> --session <session-id> --root .`.
-4. **Isolate when useful:** for concurrent writes, create the deterministic worktree with `forgeyard workspace create <task-id> --worker <worker-id> --root .` and do the task there.
-5. **Implement:** remain inside declared scopes. Check uncertain paths with `forgeyard guard <task-id> <path...> --root .`. Preserve unrelated work and avoid external effects without explicit policy.
-6. **Checkpoint:** record a reproducible next step with `forgeyard task checkpoint <task-id> --worker <worker-id> --note <text> --root .`. A later process uses `forgeyard task resume` with the same worker ID.
-7. **Verify:** run `forgeyard verify <task-id> --root . --json`. A receipt is current only for the same task bytes, command arguments, clean Git revision, and commit.
-8. **Close:** for shared-checkout work, use `forgeyard task complete` with the current receipt. For isolated work, run `forgeyard workspace validate` and then the serialized `forgeyard workspace integrate` from the main checkout; a successful integration completes the task, removes the registered worktree and its Git administration entry, deletes only the merged worker branch, and never pushes. If post-merge cleanup is interrupted, retry only the idempotent cleanup with `forgeyard workspace cleanup <task-id> --worker <worker-id> --root .`; do not rerun validation or integration. Forgeyard refuses to delete an existing workspace directory that Git no longer registers, so inspect and preserve that path instead.
-9. **Review and rehearse:** follow the installed DAG through independent read-only review and the offline demonstration task.
-10. **Handoff:** update `.forgeyard/handoffs/CURRENT.md` and `.forgeyard/reports/RUN_REPORT.md` with revision-bound facts, then report the strongest evidence-backed state and unmet gates.
+Ask one concise product or constraint question only when `intake.questions` contains an unresolved item or the current request has unresolved product ambiguity that would materially change the result. Do not ask the user to select skills, roles, workflow phases, authors, or internal commands. If the current request conflicts with the stored task contract, stop and explain the mismatch instead of weakening evidence traceability.
+
+## Controller loop
+
+1. Run `forgeyard task status --root . --json`. Resume an active task from its checkpoint before selecting new work.
+2. Run `forgeyard task next --root . --json`. Treat each returned work order as the complete bounded dispatch contract.
+3. In `guided` mode, execute the single returned `hostPrompt`. In `native` mode, dispatch up to the returned orders through the host-native worker or subagent facility, one prompt per worker. If the host has no such facility, execute one order at a time. `task next` does not claim tasks and does not launch model clients.
+4. The worker follows the returned `hostPrompt`: claim before editing, stay inside write scopes, checkpoint durable progress, run the exact verification, and complete only with a current receipt.
+5. Use a worktree only for concurrent writing tasks. After validation, run `forgeyard workspace integrate`; successful integration removes the registered worktree, its Git administration entry, and only the merged worker branch. If cleanup is interrupted after integration, retry `forgeyard workspace cleanup`; do not repeat integration or delete an unregistered directory.
+6. Continue until no work order remains or a governed stop requires user input. Update the handoff and run report with the exact revision, receipts, open risks, and next product action.
+
+## Governing decisions
+
+- `unmeasured` cost means no explicit provider observation exists; it never means zero. Record usage only from an actual host/provider observation.
+- `measured` cost is enforced against the task ceiling. A cost stop, deadline, retry stop, stale receipt, scope conflict, or material ambiguity is a real stop—not permission to bypass the gate.
+- Installed agents and skills are capabilities to load when a work order names them, not running processes and not content to load wholesale.
+- Push, publish, deploy, messages, purchases, and every other external effect require explicit authorization at the point of action.
+- Report `implemented`, `verified`, `reviewed`, and `demo-ready` as distinct states. Never promote evidence from an older task definition, argv, or Git revision.
+
+Configured horizon: {{workflow.timeboxMinutes}} minutes. Maximum active claims: {{workflow.maxConcurrency}}.
 
 Configured quality commands:
 
 {{quality.commands}}
-
-Use status precisely:
-
-- `implemented`: files changed;
-- `verified`: required commands passed for the named revision;
-- `reviewed`: an independent review inspected that frozen revision;
-- `demo-ready`: the observable journey and fallback were exercised.
-
-Never promote an older receipt to a newer revision, treat installed role files as running workers, load the whole catalog into one prompt, or invent proof that was not captured.
