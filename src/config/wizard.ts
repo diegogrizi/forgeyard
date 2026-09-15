@@ -1,5 +1,12 @@
 import path from "node:path";
 
+import {
+  confirm as promptConfirm,
+  input as promptInput,
+  number as promptNumber,
+  select as promptSelect,
+} from "@inquirer/prompts";
+
 import type { ForgeyardConfig, InitRequest, NonEmptyArgv } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { loadConfig, validateConfig } from "./config.js";
@@ -17,6 +24,33 @@ export interface WizardInput {
   answersPath?: string;
   profile?: string;
   adapter?: string;
+}
+
+export function createInquirerPromptDriver(): PromptDriver {
+  return {
+    input: async (_id, message, defaultValue) => promptInput({
+      message,
+      ...(defaultValue === undefined ? {} : { default: defaultValue }),
+    }),
+    select: async (_id, message, choices, defaultValue) => promptSelect({
+      message,
+      choices: choices.map((value) => ({ name: value, value })),
+      ...(defaultValue === undefined ? {} : { default: defaultValue }),
+    }),
+    number: async (_id, message, defaultValue) => {
+      const value = await promptNumber({
+        message,
+        ...(defaultValue === undefined ? {} : { default: defaultValue }),
+        required: true,
+      });
+      if (value === undefined) throw invalid("A numeric wizard answer is required.");
+      return value;
+    },
+    confirm: async (_id, message, defaultValue) => promptConfirm({
+      message,
+      ...(defaultValue === undefined ? {} : { default: defaultValue }),
+    }),
+  };
 }
 
 function invalid(message: string, cause?: unknown): ForgeyardError {

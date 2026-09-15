@@ -109,8 +109,8 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
     schemaVersion: 1,
     operationId: input.operationId,
     targetRoot: path.resolve(input.targetRoot),
-    profile: "hackathon",
-    adapter: "codex",
+    profile: input.resolved.profileId,
+    adapter: input.resolved.adapter,
     files,
   };
 }

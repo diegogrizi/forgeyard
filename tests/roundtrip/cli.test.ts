@@ -1,0 +1,229 @@
+import { lstat, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+
+import type { InitCommandResult, UpdateCommandResult, VerifyCommandResult } from "../../src/application/forgeyard.js";
+import { getReceiptStatus, parseReceipt } from "../../src/evidence/receipts.js";
+import { loadInstallManifest } from "../../src/installer/manifest.js";
+import { buildCli, runBuiltCli, runProcess } from "../helpers/cli.js";
+
+const repositoryRoot = path.resolve(".");
+const answersPath = path.join(repositoryRoot, "fixtures", "answers", "hackathon.yaml");
+let sandboxRoot: string;
+let targetRoot: string;
+let initialOperationId: string;
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await lstat(filePath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function fileTree(root: string, relative = ""): Promise<string[]> {
+  const directory = path.join(root, ...relative.split("/").filter(Boolean));
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const next = relative.length === 0 ? entry.name : `${relative}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...await fileTree(root, next));
+    else files.push(next);
+  }
+  return files.sort((left, right) => left.localeCompare(right, "en"));
+}
+
+function parseJson<T>(source: string): T {
+  return JSON.parse(source) as T;
+}
+
+async function requireProcess(executable: string, args: readonly string[], cwd: string): Promise<void> {
+  const result = await runProcess(executable, args, cwd);
+  expect(result, `${executable} ${args.join(" ")}\n${result.stderr}`).toEqual(
+    expect.objectContaining({ exitCode: 0 }),
+  );
+}
+
+beforeAll(async () => {
+  await buildCli(repositoryRoot);
+  sandboxRoot = await mkdtemp(path.join(os.tmpdir(), "forgeyard-cli-roundtrip-"));
+  targetRoot = path.join(sandboxRoot, "generated-project");
+}, 60_000);
+
+afterAll(async () => {
+  if (sandboxRoot !== undefined) await rm(sandboxRoot, { recursive: true, force: true });
+});
+
+describe("built Forgeyard CLI round trip", () => {
+  test("dry-run resolves and validates without creating the target", async () => {
+    const result = await runBuiltCli(
+      repositoryRoot,
+      [
+        "init",
+        targetRoot,
+        "--profile",
+        "hackathon",
+        "--adapter",
+        "codex",
+        "--answers",
+        answersPath,
+        "--dry-run",
+        "--json",
+      ],
+      sandboxRoot,
+    );
+    const output = parseJson<InitCommandResult>(result.stdout);
+
+    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(output).toEqual(expect.objectContaining({ command: "init", applied: false, status: "preview" }));
+    expect(output.changes.created).toHaveLength(12);
+    expect(await exists(targetRoot)).toBe(false);
+  });
+
+  test("applied init produces the exact generic factory tree", async () => {
+    const result = await runBuiltCli(
+      repositoryRoot,
+      [
+        "init",
+        targetRoot,
+        "--profile",
+        "hackathon",
+        "--adapter",
+        "codex",
+        "--answers",
+        answersPath,
+        "--yes",
+        "--json",
+      ],
+      sandboxRoot,
+    );
+    const output = parseJson<InitCommandResult>(result.stdout);
+    initialOperationId = output.operationId;
+
+    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(output).toEqual(expect.objectContaining({ command: "init", applied: true, status: "applied" }));
+    expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
+    expect(await fileTree(targetRoot)).toEqual([
+      ".agents/skills/forgeyard-showcase/SKILL.md",
+      ".agents/skills/forgeyard-workflow/SKILL.md",
+      ".codex/agents/reviewer.toml",
+      ".forgeyard/.gitignore",
+      ".forgeyard/manifest.json",
+      `.forgeyard/state/operations/${initialOperationId}.json`,
+      ".forgeyard/tasks/T001.yaml",
+      "AGENTS.md",
+      "forgeyard.lock",
+      "forgeyard.yaml",
+      "presentation/app.js",
+      "presentation/index.html",
+      "presentation/README.md",
+      "presentation/styles.css",
+    ].sort((left, right) => left.localeCompare(right, "en")));
+
+    for (const relativePath of [
+      "AGENTS.md",
+      "presentation/app.js",
+      "presentation/index.html",
+      "presentation/README.md",
+      "presentation/styles.css",
+    ]) {
+      expect(await readFile(path.join(targetRoot, ...relativePath.split("/")), "utf8")).toBe(
+        await readFile(path.join(repositoryRoot, "fixtures", "golden", "codex-hackathon", ...relativePath.split("/")), "utf8"),
+      );
+    }
+  });
+
+  test("doctor reports the installed factory in plain and JSON modes", async () => {
+    const plain = await runBuiltCli(repositoryRoot, ["doctor", targetRoot], sandboxRoot);
+    const json = await runBuiltCli(repositoryRoot, ["doctor", targetRoot, "--json"], sandboxRoot);
+
+    expect(plain).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(plain.stdout).toContain("Forgeyard doctor: passed");
+    expect(parseJson(json.stdout)).toEqual(expect.objectContaining({ schemaVersion: 1, ok: true, command: "doctor" }));
+  });
+
+  test("verification writes current revision-bound evidence without output bodies", async () => {
+    await writeFile(path.join(targetRoot, "sentinel.txt"), "unrelated\n", "utf8");
+    await requireProcess("git", ["init"], targetRoot);
+    await requireProcess("git", ["add", "--all"], targetRoot);
+    await requireProcess(
+      "git",
+      [
+        "-c",
+        "user.name=Forgeyard Roundtrip",
+        "-c",
+        "user.email=forgeyard-roundtrip@example.invalid",
+        "commit",
+        "-m",
+        "roundtrip fixture",
+      ],
+      targetRoot,
+    );
+
+    const result = await runBuiltCli(repositoryRoot, ["verify", "T001", "--root", targetRoot, "--json"], sandboxRoot);
+    const output = parseJson<VerifyCommandResult>(result.stdout);
+    const receiptSource = await readFile(path.join(targetRoot, ...output.receiptPath.split("/")), "utf8");
+    const receipt = parseReceipt(receiptSource, output.receiptPath);
+
+    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(output).toEqual(expect.objectContaining({ command: "verify", taskId: "T001", current: true }));
+    expect(output.stdoutBytes).toBe(0);
+    expect(output.stderrBytes).toBe(0);
+    expect(receipt).not.toHaveProperty("stdout");
+    expect(receipt).not.toHaveProperty("stderr");
+    expect(await getReceiptStatus(targetRoot, receipt)).toBe("current");
+  });
+
+  test("dry-run and applied update are deterministic no-ops", async () => {
+    const before = await fileTree(targetRoot);
+    const dryRun = await runBuiltCli(repositoryRoot, ["update", targetRoot, "--dry-run", "--json"], sandboxRoot);
+    const applied = await runBuiltCli(repositoryRoot, ["update", targetRoot, "--yes", "--json"], sandboxRoot);
+    const dryOutput = parseJson<UpdateCommandResult>(dryRun.stdout);
+    const appliedOutput = parseJson<UpdateCommandResult>(applied.stdout);
+
+    expect(dryRun.exitCode).toBe(0);
+    expect(applied.exitCode).toBe(0);
+    expect(dryOutput).toEqual(expect.objectContaining({ applied: false, status: "no-op" }));
+    expect(appliedOutput).toEqual(expect.objectContaining({ applied: false, status: "no-op" }));
+    expect(dryOutput.changes).toEqual(appliedOutput.changes);
+    expect(await fileTree(targetRoot)).toEqual(before);
+  });
+
+  test("doctor rejects an in-memory generic term without echoing it", async () => {
+    const denyTerm = "trustworthy";
+    const result = await runBuiltCli(
+      repositoryRoot,
+      ["doctor", targetRoot, "--deny-term", denyTerm, "--json"],
+      sandboxRoot,
+    );
+
+    expect(result.exitCode).toBe(6);
+    expect(parseJson<{ ok: false; error: { code: string } }>(result.stdout).error.code).toBe("FY_DOCTOR_FAILED");
+    expect(`${result.stdout}\n${result.stderr}`.toLocaleLowerCase("en-US")).not.toContain(denyTerm);
+  });
+
+  test("rollback removes managed files and preserves the seed and unrelated files", async () => {
+    const result = await runBuiltCli(
+      repositoryRoot,
+      ["rollback", initialOperationId, "--root", targetRoot, "--yes", "--json"],
+      sandboxRoot,
+    );
+    const output = parseJson<{ applied: boolean; changes: { removed: string[] } }>(result.stdout);
+    const manifest = await loadInstallManifest(targetRoot);
+
+    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(output.applied).toBe(true);
+    expect(await readFile(path.join(targetRoot, "forgeyard.yaml"), "utf8")).toBe(
+      await readFile(answersPath, "utf8"),
+    );
+    expect(await readFile(path.join(targetRoot, "sentinel.txt"), "utf8")).toBe("unrelated\n");
+    expect(manifest.files.map((file) => file.path)).toEqual(["forgeyard.yaml"]);
+    for (const relativePath of output.changes.removed) {
+      expect(await exists(path.join(targetRoot, ...relativePath.split("/"))), relativePath).toBe(false);
+    }
+  });
+});

@@ -1,3 +1,3 @@
-import { runCli } from "./program.js";
+import { defaultDependencies, runCli } from "./program.js";
 
-process.exitCode = await runCli(process.argv.slice(2));
+process.exitCode = await runCli(process.argv.slice(2), defaultDependencies);

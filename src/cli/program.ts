@@ -1,23 +1,17 @@
 import { Command, CommanderError } from "commander";
 
-import { ForgeyardError, formatFailure } from "../core/errors.js";
-
-export interface CliInvocation {
-  positional: readonly string[];
-  options: Readonly<Record<string, unknown>>;
-}
-
-export type CliHandler = (invocation: CliInvocation) => Promise<unknown>;
+import {
+  createForgeyardService,
+  type ForgeyardCommandResult,
+  type ForgeyardService,
+} from "../application/forgeyard.js";
+import { createInquirerPromptDriver } from "../config/wizard.js";
+import { formatFailure } from "../core/errors.js";
 
 export interface CliDependencies {
   version: string;
-  handlers: {
-    init: CliHandler;
-    doctor: CliHandler;
-    verify: CliHandler;
-    update: CliHandler;
-    rollback: CliHandler;
-  };
+  service: ForgeyardService;
+  interactive: boolean;
 }
 
 export interface CliIo {
@@ -26,32 +20,83 @@ export interface CliIo {
   debug: boolean;
 }
 
-const notImplemented = async (): Promise<never> => {
-  throw new ForgeyardError({
-    code: "FY_INTERNAL",
-    message: "This command is not wired yet.",
-    remediation: "Complete the Forgeyard M1 implementation before invoking it.",
-    exitCode: 1,
-  });
-};
+const productionPrompts = createInquirerPromptDriver();
 
 export const defaultDependencies: CliDependencies = {
   version: "0.1.0",
-  handlers: {
-    init: notImplemented,
-    doctor: notImplemented,
-    verify: notImplemented,
-    update: notImplemented,
-    rollback: notImplemented,
-  },
+  service: createForgeyardService({ prompts: productionPrompts, forgeyardVersion: "0.1.0" }),
+  interactive: process.stdin.isTTY === true,
 };
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
+function stringOption(options: Record<string, unknown>, name: string): string | undefined {
+  const value = options[name];
+  return typeof value === "string" ? value : undefined;
+}
+
+function booleanOption(options: Record<string, unknown>, name: string): boolean {
+  return options[name] === true;
+}
+
+function listOption(options: Record<string, unknown>, name: string): readonly string[] {
+  const value = options[name];
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : [];
+}
+
+function lineList(label: string, values: readonly string[]): string {
+  return `${label}: ${values.length === 0 ? "(none)" : values.join(", ")}`;
+}
+
+export function formatSuccess(result: ForgeyardCommandResult, json: boolean): string {
+  if (json) return `${JSON.stringify(result)}\n`;
+
+  switch (result.command) {
+    case "init":
+    case "update":
+      return `${[
+        `Forgeyard ${result.command}: ${result.status}`,
+        `Operation: ${result.operationId}`,
+        lineList("Created", result.changes.created),
+        lineList("Updated", result.changes.updated),
+        lineList("Removed", result.changes.removed),
+        lineList("Unchanged", result.changes.unchanged),
+        lineList("Preserved", result.changes.preserved),
+        result.doctor === null
+          ? "Doctor: not run"
+          : `Doctor: passed (${result.doctor.passed} passed, ${result.doctor.skipped} skipped, ${result.doctor.unavailable} unavailable)`,
+      ].join("\n")}\n`;
+    case "doctor":
+      return `${[
+        "Forgeyard doctor: passed",
+        `Checks: ${result.summary.passed} passed, ${result.summary.failed} failed, ${result.summary.skipped} skipped, ${result.summary.unavailable} unavailable`,
+      ].join("\n")}\n`;
+    case "verify":
+      return `${[
+        `Forgeyard verify: ${result.status}`,
+        `Task: ${result.taskId}`,
+        `Receipt: ${result.receiptPath}`,
+        `Evidence: ${result.current ? "current" : "stale"}`,
+      ].join("\n")}\n`;
+    case "rollback":
+      return `${[
+        `Forgeyard rollback: ${result.status}`,
+        `Operation: ${result.operationId}`,
+        `Source operation: ${result.sourceOperationId}`,
+        lineList("Removed", result.changes.removed),
+        lineList("Restored", result.changes.restored),
+      ].join("\n")}\n`;
+  }
+}
+
 export function createProgram(dependencies: CliDependencies = defaultDependencies): Command {
   const program = new Command();
+  const writeResult = (result: ForgeyardCommandResult, json: boolean): void => {
+    program.configureOutput().writeOut?.(formatSuccess(result, json));
+  };
+
   program
     .name("forgeyard")
     .description("Install and verify a project-scoped agentic development workflow.")
@@ -61,14 +106,27 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
   program
     .command("init")
     .argument("[target]", "project directory", ".")
-    .requiredOption("--profile <profile>", "Forgeyard profile")
-    .requiredOption("--adapter <adapter>", "target harness adapter")
+    .option("--profile <profile>", "Forgeyard profile")
+    .option("--adapter <adapter>", "target harness adapter")
     .option("--answers <file>", "non-interactive answer file")
     .option("--yes", "apply without an interactive confirmation")
     .option("--dry-run", "validate and show the plan without writing")
     .option("--json", "emit machine-readable output")
     .action(async (target: string, options: Record<string, unknown>) => {
-      await dependencies.handlers.init({ positional: [target], options });
+      const answersPath = stringOption(options, "answers");
+      const profile = stringOption(options, "profile");
+      const adapter = stringOption(options, "adapter");
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.init({
+        targetRoot: target,
+        ...(profile === undefined ? {} : { profile }),
+        ...(adapter === undefined ? {} : { adapter }),
+        ...(answersPath === undefined ? {} : { answersPath }),
+        yes: booleanOption(options, "yes"),
+        dryRun: booleanOption(options, "dryRun"),
+        nonInteractive: !dependencies.interactive || json || answersPath !== undefined,
+      });
+      writeResult(result, json);
     });
 
   program
@@ -77,7 +135,12 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .option("--deny-term <value>", "reject a private term without persisting it", collect, [])
     .option("--json", "emit machine-readable output")
     .action(async (target: string, options: Record<string, unknown>) => {
-      await dependencies.handlers.doctor({ positional: [target], options });
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.doctor({
+        root: target,
+        denyTerms: listOption(options, "denyTerm"),
+      });
+      writeResult(result, json);
     });
 
   program
@@ -86,7 +149,12 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .option("--root <target>", "project directory", ".")
     .option("--json", "emit machine-readable output")
     .action(async (taskId: string, options: Record<string, unknown>) => {
-      await dependencies.handlers.verify({ positional: [taskId], options });
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.verify({
+        root: stringOption(options, "root") ?? ".",
+        taskId,
+      });
+      writeResult(result, json);
     });
 
   program
@@ -96,7 +164,14 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .option("--dry-run", "validate and show the plan without writing")
     .option("--json", "emit machine-readable output")
     .action(async (target: string, options: Record<string, unknown>) => {
-      await dependencies.handlers.update({ positional: [target], options });
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.update({
+        root: target,
+        yes: booleanOption(options, "yes"),
+        dryRun: booleanOption(options, "dryRun"),
+        nonInteractive: !dependencies.interactive || json,
+      });
+      writeResult(result, json);
     });
 
   program
@@ -105,8 +180,15 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .option("--root <target>", "project directory", ".")
     .option("--yes", "apply without an interactive confirmation")
     .option("--json", "emit machine-readable output")
-    .action(async (operationId: string, options: Record<string, unknown>) => {
-      await dependencies.handlers.rollback({ positional: [operationId], options });
+    .action(async (sourceOperationId: string, options: Record<string, unknown>) => {
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.rollback({
+        root: stringOption(options, "root") ?? ".",
+        sourceOperationId,
+        yes: booleanOption(options, "yes"),
+        nonInteractive: !dependencies.interactive || json,
+      });
+      writeResult(result, json);
     });
 
   return program;
