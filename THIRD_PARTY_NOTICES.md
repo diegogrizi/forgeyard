@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file is generated from `package-lock.json`, installed package metadata, and `sources/catalog.yaml`.
+This file is generated from `package-lock.json`, installed package metadata, `sources/catalog.yaml`, and verified vendor attestations.
 Lockfile versions remain authoritative. Each package remains subject to its own license terms.
 
 ## @esbuild/aix-ppc64 0.27.2 (node_modules/@esbuild/aix-ppc64)
@@ -726,6 +726,16 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/acorn/-/acorn-8.18.0.tgz
+
+## Agentic Plugin Marketplace 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620 (vendored catalog)
+
+- License: MIT
+- Project source: https://github.com/wshobson/agents
+- Forgeyard use: Pinned English portable plugin catalog distributed unchanged with its MIT license.
+- Verified content: 1,007 files and 211,594 physical lines (6,737,904 bytes)
+- Pinned revision: 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620
+- Tree SHA-256: cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97
+- Preserved license notice: packs/ecosystem/vendor/LICENSE
 
 ## ajv 8.20.0 (node_modules/ajv)
 

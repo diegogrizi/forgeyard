@@ -1,5 +1,9 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { access, lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+
+import { loadPortableMarketplace } from "../src/catalog/load-portable-marketplace.js";
+import { loadRegistry } from "../src/registry/load.js";
+import { readVendorAttestation, verifyVendorTree } from "../src/provenance/vendor-catalog.js";
 
 type RuleId =
   | "release.private-deny-term"
@@ -67,13 +71,47 @@ function intentionalTokenContext(relativePath: string): boolean {
   return relativePath.endsWith(".tpl")
     || relativePath.startsWith("tests/")
     || relativePath.startsWith("fixtures/")
-    || relativePath.startsWith("docs/superpowers/");
+    || relativePath.startsWith("docs/superpowers/")
+    || relativePath.startsWith("packs/ecosystem/vendor/");
 }
 
 function intentionalRuleFixture(relativePath: string): boolean {
   return relativePath === "scripts/release-audit.ts"
     || relativePath.startsWith("tests/")
-    || relativePath.startsWith("docs/superpowers/");
+    || relativePath.startsWith("docs/superpowers/")
+    || relativePath.startsWith("packs/ecosystem/vendor/");
+}
+
+interface CatalogMetrics {
+  files: number;
+  physicalLines: number;
+  agents: number;
+  skills: number;
+  commands: number;
+}
+
+async function verifiedCatalogMetrics(root: string): Promise<CatalogMetrics | undefined> {
+  const vendorRoot = path.join(root, "packs", "ecosystem", "vendor");
+  const attestationPath = path.join(vendorRoot, "UPSTREAM.json");
+  try {
+    await access(attestationPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  const attestation = await readVendorAttestation(attestationPath);
+  const summary = await verifyVendorTree(vendorRoot, attestation);
+  const registry = await loadRegistry(root);
+  const entry = registry.packs.get("ecosystem")?.entries.get("ecosystem.portable-catalog");
+  if (entry?.files === undefined) throw new Error("The ecosystem catalog component is unavailable.");
+  const marketplace = await loadPortableMarketplace(entry.files, { defaultLicense: "MIT" });
+  return {
+    files: summary.fileCount,
+    physicalLines: summary.physicalLines,
+    agents: marketplace.counts.agents,
+    skills: marketplace.counts.skills,
+    commands: marketplace.counts.commands,
+  };
 }
 
 function recordedOutput(relativePath: string): boolean {
@@ -165,8 +203,18 @@ async function main(): Promise<number> {
     root: parsed.root,
     ...(denyTerm === undefined ? {} : { denyTerm }),
   });
+  let metrics: CatalogMetrics | undefined;
+  try {
+    metrics = await verifiedCatalogMetrics(path.resolve(parsed.root));
+  } catch {
+    process.stderr.write("release.vendor-integrity\n");
+    return 1;
+  }
   if (findings.size === 0) {
-    process.stdout.write(redact("Release audit passed.\n", denyTerm));
+    const catalogSummary = metrics === undefined
+      ? ""
+      : ` Catalog: ${metrics.files.toLocaleString("en-US")} files, ${metrics.physicalLines.toLocaleString("en-US")} physical lines, ${metrics.agents.toLocaleString("en-US")} agents, ${metrics.skills.toLocaleString("en-US")} skills, ${metrics.commands.toLocaleString("en-US")} commands.`;
+    process.stdout.write(redact(`Release audit passed.${catalogSummary}\n`, denyTerm));
     return 0;
   }
   const lines = ["Release audit failed."];

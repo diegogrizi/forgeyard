@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "forgeyard-0.1.0",
-  "documentNamespace": "https://forgeyard.dev/spdx/forgeyard-0.1.0-ac9436b07b1600a56e0487c2995a4daec6442666f1d8b8326a9ebcd0a6bd05d1",
+  "documentNamespace": "https://forgeyard.dev/spdx/forgeyard-0.1.0-50d0a6d43f4af8d04e96e4cc4d8e8062edfdb239e961697bf2b890d7e297ee81",
   "creationInfo": {
     "created": "2026-09-15T00:00:00Z",
     "creators": [
@@ -5940,6 +5940,30 @@
           "referenceLocator": "pkg:npm/yoctocolors@2.2.0"
         }
       ]
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-github.wshobson-agents",
+      "name": "Agentic Plugin Marketplace",
+      "versionInfo": "4236bb91f8395b0435f1d8b8baf9e8e4c69a8620",
+      "downloadLocation": "https://github.com/wshobson/agents",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97"
+        }
+      ],
+      "homepage": "https://github.com/wshobson/agents",
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "vcs",
+          "referenceLocator": "git+https://github.com/wshobson/agents@4236bb91f8395b0435f1d8b8baf9e8e4c69a8620"
+        }
+      ]
     }
   ],
   "relationships": [
@@ -6352,6 +6376,11 @@
       "spdxElementId": "SPDXRef-Package-fix-dts-default-cjs-exports-e23504e7cc52",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-rollup-b24e83403df2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-forgeyard",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Vendor-github.wshobson-agents"
     },
     {
       "spdxElementId": "SPDXRef-Package-forgeyard",

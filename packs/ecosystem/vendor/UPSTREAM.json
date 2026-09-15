@@ -8,5 +8,10 @@
   "physicalLines": 211594,
   "bytes": 6737904,
   "treeSha256": "cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97",
-  "licenseSha256": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746"
+  "licenseSha256": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746",
+  "npmTransport": {
+    "sourcePath": "plugins/ship-mate/.gitignore",
+    "carrierPath": "npm-carriers/ship-mate.gitignore",
+    "reason": "npm excludes nested .gitignore files from package tarballs"
+  }
 }

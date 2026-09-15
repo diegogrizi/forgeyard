@@ -53,10 +53,15 @@ describe("public npm package contents", () => {
       "dist/cli/main.js",
       "schemas/forgeyard-config.schema.json",
       "profiles/hackathon.yaml",
+      "profiles/minimal.yaml",
+      "profiles/full.yaml",
       "packs/foundation/pack.yaml",
+      "packs/ecosystem/vendor/UPSTREAM.json",
+      "packs/ecosystem/vendor/LICENSE",
       "packs/presentation/pack.yaml",
       "sources/catalog.yaml",
     ]));
+    expect(paths.filter((filePath) => filePath.startsWith("packs/ecosystem/vendor/"))).toHaveLength(1_009);
   });
 
   test("contains only allow-listed publish paths", () => {

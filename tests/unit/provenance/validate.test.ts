@@ -209,4 +209,52 @@ describe("release provenance validation", () => {
     referenced.packs[0]!.provenance = { mode: "adapted", sourceId: "reference.pack" };
     expect(validateProvenance(referenced).referencedSourceIds).toContain("reference.pack");
   });
+
+  test("binds vendored attestations to their source, license, and verified tree summary", () => {
+    const input = clone();
+    input.catalog.sources.push({
+      id: "github.catalog",
+      name: "Portable catalog",
+      url: "https://github.com/example/catalog",
+      revision: "a".repeat(40),
+      license: "MIT",
+      provenance: "vendored-unmodified",
+      retrievedAt: "2026-09-15",
+      notes: "Pinned test catalog.",
+    });
+    input.packs.push({
+      schemaVersion: 1,
+      id: "catalog-pack",
+      version: "1.0.0",
+      license: "MIT",
+      provenance: { mode: "vendored-unmodified", sourceId: "github.catalog" },
+      components: [],
+    });
+    const summary = {
+      ok: true as const,
+      fileCount: 100,
+      physicalLines: 10_000,
+      bytes: 500_000,
+      treeSha256: "b".repeat(64),
+      licenseSha256: "c".repeat(64),
+    };
+    input.vendoredSources = [{
+      packId: "catalog-pack",
+      sourceId: "github.catalog",
+      licenseRelativePath: "packs/catalog/vendor/LICENSE",
+      attestation: {
+        schemaVersion: 1,
+        source: "https://github.com/example/catalog",
+        revision: "a".repeat(40),
+        license: "MIT",
+        contentRoot: "plugins",
+        ...summary,
+      },
+      summary,
+    }];
+
+    expect(validateProvenance(input).vendoredSources).toHaveLength(1);
+    input.vendoredSources[0]!.attestation.treeSha256 = "d".repeat(64);
+    expectInvalid(input, "does not match verified content");
+  });
 });

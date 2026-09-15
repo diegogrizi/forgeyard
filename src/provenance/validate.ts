@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { PackManifest, SourceRecord } from "../core/contracts.js";
+import type { VendorAttestation, VendorTreeSummary } from "./vendor-catalog.js";
 
 const EXACT_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 const UNKNOWN_LICENSES = new Set(["", "UNKNOWN", "NOASSERTION", "NONE", "UNLICENSED"]);
@@ -56,6 +57,7 @@ export interface ProvenanceValidationInput {
   catalog: SourceCatalogDocument;
   packs: PackManifest[];
   installedPackages: InstalledPackageMetadata[];
+  vendoredSources?: readonly VendoredSourceMetadata[];
 }
 
 export interface ProvenanceWorkspace extends ProvenanceValidationInput {
@@ -66,6 +68,15 @@ export interface ProvenanceWorkspace extends ProvenanceValidationInput {
 export interface ValidatedProvenance {
   directDependencies: readonly SourceRecord[];
   referencedSourceIds: readonly string[];
+  vendoredSources: readonly VendoredSourceMetadata[];
+}
+
+export interface VendoredSourceMetadata {
+  packId: string;
+  sourceId: string;
+  licenseRelativePath: string;
+  attestation: VendorAttestation;
+  summary: VendorTreeSummary;
 }
 
 export class ProvenanceValidationError extends Error {
@@ -204,6 +215,43 @@ export function validateProvenance(input: ProvenanceValidationInput): ValidatedP
     }
   }
 
+  const vendoredSources = [...(input.vendoredSources ?? [])]
+    .sort((left, right) => left.sourceId.localeCompare(right.sourceId, "en"));
+  const vendorPackIds = new Set<string>();
+  const vendorSourceIds = new Set<string>();
+  for (const vendor of vendoredSources) {
+    if (vendorPackIds.has(vendor.packId)) issues.push(`Vendored pack '${vendor.packId}' has duplicate attestations.`);
+    if (vendorSourceIds.has(vendor.sourceId)) issues.push(`Vendored source '${vendor.sourceId}' has duplicate attestations.`);
+    vendorPackIds.add(vendor.packId);
+    vendorSourceIds.add(vendor.sourceId);
+    const pack = input.packs.find((candidate) => candidate.id === vendor.packId);
+    const source = sourceById.get(vendor.sourceId);
+    if (pack?.provenance.mode !== "vendored-unmodified" || pack.provenance.sourceId !== vendor.sourceId) {
+      issues.push(`Vendor attestation for '${vendor.packId}' does not match its pack provenance.`);
+    }
+    if (
+      source === undefined ||
+      normalizeRepositoryUrl(source.url) !== normalizeRepositoryUrl(vendor.attestation.source) ||
+      source.revision !== vendor.attestation.revision ||
+      source.license !== vendor.attestation.license
+    ) {
+      issues.push(`Vendor attestation for '${vendor.sourceId}' does not match its source catalog record.`);
+    }
+    for (const field of ["fileCount", "physicalLines", "bytes", "treeSha256", "licenseSha256"] as const) {
+      if (vendor.attestation[field] !== vendor.summary[field]) {
+        issues.push(`Vendor attestation field '${field}' does not match verified content for '${vendor.sourceId}'.`);
+      }
+    }
+    if (!vendor.licenseRelativePath.endsWith("/LICENSE")) {
+      issues.push(`Vendored source '${vendor.sourceId}' does not identify a preserved license notice.`);
+    }
+  }
+  if (input.vendoredSources !== undefined) {
+    for (const pack of input.packs.filter((candidate) => candidate.provenance.mode === "vendored-unmodified")) {
+      if (!vendorPackIds.has(pack.id)) issues.push(`Vendored pack '${pack.id}' is missing a verified attestation.`);
+    }
+  }
+
   for (const source of input.catalog.sources) {
     if (!referenced.has(source.id)) issues.push(`Catalog source '${source.id}' is not referenced by a package or component.`);
   }
@@ -214,6 +262,7 @@ export function validateProvenance(input: ProvenanceValidationInput): ValidatedP
   return {
     directDependencies: direct.sort((left, right) => left.name.localeCompare(right.name, "en")),
     referencedSourceIds: [...referenced].sort((left, right) => left.localeCompare(right, "en")),
+    vendoredSources,
   };
 }
 
@@ -260,13 +309,17 @@ export async function loadProvenanceWorkspace(root: string): Promise<ProvenanceW
     ),
     readdir(path.join(absoluteRoot, "packs"), { withFileTypes: true }),
   ]);
-  const packs = await Promise.all(
+  const loadedPacks = await Promise.all(
     packDirectories
       .filter((entry) => entry.isDirectory())
       .sort((left, right) => left.name.localeCompare(right.name, "en"))
-      .map((entry) => readFile(path.join(absoluteRoot, "packs", entry.name, "pack.yaml"), "utf8")
-        .then((source) => parseYaml(source) as PackManifest)),
+      .map(async (entry) => ({
+        directory: path.join(absoluteRoot, "packs", entry.name),
+        manifest: await readFile(path.join(absoluteRoot, "packs", entry.name, "pack.yaml"), "utf8")
+          .then((source) => parseYaml(source) as PackManifest),
+      })),
   );
+  const packs = loadedPacks.map((entry) => entry.manifest);
   const packageLock: PackageLockDocument = {
     ...rawLock,
     packages: Object.fromEntries(Object.entries(rawLock.packages).map(([lockPath, record]) => [
@@ -285,5 +338,27 @@ export async function loadProvenanceWorkspace(root: string): Promise<ProvenanceW
     .map((name) => installedByPath.get(`node_modules/${name}`))
     .filter((entry): entry is InstalledPackageMetadata => entry !== undefined);
 
-  return { packageManifest, packageLock, catalog, packs, installedPackages, installedByPath };
+  const { readVendorAttestation, verifyVendorTree } = await import("./vendor-catalog.js");
+  const vendoredSources: VendoredSourceMetadata[] = [];
+  for (const loaded of loadedPacks.filter((entry) => entry.manifest.provenance.mode === "vendored-unmodified")) {
+    const sourceId = loaded.manifest.provenance.sourceId;
+    const trees = loaded.manifest.components.filter((component) => component.entryType === "tree");
+    if (sourceId === undefined || trees.length !== 1) {
+      throw new ProvenanceValidationError([
+        `Vendored pack '${loaded.manifest.id}' must declare one source and one attested tree component.`,
+      ]);
+    }
+    const vendorRoot = path.join(loaded.directory, trees[0]!.entry);
+    const attestation = await readVendorAttestation(path.join(vendorRoot, "UPSTREAM.json"));
+    const summary = await verifyVendorTree(vendorRoot, attestation);
+    vendoredSources.push({
+      packId: loaded.manifest.id,
+      sourceId,
+      licenseRelativePath: path.relative(absoluteRoot, path.join(vendorRoot, "LICENSE")).replaceAll("\\", "/"),
+      attestation,
+      summary,
+    });
+  }
+
+  return { packageManifest, packageLock, catalog, packs, installedPackages, installedByPath, vendoredSources };
 }

@@ -1,6 +1,8 @@
+import { cp, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import {
   readVendorAttestation,
@@ -8,6 +10,11 @@ import {
 } from "../../../src/provenance/vendor-catalog.js";
 
 const vendorRoot = path.resolve("packs", "ecosystem", "vendor");
+const temporaryRoots: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
 
 describe("vendored portable catalog", () => {
   test("matches its pinned MIT source attestation byte for byte", async () => {
@@ -31,5 +38,22 @@ describe("vendored portable catalog", () => {
       treeSha256: attestation.treeSha256,
       licenseSha256: attestation.licenseSha256,
     });
+  });
+
+  test("rejects a changed vendor byte and a missing upstream license notice", async () => {
+    const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "forgeyard-vendor-drift-"));
+    temporaryRoots.push(temporaryRoot);
+    await cp(vendorRoot, temporaryRoot, { recursive: true });
+    const attestation = await readVendorAttestation(path.join(temporaryRoot, "UPSTREAM.json"));
+    const changedFile = path.join(temporaryRoot, "plugins", "accessibility-compliance", ".claude-plugin", "plugin.json");
+
+    await writeFile(changedFile, "{}\n", "utf8");
+    await expect(verifyVendorTree(temporaryRoot, attestation)).rejects.toEqual(
+      expect.objectContaining({ name: "ProvenanceValidationError" }),
+    );
+
+    await cp(vendorRoot, temporaryRoot, { recursive: true, force: true });
+    await unlink(path.join(temporaryRoot, "LICENSE"));
+    await expect(verifyVendorTree(temporaryRoot, attestation)).rejects.toBeDefined();
   });
 });

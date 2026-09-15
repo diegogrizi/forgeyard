@@ -75,6 +75,41 @@ describe("non-leaking release audit", () => {
     expect(result.stdout).toContain("Release audit passed");
   });
 
+  test("scans vendored text for private terms but exempts upstream prompt syntax", async () => {
+    const root = await freshRoot();
+    const privateValue = "private-vendor-marker-9471";
+    await put(root, "packs/ecosystem/vendor/plugins/example/SKILL.md", "TODO: preserve {{upstream.placeholder}}.\n");
+
+    const clean = await audit(root);
+    const denied = await audit(
+      root,
+      ["--deny-term-env", "FORGEYARD_TEST_DENY_TERM"],
+      { FORGEYARD_TEST_DENY_TERM: privateValue },
+    );
+    await put(root, "packs/ecosystem/vendor/plugins/example/reference.md", `${privateValue}\n`);
+    const detected = await audit(
+      root,
+      ["--deny-term-env", "FORGEYARD_TEST_DENY_TERM"],
+      { FORGEYARD_TEST_DENY_TERM: privateValue },
+    );
+
+    expect(clean).toEqual(expect.objectContaining({ exitCode: 0 }));
+    expect(denied).toEqual(expect.objectContaining({ exitCode: 0 }));
+    expect(detected.exitCode).toBe(1);
+    expect(`${detected.stdout}\n${detected.stderr}`).toContain("release.private-deny-term");
+  });
+
+  test("reports verified catalog metrics for the release workspace", async () => {
+    const result = await audit(repositoryRoot);
+
+    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(result.stdout).toContain("1,007 files");
+    expect(result.stdout).toContain("211,594 physical lines");
+    expect(result.stdout).toContain("202 agents");
+    expect(result.stdout).toContain("183 skills");
+    expect(result.stdout).toContain("105 commands");
+  }, 30_000);
+
   test("reports generic rules for unfinished, unresolved, logged, remote, and identity-bearing content", async () => {
     const root = await freshRoot();
     await put(root, "README.md", "TODO: finish public wording.\n");

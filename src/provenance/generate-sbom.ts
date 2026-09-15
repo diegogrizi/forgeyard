@@ -20,16 +20,16 @@ interface SpdxPackage {
   copyrightText: "NOASSERTION";
   checksums?: readonly SpdxChecksum[];
   homepage?: string;
-  externalRefs: readonly [{
-    referenceCategory: "PACKAGE-MANAGER";
-    referenceType: "purl";
+  externalRefs: readonly {
+    referenceCategory: "PACKAGE-MANAGER" | "OTHER";
+    referenceType: "purl" | "vcs";
     referenceLocator: string;
-  }];
+  }[];
 }
 
 interface SpdxRelationship {
   spdxElementId: string;
-  relationshipType: "DESCRIBES" | "DEPENDS_ON";
+  relationshipType: "DESCRIBES" | "DEPENDS_ON" | "CONTAINS";
   relatedSpdxElement: string;
 }
 
@@ -37,6 +37,10 @@ function packageSpdxId(name: string, lockPath: string): string {
   if (lockPath === "") return "SPDXRef-Package-forgeyard";
   const safeName = name.replaceAll(/[^A-Za-z0-9.-]+/g, "-").replace(/^-|-$/g, "");
   return `SPDXRef-Package-${safeName}-${sha256Text(lockPath).slice(0, 12)}`;
+}
+
+function vendorSpdxId(sourceId: string): string {
+  return `SPDXRef-Vendor-${sourceId.replaceAll(/[^A-Za-z0-9.-]+/g, "-")}`;
 }
 
 function checksum(integrity: string | undefined): readonly SpdxChecksum[] | undefined {
@@ -92,7 +96,7 @@ function creationDate(workspace: ProvenanceWorkspace): string {
 }
 
 export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
-  validateProvenance(workspace);
+  const validated = validateProvenance(workspace);
   const entries = Object.entries(workspace.packageLock.packages)
     .sort(([left], [right]) => left.localeCompare(right, "en"));
   const ids = new Map(entries.map(([lockPath, locked]) => [lockPath, packageSpdxId(locked.name!, lockPath)]));
@@ -119,6 +123,27 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
       }],
     };
   });
+  const sourceById = new Map(workspace.catalog.sources.map((source) => [source.id, source]));
+  for (const vendor of validated.vendoredSources) {
+    const source = sourceById.get(vendor.sourceId)!;
+    packages.push({
+      SPDXID: vendorSpdxId(vendor.sourceId),
+      name: source.name,
+      versionInfo: vendor.attestation.revision,
+      downloadLocation: source.url,
+      filesAnalyzed: false,
+      licenseConcluded: vendor.attestation.license,
+      licenseDeclared: vendor.attestation.license,
+      copyrightText: "NOASSERTION",
+      checksums: [{ algorithm: "SHA256", checksumValue: vendor.summary.treeSha256 }],
+      homepage: source.url,
+      externalRefs: [{
+        referenceCategory: "OTHER",
+        referenceType: "vcs",
+        referenceLocator: `git+${source.url}@${vendor.attestation.revision}`,
+      }],
+    });
+  }
   const relationships: SpdxRelationship[] = [{
     spdxElementId: "SPDXRef-DOCUMENT",
     relationshipType: "DESCRIBES",
@@ -135,9 +160,22 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
       });
     }
   }
+  for (const vendor of validated.vendoredSources) {
+    relationships.push({
+      spdxElementId: ids.get("")!,
+      relationshipType: "CONTAINS",
+      relatedSpdxElement: vendorSpdxId(vendor.sourceId),
+    });
+  }
   const uniqueRelationships = [...new Map(relationships.map((entry) => [JSON.stringify(entry), entry])).values()]
     .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right), "en"));
-  const lockDigest = sha256Text(canonicalJson(workspace.packageLock));
+  const lockDigest = sha256Text(canonicalJson({
+    packageLock: workspace.packageLock,
+    vendors: validated.vendoredSources.map((vendor) => ({
+      sourceId: vendor.sourceId,
+      attestation: vendor.attestation,
+    })),
+  }));
   const document = {
     spdxVersion: "SPDX-2.3",
     dataLicense: "CC0-1.0",
