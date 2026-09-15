@@ -51,7 +51,12 @@ export type ComponentKind =
   | "tool-policy"
   | "template"
   | "validator"
-  | "reference";
+  | "reference"
+  | "catalog";
+
+export type ComponentEntryType = "file" | "tree";
+
+export type ComponentFormat = "portable-plugin-marketplace-v1";
 
 export type ProvenanceMode =
   | "original"
@@ -66,6 +71,8 @@ export interface ComponentDeclaration {
   id: string;
   kind: ComponentKind;
   entry: string;
+  entryType?: ComponentEntryType;
+  format?: ComponentFormat;
   slot: string;
   template: boolean;
   ownership: "managed" | "seed";
@@ -104,6 +111,13 @@ export interface SourceRecord {
 export interface ResolvedComponent extends ComponentDeclaration {
   packId: string;
   packVersion: string;
+  sourcePath: string;
+  sha256: string;
+  treeFiles?: readonly ComponentTreeFile[];
+}
+
+export interface ComponentTreeFile {
+  relativePath: string;
   sourcePath: string;
   sha256: string;
 }

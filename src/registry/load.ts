@@ -6,17 +6,20 @@ import * as formatsModule from "ajv-formats";
 import { parse } from "yaml";
 
 import type {
+  ComponentTreeFile,
   PackManifest,
   ProfileManifest,
   SourceRecord,
 } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
-import { sha256Text } from "../core/hash.js";
-import { normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
+import { sha256Bytes, sha256Text } from "../core/hash.js";
+import { assertNoCaseCollisions, normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
 
 export interface LoadedEntry {
   sourcePath: string;
   sha256: string;
+  entryType?: "tree";
+  files?: readonly ComponentTreeFile[];
 }
 
 export interface LoadedPack {
@@ -117,6 +120,70 @@ function safeEntry(entry: string, packDirectory: string): string {
   return resolveInsideRoot(packDirectory, portable);
 }
 
+function ensureInside(directory: string, candidate: string, label: string): void {
+  const relative = path.relative(directory, candidate);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw registryError(`${label} escapes its declared directory.`, [candidate]);
+  }
+}
+
+async function loadTree(entryRoot: string, packDirectory: string): Promise<LoadedEntry> {
+  const canonicalRoot = await realpath(entryRoot);
+  ensureInside(packDirectory, canonicalRoot, "Tree component");
+  const files: ComponentTreeFile[] = [];
+
+  async function walk(directory: string, relativeDirectory: string): Promise<void> {
+    let children;
+    try {
+      children = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      throw registryError(`Unable to enumerate tree component '${entryRoot}'.`, [directory], error);
+    }
+    children.sort((left, right) => left.name.localeCompare(right.name, "en"));
+
+    for (const child of children) {
+      const candidate = path.join(directory, child.name);
+      const stats = await lstat(candidate);
+      if (stats.isSymbolicLink()) {
+        throw registryError("Symbolic links are not allowed inside tree components.", [candidate]);
+      }
+      const relativePath = normalizePortablePath(
+        relativeDirectory.length === 0 ? child.name : `${relativeDirectory}/${child.name}`,
+      );
+      if (stats.isDirectory()) {
+        const canonicalDirectory = await realpath(candidate);
+        ensureInside(canonicalRoot, canonicalDirectory, "Tree directory");
+        await walk(canonicalDirectory, relativePath);
+        continue;
+      }
+      if (!stats.isFile()) {
+        throw registryError("Tree components may contain only regular files and directories.", [candidate]);
+      }
+      const canonicalFile = await realpath(candidate);
+      ensureInside(canonicalRoot, canonicalFile, "Tree file");
+      files.push({
+        relativePath,
+        sourcePath: canonicalFile,
+        sha256: sha256Bytes(await readFile(canonicalFile)),
+      });
+    }
+  }
+
+  await walk(canonicalRoot, "");
+  try {
+    assertNoCaseCollisions(files.map((file) => file.relativePath));
+  } catch (error) {
+    throw registryError("Tree component paths collide after portable case normalization.", [entryRoot], error);
+  }
+  const aggregate = files.map((file) => `${file.relativePath}\0${file.sha256}\n`).join("");
+  return {
+    entryType: "tree",
+    sourcePath: canonicalRoot,
+    sha256: sha256Text(aggregate),
+    files,
+  };
+}
+
 async function loadEntries(packDirectory: string, manifest: PackManifest): Promise<ReadonlyMap<string, LoadedEntry>> {
   const entries = new Map<string, LoadedEntry>();
   const canonicalPackDirectory = await realpath(packDirectory);
@@ -129,15 +196,22 @@ async function loadEntries(packDirectory: string, manifest: PackManifest): Promi
     } catch (error) {
       throw registryError(`Component entry '${component.entry}' does not exist.`, [candidate], error);
     }
-    if (stats.isSymbolicLink() || !stats.isFile()) {
+    if (stats.isSymbolicLink()) {
+      throw registryError(`Component entry '${component.entry}' must not be a symbolic link.`, [candidate]);
+    }
+    if (component.entryType === "tree") {
+      if (!stats.isDirectory()) {
+        throw registryError(`Tree component entry '${component.entry}' must be a directory.`, [candidate]);
+      }
+      entries.set(component.id, await loadTree(candidate, canonicalPackDirectory));
+      continue;
+    }
+    if (!stats.isFile()) {
       throw registryError(`Component entry '${component.entry}' must be a regular file.`, [candidate]);
     }
 
     const canonicalEntry = await realpath(candidate);
-    const relative = path.relative(canonicalPackDirectory, canonicalEntry);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
-      throw registryError(`Component entry '${component.entry}' escapes its pack directory.`, [candidate]);
-    }
+    ensureInside(canonicalPackDirectory, canonicalEntry, `Component entry '${component.entry}'`);
     const source = await readFile(canonicalEntry, "utf8");
     entries.set(component.id, { sourcePath: canonicalEntry, sha256: sha256Text(source) });
   }

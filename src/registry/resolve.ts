@@ -87,6 +87,7 @@ export function resolveProfile(
         packVersion: loadedPack.manifest.version,
         sourcePath: entry.sourcePath,
         sha256: entry.sha256,
+        ...(entry.files === undefined ? {} : { treeFiles: entry.files }),
       });
       slots.set(slotKey, declaration.id);
     }

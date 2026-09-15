@@ -71,10 +71,13 @@
               "tool-policy",
               "template",
               "validator",
-              "reference"
+              "reference",
+              "catalog"
             ]
           },
           "entry": { "type": "string", "minLength": 1, "maxLength": 260 },
+          "entryType": { "enum": ["file", "tree"] },
+          "format": { "enum": ["portable-plugin-marketplace-v1"] },
           "slot": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
           "template": { "type": "boolean" },
           "ownership": { "enum": ["managed", "seed"] },
@@ -90,7 +93,35 @@
             "uniqueItems": true,
             "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" }
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "kind": { "const": "catalog" } },
+              "required": ["kind"]
+            },
+            "then": {
+              "required": ["entryType", "format"],
+              "properties": {
+                "entryType": { "const": "tree" },
+                "format": { "const": "portable-plugin-marketplace-v1" }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "entryType": { "const": "tree" } },
+              "required": ["entryType"]
+            },
+            "then": {
+              "required": ["format"],
+              "properties": {
+                "kind": { "const": "catalog" },
+                "format": { "const": "portable-plugin-marketplace-v1" }
+              }
+            }
+          }
+        ]
       }
     }
   }
