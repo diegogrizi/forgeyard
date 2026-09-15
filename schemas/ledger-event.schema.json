@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeyard.dev/schemas/ledger-event.schema.json",
+  "title": "Forgeyard local ledger event",
+  "oneOf": [
+    { "$ref": "#/definitions/taskTransition" },
+    { "$ref": "#/definitions/usage" }
+  ],
+  "definitions": {
+    "common": {
+      "type": "object",
+      "required": ["schemaVersion", "eventId", "recordedAt", "kind", "taskId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "eventId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$" },
+        "recordedAt": { "type": "string", "format": "date-time" },
+        "kind": { "type": "string" },
+        "taskId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" }
+      }
+    },
+    "taskTransition": {
+      "allOf": [
+        { "$ref": "#/definitions/common" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "eventId", "recordedAt", "kind", "taskId", "action", "workerId", "graphSha256", "runtimeStatus"],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "eventId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$" },
+            "recordedAt": { "type": "string", "format": "date-time" },
+            "kind": { "const": "task-transition" },
+            "taskId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" },
+            "action": { "enum": ["claim", "checkpoint", "resume", "complete", "fail", "cancel"] },
+            "workerId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+            "graphSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "runtimeStatus": { "enum": ["pending", "active", "completed", "blocked", "canceled"] }
+          }
+        }
+      ]
+    },
+    "usage": {
+      "allOf": [
+        { "$ref": "#/definitions/common" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "eventId", "recordedAt", "kind", "taskId", "provider", "model", "inputTokens", "outputTokens", "costUsd", "durationMs"],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "eventId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$" },
+            "recordedAt": { "type": "string", "format": "date-time" },
+            "kind": { "const": "usage" },
+            "taskId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" },
+            "provider": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+            "model": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+            "inputTokens": { "type": "integer", "minimum": 0 },
+            "outputTokens": { "type": "integer", "minimum": 0 },
+            "costUsd": { "type": "number", "minimum": 0, "maximum": 1000000 },
+            "durationMs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    }
+  }
+}

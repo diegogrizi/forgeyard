@@ -118,6 +118,8 @@ function service(): ForgeyardService {
     verify: vi.fn(async () => verifyResult),
     update: vi.fn(async () => updateResult),
     rollback: vi.fn(async () => rollbackResult),
+    task: vi.fn(async () => { throw new Error("not used"); }),
+    recordUsage: vi.fn(async () => { throw new Error("not used"); }),
   };
 }
 

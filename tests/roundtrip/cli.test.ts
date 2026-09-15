@@ -4,7 +4,12 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import type { InitCommandResult, UpdateCommandResult, VerifyCommandResult } from "../../src/application/forgeyard.js";
+import type {
+  InitCommandResult,
+  TaskCommandResult,
+  UpdateCommandResult,
+  VerifyCommandResult,
+} from "../../src/application/forgeyard.js";
 import { getReceiptStatus, parseReceipt } from "../../src/evidence/receipts.js";
 import { loadInstallManifest } from "../../src/installer/manifest.js";
 import { buildCli, runBuiltCli, runProcess } from "../helpers/cli.js";
@@ -16,6 +21,7 @@ const minimalAnswersPath = path.join(repositoryRoot, "fixtures", "answers", "min
 let sandboxRoot: string;
 let targetRoot: string;
 let initialOperationId: string;
+let verificationReceiptId: string;
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -240,6 +246,7 @@ describe("built Forgeyard CLI round trip", () => {
     const output = parseJson<VerifyCommandResult>(result.stdout);
     const receiptSource = await readFile(path.join(targetRoot, ...output.receiptPath.split("/")), "utf8");
     const receipt = parseReceipt(receiptSource, output.receiptPath);
+    verificationReceiptId = receipt.receiptId;
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output).toEqual(expect.objectContaining({ command: "verify", taskId: "T001", current: true }));
@@ -248,6 +255,57 @@ describe("built Forgeyard CLI round trip", () => {
     expect(receipt).not.toHaveProperty("stdout");
     expect(receipt).not.toHaveProperty("stderr");
     expect(await getReceiptStatus(targetRoot, receipt)).toBe("current");
+  });
+
+  test("resumes a claimed task through fresh CLI processes and records local accounting", async () => {
+    const status = parseJson<TaskCommandResult>((await runBuiltCli(
+      repositoryRoot,
+      ["task", "status", "--root", targetRoot, "--json"],
+      sandboxRoot,
+    )).stdout);
+    expect(status.snapshot.readyTaskIds).toEqual(["T001"]);
+
+    for (const args of [
+      ["task", "claim", "T001", "--worker", "roundtrip-worker", "--session", "roundtrip-session"],
+      ["task", "checkpoint", "T001", "--worker", "roundtrip-worker", "--note", "Visible slice implemented"],
+    ]) {
+      const result = await runBuiltCli(repositoryRoot, [...args, "--root", targetRoot, "--json"], sandboxRoot);
+      expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    }
+
+    const resumed = parseJson<TaskCommandResult>((await runBuiltCli(
+      repositoryRoot,
+      ["task", "resume", "T001", "--worker", "roundtrip-worker", "--root", targetRoot, "--json"],
+      sandboxRoot,
+    )).stdout);
+    expect(resumed.task).toEqual(expect.objectContaining({
+      status: "active",
+      checkpoint: expect.objectContaining({ note: "Visible slice implemented" }),
+    }));
+
+    const completedProcess = await runBuiltCli(repositoryRoot, [
+      "task", "complete", "T001", "--worker", "roundtrip-worker", "--receipt", verificationReceiptId,
+      "--root", targetRoot, "--json",
+    ], sandboxRoot);
+    const completed = parseJson<TaskCommandResult>(completedProcess.stdout);
+    expect(completedProcess).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    expect(completed.task).toEqual(expect.objectContaining({ status: "completed", receiptId: verificationReceiptId }));
+
+    const usage = await runBuiltCli(repositoryRoot, [
+      "ledger", "record", "--task", "T001", "--provider", "local-test", "--model", "fixture",
+      "--input-tokens", "120", "--output-tokens", "45", "--cost-usd", "0.031", "--duration-ms", "2400",
+      "--root", targetRoot, "--json",
+    ], sandboxRoot);
+    expect(usage).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
+    const ledgerLines = (await readFile(path.join(targetRoot, ".forgeyard", "ledger", "events.jsonl"), "utf8"))
+      .trim().split("\n").map((line) => JSON.parse(line));
+    expect(ledgerLines.map((event) => event.kind)).toEqual([
+      "task-transition",
+      "task-transition",
+      "task-transition",
+      "task-transition",
+      "usage",
+    ]);
   });
 
   test("dry-run and applied update are deterministic no-ops", async () => {

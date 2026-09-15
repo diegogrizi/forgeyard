@@ -16,6 +16,16 @@ import { applyRollback, planRollback } from "../installer/rollback.js";
 import { applyUpdate, planUpdate } from "../installer/update.js";
 import { loadRegistry } from "../registry/load.js";
 import { resolveProfile } from "../registry/resolve.js";
+import {
+  recordUsageCommand,
+  runTaskCommand,
+  type TaskCommandInput,
+  type TaskCommandResult,
+  type UsageCommandInput,
+  type UsageCommandResult,
+} from "./orchestration.js";
+
+export type { TaskCommandInput, TaskCommandResult, UsageCommandInput, UsageCommandResult } from "./orchestration.js";
 
 export type WriteStatus = "applied" | "preview" | "declined" | "no-op";
 
@@ -130,7 +140,9 @@ export type ForgeyardCommandResult =
   | DoctorCommandResult
   | VerifyCommandResult
   | UpdateCommandResult
-  | RollbackCommandResult;
+  | RollbackCommandResult
+  | TaskCommandResult
+  | UsageCommandResult;
 
 export interface ForgeyardService {
   init(input: InitCommandInput): Promise<InitCommandResult>;
@@ -138,6 +150,8 @@ export interface ForgeyardService {
   verify(input: VerifyCommandInput): Promise<VerifyCommandResult>;
   update(input: UpdateCommandInput): Promise<UpdateCommandResult>;
   rollback(input: RollbackCommandInput): Promise<RollbackCommandResult>;
+  task(input: TaskCommandInput): Promise<TaskCommandResult>;
+  recordUsage(input: UsageCommandInput): Promise<UsageCommandResult>;
 }
 
 export interface ForgeyardApplicationOptions {
@@ -452,5 +466,9 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         changes: { removed: result.removed, restored: result.restored },
       };
     },
+
+    task: runTaskCommand,
+
+    recordUsage: recordUsageCommand,
   };
 }

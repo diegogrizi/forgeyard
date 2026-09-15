@@ -25,11 +25,11 @@
 
 ## Task 3: Expose task and ledger commands
 
-- [ ] Add machine-readable and human-readable `forgeyard task` subcommands.
-- [ ] Append transition timing and optional provider/model/token/cost observations to a secret-free local JSONL ledger.
-- [ ] Add stable error codes and remediation for graph, state, scope, budget, and completion failures.
-- [ ] Add built-CLI round trips that claim, checkpoint, resume, verify, complete, and reload state in a fresh process.
-- [ ] Commit as `feat: expose Forgeyard task orchestration commands`.
+- [x] Add machine-readable and human-readable `forgeyard task` subcommands.
+- [x] Append transition timing and optional provider/model/token/cost observations to a secret-free local JSONL ledger.
+- [x] Add stable error codes and remediation for graph, state, scope, budget, and completion failures.
+- [x] Add built-CLI round trips that claim, checkpoint, resume, verify, complete, and reload state in a fresh process.
+- [x] Commit as `feat: expose Forgeyard task orchestration commands`.
 
 ## Task 4: Install deterministic write guards
 
