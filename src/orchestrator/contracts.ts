@@ -82,7 +82,7 @@ export interface TaskRuntimeState {
 }
 
 export interface RunStop {
-  reason: "retry-budget-exhausted" | "repeated-failure" | "time-budget-exhausted" | "canceled";
+  reason: "retry-budget-exhausted" | "repeated-failure" | "time-budget-exhausted" | "cost-budget-exhausted" | "canceled";
   taskId: string;
   at: string;
 }

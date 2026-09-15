@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, lstat, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { TextDecoder } from "node:util";
 
 import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
 import * as formatsModule from "ajv-formats";
@@ -40,7 +41,32 @@ export interface LedgerWriteResult {
   path: string;
 }
 
+export interface TaskUsageSummary {
+  observations: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  durationMs: number;
+}
+
+export interface UsageSummary {
+  observed: boolean;
+  totalCostUsd: number;
+  byTask: Record<string, TaskUsageSummary>;
+}
+
+interface PersistedUsageEvent {
+  kind: "usage";
+  taskId: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  durationMs: number;
+}
+
 let eventValidator: ValidateFunction | undefined;
+const MAX_LEDGER_BYTES = 16 * 1024 * 1024;
+const COST_PRECISION = 1_000_000;
 
 const defaultPorts: LedgerPorts = {
   clock: { now: () => new Date() },
@@ -73,6 +99,88 @@ function validator(): ValidateFunction {
 function validationText(errors: readonly ErrorObject[] | null | undefined): string {
   return (errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`)
     .sort((left, right) => left.localeCompare(right, "en")).join("; ") || "unknown schema error";
+}
+
+function emptyUsageSummary(): UsageSummary {
+  return { observed: false, totalCostUsd: 0, byTask: {} };
+}
+
+function costUnits(value: number): number {
+  return Math.round(value * COST_PRECISION);
+}
+
+function isUsageEvent(value: unknown): value is PersistedUsageEvent {
+  return typeof value === "object" && value !== null && (value as { kind?: unknown }).kind === "usage";
+}
+
+export async function readUsageSummary(rootInput: string): Promise<UsageSummary> {
+  const root = path.resolve(rootInput);
+  const ledgerPath = resolveInsideRoot(root, ".forgeyard/ledger/events.jsonl");
+  let details;
+  try {
+    details = await lstat(ledgerPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyUsageSummary();
+    throw ledgerError("Unable to inspect the local usage ledger.", [ledgerPath]);
+  }
+  if (!details.isFile() || details.isSymbolicLink() || details.size > MAX_LEDGER_BYTES) {
+    throw ledgerError("The local usage ledger is not a bounded regular file.", [ledgerPath]);
+  }
+
+  let source: string;
+  try {
+    const bytes = await readFile(ledgerPath);
+    if (bytes.byteLength > MAX_LEDGER_BYTES) {
+      throw ledgerError("The local usage ledger exceeds the supported size limit.", [ledgerPath]);
+    }
+    source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch (error) {
+    if (error instanceof ForgeyardError) throw error;
+    throw ledgerError("Unable to read the local usage ledger as UTF-8.", [ledgerPath]);
+  }
+  if (source.includes("\0")) throw ledgerError("The local usage ledger contains forbidden NUL bytes.", [ledgerPath]);
+
+  const validate = validator();
+  const byTaskUnits = new Map<string, TaskUsageSummary>();
+  let totalCostUnits = 0;
+  let observed = false;
+  for (const line of source.split(/\r?\n/u)) {
+    if (line.trim().length === 0) continue;
+    let event: unknown;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      throw ledgerError("The local usage ledger contains invalid JSON.", [ledgerPath]);
+    }
+    if (!validate(event)) {
+      throw ledgerError(`Ledger event failed schema validation: ${validationText(validate.errors)}`, [ledgerPath]);
+    }
+    if (!isUsageEvent(event)) continue;
+    observed = true;
+    const previous = byTaskUnits.get(event.taskId) ?? {
+      observations: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd: 0,
+      durationMs: 0,
+    };
+    const eventCostUnits = costUnits(event.costUsd);
+    previous.observations += 1;
+    previous.inputTokens += event.inputTokens;
+    previous.outputTokens += event.outputTokens;
+    previous.costUsd += eventCostUnits;
+    previous.durationMs += event.durationMs;
+    totalCostUnits += eventCostUnits;
+    byTaskUnits.set(event.taskId, previous);
+  }
+
+  const byTask = Object.fromEntries([...byTaskUnits.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .map(([taskId, summary]) => [taskId, {
+      ...summary,
+      costUsd: summary.costUsd / COST_PRECISION,
+    }]));
+  return { observed, totalCostUsd: totalCostUnits / COST_PRECISION, byTask };
 }
 
 async function appendEvent(rootInput: string, event: object): Promise<LedgerWriteResult> {

@@ -5,7 +5,11 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { loadTaskGraph } from "../../../src/orchestrator/graph.js";
-import { createTaskScheduler, type EvidencePort } from "../../../src/orchestrator/scheduler.js";
+import {
+  createTaskScheduler,
+  type CostPort,
+  type EvidencePort,
+} from "../../../src/orchestrator/scheduler.js";
 
 const temporaryRoots: string[] = [];
 
@@ -21,6 +25,7 @@ function source(
   scope: string,
   dependsOn: readonly string[] = [],
   maxRetries = 2,
+  maxCostUsd?: number,
 ): string {
   const dependencies = dependsOn.length === 0
     ? ["dependsOn: []"]
@@ -40,6 +45,7 @@ function source(
     "limits:",
     "  minutes: 45",
     `  maxRetries: ${maxRetries}`,
+    ...(maxCostUsd === undefined ? [] : [`  maxCostUsd: ${maxCostUsd}`]),
     "evidence:",
     "  required: true",
     "integration:",
@@ -61,6 +67,10 @@ async function graph(root: string) {
 
 function evidence(current: ReadonlySet<string> = new Set()): EvidencePort {
   return { isCurrent: async (_taskId, receiptId) => receiptId !== undefined && current.has(receiptId) };
+}
+
+function costs(read: (taskId: string) => { measured: boolean; costUsd: number }): CostPort {
+  return { forTask: async (taskId) => read(taskId) };
 }
 
 const clock = {
@@ -200,6 +210,61 @@ describe("resumable task scheduler", () => {
       reason: "time-budget-exhausted",
       taskId: "T001",
     }));
+  });
+
+  test("allows unmeasured cost but blocks a new claim at the recorded task limit", async () => {
+    const unmeasuredRoot = await freshRoot();
+    await put(unmeasuredRoot, "T001", source("T001", "src/one", [], 2, 1));
+    const unmeasured = createTaskScheduler({
+      root: unmeasuredRoot,
+      graph: await graph(unmeasuredRoot),
+      maxConcurrency: 1,
+      clock,
+      evidence: evidence(),
+      cost: costs(() => ({ measured: false, costUsd: 0 })),
+    });
+    await expect(unmeasured.claim({ taskId: "T001", workerId: "worker-one" })).resolves.toMatchObject({ status: "active" });
+
+    const measuredRoot = await freshRoot();
+    await put(measuredRoot, "T001", source("T001", "src/one", [], 2, 1));
+    const measured = createTaskScheduler({
+      root: measuredRoot,
+      graph: await graph(measuredRoot),
+      maxConcurrency: 1,
+      clock,
+      evidence: evidence(),
+      cost: costs(() => ({ measured: true, costUsd: 1 })),
+    });
+    await expect(measured.claim({ taskId: "T001", workerId: "worker-one" })).rejects.toEqual(
+      expect.objectContaining({ code: "FY_BUDGET_EXHAUSTED" }),
+    );
+    expect((await measured.status()).stopped).toEqual(expect.objectContaining({
+      reason: "cost-budget-exhausted",
+      taskId: "T001",
+    }));
+  });
+
+  test("blocks completion when newly recorded usage exceeds the task cost limit", async () => {
+    const root = await freshRoot();
+    await put(root, "T001", source("T001", "src/one", [], 2, 1));
+    let recorded = 0.5;
+    const scheduler = createTaskScheduler({
+      root,
+      graph: await graph(root),
+      maxConcurrency: 1,
+      clock,
+      evidence: evidence(new Set(["receipt-current"])),
+      cost: costs(() => ({ measured: true, costUsd: recorded })),
+    });
+    await scheduler.claim({ taskId: "T001", workerId: "worker-one" });
+    recorded = 1.01;
+
+    await expect(scheduler.complete({
+      taskId: "T001",
+      workerId: "worker-one",
+      receiptId: "receipt-current",
+    })).rejects.toEqual(expect.objectContaining({ code: "FY_BUDGET_EXHAUSTED" }));
+    expect((await scheduler.status()).stopped?.reason).toBe("cost-budget-exhausted");
   });
 
   test("rejects state written for a different task graph", async () => {

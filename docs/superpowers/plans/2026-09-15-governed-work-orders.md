@@ -39,12 +39,12 @@
 - Modify: `tests/unit/observability/ledger.test.ts`
 - Modify: `tests/integration/orchestrator/scheduler.test.ts`
 
-- [ ] Add failing tests for deterministic usage summaries, malformed ledger rejection, unmeasured cost, claim refusal at the recorded limit, and completion refusal above it.
-- [ ] Implement a bounded ledger reader that validates every event and sums only explicit usage observations.
-- [ ] Add a scheduler cost port and durable `cost-budget-exhausted` stop reason.
-- [ ] Preserve the distinction between unmeasured and zero-cost observations.
-- [ ] Run ledger, scheduler, state-schema, and type tests.
-- [ ] Commit as `feat: enforce recorded task budgets`.
+- [x] Add failing tests for deterministic usage summaries, malformed ledger rejection, unmeasured cost, claim refusal at the recorded limit, and completion refusal above it.
+- [x] Implement a bounded ledger reader that validates every event and sums only explicit usage observations.
+- [x] Add a scheduler cost port and durable `cost-budget-exhausted` stop reason.
+- [x] Preserve the distinction between unmeasured and zero-cost observations.
+- [x] Run ledger, scheduler, state-schema, and type tests.
+- [x] Commit as `feat: enforce recorded task budgets`.
 
 ## Task 3: Return host-executable work orders from `task next`
 

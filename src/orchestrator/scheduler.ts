@@ -5,6 +5,7 @@ import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
 import { getReceiptStatus, parseReceipt } from "../evidence/receipts.js";
+import { readUsageSummary } from "../observability/ledger.js";
 import type {
   RunState,
   SchedulerSnapshot,
@@ -20,12 +21,22 @@ export interface EvidencePort {
   isCurrent(taskId: string, receiptId: string | undefined): Promise<boolean>;
 }
 
+export interface CostObservation {
+  measured: boolean;
+  costUsd: number;
+}
+
+export interface CostPort {
+  forTask(taskId: string): Promise<CostObservation>;
+}
+
 export interface TaskSchedulerOptions {
   root: string;
   graph: TaskGraph;
   maxConcurrency: number;
   clock?: StateClock;
   evidence?: EvidencePort;
+  cost?: CostPort;
   store?: RunStateStore;
 }
 
@@ -166,6 +177,31 @@ export function createFilesystemEvidencePort(rootInput: string): EvidencePort {
   };
 }
 
+export function createLedgerCostPort(root: string): CostPort {
+  return {
+    async forTask(taskId) {
+      const summary = await readUsageSummary(root);
+      const task = summary.byTask[taskId];
+      return task === undefined
+        ? { measured: false, costUsd: 0 }
+        : { measured: true, costUsd: task.costUsd };
+    },
+  };
+}
+
+function costBudgetError(task: WorkflowTask, costUsd: number): ForgeyardError {
+  return schedulerError(
+    "FY_BUDGET_EXHAUSTED",
+    `Task ${task.id} recorded $${costUsd.toFixed(6)} against its $${task.limits.maxCostUsd!.toFixed(6)} cost budget.`,
+  );
+}
+
+function stopForCost(state: RunState, runtime: TaskRuntimeState, task: WorkflowTask, at: string): void {
+  runtime.status = "blocked";
+  clearClaim(runtime);
+  state.stopped = { reason: "cost-budget-exhausted", taskId: task.id, at };
+}
+
 export function createTaskScheduler(options: TaskSchedulerOptions): TaskScheduler {
   const maxConcurrency = Math.trunc(options.maxConcurrency);
   if (maxConcurrency < 1 || maxConcurrency > 16) {
@@ -174,6 +210,7 @@ export function createTaskScheduler(options: TaskSchedulerOptions): TaskSchedule
   const clock = options.clock ?? systemClock;
   const store = options.store ?? createFileRunStateStore(options.root);
   const evidence = options.evidence ?? createFilesystemEvidencePort(options.root);
+  const cost = options.cost ?? createLedgerCostPort(options.root);
   const graph = options.graph;
 
   return {
@@ -182,32 +219,48 @@ export function createTaskScheduler(options: TaskSchedulerOptions): TaskSchedule
       changed: false,
     })),
 
-    claim: (input) => store.transact(graph, clock, async (state) => {
-      validateIdentity(input.workerId, "Worker ID");
-      if (input.sessionId !== undefined) validateIdentity(input.sessionId, "Session ID");
-      const task = taskById(graph, input.taskId);
-      const runtime = state.tasks[input.taskId]!;
-      if (state.stopped !== null) throw schedulerError("FY_RUN_STOPPED", `The run stopped because ${state.stopped.reason}.`);
-      if (runtime.status === "active" && runtime.workerId === input.workerId) return { value: runtime, changed: false };
-      if (runtime.status !== "pending" || !dependenciesComplete(task, state)) {
-        throw schedulerError("FY_TASK_NOT_READY", `Task ${task.id} is not dependency-ready.`);
-      }
-      if (activeIds(state).length >= maxConcurrency) {
-        throw schedulerError("FY_CONCURRENCY_LIMIT", `The run already has ${maxConcurrency} active workers.`);
-      }
-      if (conflictsWithActive(task, state, graph)) {
-        throw schedulerError("FY_SCOPE_CONFLICT", `Task ${task.id} overlaps an active task write scope.`, task.writeScopes);
-      }
-      const now = clock.now();
-      runtime.status = "active";
-      runtime.attempts += 1;
-      runtime.workerId = input.workerId;
-      if (input.sessionId !== undefined) runtime.sessionId = input.sessionId;
-      runtime.claimedAt = now.toISOString();
-      runtime.deadlineAt = new Date(now.getTime() + task.limits.minutes * 60_000).toISOString();
-      runtime.guard = { writeScopes: task.writeScopes, protectedPaths: graph.protectedPaths };
-      return { value: runtime, changed: true };
-    }),
+    claim: async (input) => {
+      const outcome = await store.transact<{ runtime: TaskRuntimeState; error: ForgeyardError | null }>(graph, clock, async (state) => {
+        validateIdentity(input.workerId, "Worker ID");
+        if (input.sessionId !== undefined) validateIdentity(input.sessionId, "Session ID");
+        const task = taskById(graph, input.taskId);
+        const runtime = state.tasks[input.taskId]!;
+        if (state.stopped !== null) throw schedulerError("FY_RUN_STOPPED", `The run stopped because ${state.stopped.reason}.`);
+        if (runtime.status === "active" && runtime.workerId === input.workerId) {
+          return { value: { runtime, error: null }, changed: false };
+        }
+        if (runtime.status !== "pending" || !dependenciesComplete(task, state)) {
+          throw schedulerError("FY_TASK_NOT_READY", `Task ${task.id} is not dependency-ready.`);
+        }
+        if (activeIds(state).length >= maxConcurrency) {
+          throw schedulerError("FY_CONCURRENCY_LIMIT", `The run already has ${maxConcurrency} active workers.`);
+        }
+        if (conflictsWithActive(task, state, graph)) {
+          throw schedulerError("FY_SCOPE_CONFLICT", `Task ${task.id} overlaps an active task write scope.`, task.writeScopes);
+        }
+        if (task.limits.maxCostUsd !== undefined) {
+          const observation = await cost.forTask(task.id);
+          if (observation.measured && observation.costUsd >= task.limits.maxCostUsd) {
+            stopForCost(state, runtime, task, clock.now().toISOString());
+            return {
+              value: { runtime, error: costBudgetError(task, observation.costUsd) },
+              changed: true,
+            };
+          }
+        }
+        const now = clock.now();
+        runtime.status = "active";
+        runtime.attempts += 1;
+        runtime.workerId = input.workerId;
+        if (input.sessionId !== undefined) runtime.sessionId = input.sessionId;
+        runtime.claimedAt = now.toISOString();
+        runtime.deadlineAt = new Date(now.getTime() + task.limits.minutes * 60_000).toISOString();
+        runtime.guard = { writeScopes: task.writeScopes, protectedPaths: graph.protectedPaths };
+        return { value: { runtime, error: null }, changed: true };
+      });
+      if (outcome.error !== null) throw outcome.error;
+      return outcome.runtime;
+    },
 
     checkpoint: (input) => store.transact(graph, clock, async (state) => {
       const runtime = assertOwnedActive(state, input);
@@ -239,6 +292,16 @@ export function createTaskScheduler(options: TaskSchedulerOptions): TaskSchedule
             },
             changed: true,
           };
+        }
+        if (task.limits.maxCostUsd !== undefined) {
+          const observation = await cost.forTask(task.id);
+          if (observation.measured && observation.costUsd > task.limits.maxCostUsd) {
+            stopForCost(state, runtime, task, clock.now().toISOString());
+            return {
+              value: { runtime, error: costBudgetError(task, observation.costUsd) },
+              changed: true,
+            };
+          }
         }
         if (task.evidence.required && !await evidence.isCurrent(task.id, input.receiptId)) {
           throw schedulerError("FY_EVIDENCE_STALE", `Task ${task.id} requires a current successful verification receipt.`);

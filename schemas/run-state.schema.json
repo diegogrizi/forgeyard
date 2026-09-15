@@ -19,7 +19,7 @@
           "required": ["reason", "taskId", "at"],
           "properties": {
             "reason": {
-              "enum": ["retry-budget-exhausted", "repeated-failure", "time-budget-exhausted", "canceled"]
+              "enum": ["retry-budget-exhausted", "repeated-failure", "time-budget-exhausted", "cost-budget-exhausted", "canceled"]
             },
             "taskId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" },
             "at": { "type": "string", "format": "date-time" }
