@@ -69,7 +69,7 @@ export interface OperationResult {
   preserved: readonly string[];
 }
 
-function pathError(message: string, paths: readonly string[], cause?: unknown): ForgeyardError {
+export function pathError(message: string, paths: readonly string[], cause?: unknown): ForgeyardError {
   return new ForgeyardError({
     code: "FY_PATH_UNSAFE",
     message,
@@ -80,7 +80,7 @@ function pathError(message: string, paths: readonly string[], cause?: unknown): 
   });
 }
 
-function ownershipError(paths: readonly string[]): ForgeyardError {
+export function ownershipError(paths: readonly string[]): ForgeyardError {
   return new ForgeyardError({
     code: "FY_OWNERSHIP_CONFLICT",
     message: "Forgeyard would replace an unknown or locally modified file.",
@@ -90,7 +90,7 @@ function ownershipError(paths: readonly string[]): ForgeyardError {
   });
 }
 
-function transactionError(message: string, paths?: readonly string[], cause?: unknown): ForgeyardError {
+export function transactionError(message: string, paths?: readonly string[], cause?: unknown): ForgeyardError {
   return new ForgeyardError({
     code: "FY_TRANSACTION_FAILED",
     message,
@@ -101,11 +101,11 @@ function transactionError(message: string, paths?: readonly string[], cause?: un
   });
 }
 
-function digest(content: Uint8Array): string {
+export function digest(content: Uint8Array): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
-async function maybeStat(fileSystem: FileSystemPort, filePath: string): Promise<Stats | undefined> {
+export async function maybeStat(fileSystem: FileSystemPort, filePath: string): Promise<Stats | undefined> {
   try {
     return await fileSystem.lstat(filePath);
   } catch (error) {
@@ -114,7 +114,7 @@ async function maybeStat(fileSystem: FileSystemPort, filePath: string): Promise<
   }
 }
 
-async function assertSafeDestination(
+export async function assertSafeDestination(
   fileSystem: FileSystemPort,
   root: string,
   relativePath: string,
@@ -140,7 +140,7 @@ async function assertSafeDestination(
   return destination;
 }
 
-async function optionalManifest(
+export async function optionalManifest(
   root: string,
   fileSystem: FileSystemPort,
 ): Promise<{ manifest?: InstallManifest; source?: Buffer }> {
@@ -152,7 +152,7 @@ async function optionalManifest(
   return { manifest: parseInstallManifest(source.toString("utf8"), manifestPath), source };
 }
 
-function validatePlanShape(plan: InstallPlan): void {
+export function validatePlanShape(plan: InstallPlan): void {
   if (!path.isAbsolute(plan.targetRoot)) throw pathError("Install plan root must be absolute.", [plan.targetRoot]);
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{5,127}$/.test(plan.operationId)) {
     throw pathError("Operation ID is unsafe for local state paths.", [plan.operationId]);
@@ -220,11 +220,11 @@ export async function inspectInstallPlan(
   return { ...(prior.manifest === undefined ? {} : { manifest: prior.manifest }), files: inspected };
 }
 
-function journalText(journal: OperationJournal): string {
+export function journalText(journal: OperationJournal): string {
   return `${JSON.stringify(journal, null, 2)}\n`;
 }
 
-async function writeJournal(
+export async function writeJournal(
   fileSystem: FileSystemPort,
   journalPath: string,
   journal: OperationJournal,
@@ -271,6 +271,7 @@ export async function applyInstallPlan(
       return {
         path: file.planned.path,
         action: file.action,
+        ownership: file.planned.ownership,
         ...(file.currentSha256 === undefined ? {} : { preSha256: file.currentSha256 }),
         ...(postSha256 === undefined ? {} : { postSha256 }),
       };

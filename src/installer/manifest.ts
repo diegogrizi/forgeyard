@@ -30,6 +30,7 @@ export interface InstallManifest {
 export interface JournalEntry {
   path: string;
   action: "create" | "replace" | "delete" | "preserve" | "unchanged";
+  ownership: "managed" | "seed";
   preSha256?: string;
   postSha256?: string;
   backupPath?: string;
@@ -42,6 +43,47 @@ export interface OperationJournal {
   status: "prepared" | "completed" | "recovered" | "recovery-failed";
   entries: readonly JournalEntry[];
   recoveryPaths: readonly string[];
+  manifestBackupPath?: string;
+  sourceOperationId?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function parseOperationJournal(source: string, sourcePath: string): OperationJournal {
+  let value: unknown;
+  try {
+    value = JSON.parse(source);
+  } catch (error) {
+    throw metadataError(`Operation journal '${sourcePath}' is not valid JSON.`, [sourcePath], error);
+  }
+  if (
+    !isRecord(value) ||
+    value.schemaVersion !== 1 ||
+    typeof value.operationId !== "string" ||
+    !["install", "update", "rollback"].includes(String(value.kind)) ||
+    !["prepared", "completed", "recovered", "recovery-failed"].includes(String(value.status)) ||
+    !Array.isArray(value.entries) ||
+    !Array.isArray(value.recoveryPaths)
+  ) {
+    throw metadataError(`Operation journal '${sourcePath}' has an invalid structure.`, [sourcePath]);
+  }
+  for (const entry of value.entries) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.path !== "string" ||
+      !["create", "replace", "delete", "preserve", "unchanged"].includes(String(entry.action)) ||
+      !["managed", "seed"].includes(String(entry.ownership))
+    ) {
+      throw metadataError(`Operation journal '${sourcePath}' has an invalid entry.`, [sourcePath]);
+    }
+    normalizePortablePath(entry.path);
+    if (entry.backupPath !== undefined && typeof entry.backupPath !== "string") {
+      throw metadataError(`Operation journal '${sourcePath}' has an invalid backup path.`, [sourcePath]);
+    }
+  }
+  return value as unknown as OperationJournal;
 }
 
 let validateManifest: ValidateFunction | undefined;
