@@ -1,0 +1,26 @@
+schemaVersion: 1
+id: tailored
+version: 1.0.0
+packs:
+  - foundation
+  - delivery
+  - ecosystem
+catalog:
+  selection: curated
+  plugins:
+    - comprehensive-review
+    - debugging-toolkit
+    - developer-essentials
+    - documentation-generation
+    - git-pr-workflows
+    - tdd-workflows
+defaults:
+  timeboxMinutes: 300
+  orchestration:
+    mode: guided
+    maxConcurrency: 2
+  presentation:
+    enabled: false
+    audience: Project stakeholders
+    durationMinutes: 7
+    offline: true

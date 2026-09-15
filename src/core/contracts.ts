@@ -8,8 +8,56 @@ export interface QualityCommand {
   argv: NonEmptyArgv;
 }
 
-export type ProfileId = "minimal" | "hackathon" | "full";
+export type ProfileId = "minimal" | "hackathon" | "full" | "tailored";
 export type CatalogSelectionMode = "none" | "curated" | "all";
+
+export type ProjectKind =
+  | "frontend"
+  | "backend"
+  | "full-stack"
+  | "mobile"
+  | "data"
+  | "infrastructure"
+  | "library"
+  | "cli"
+  | "unknown";
+
+export interface IntakeEvidence {
+  path: string;
+  signal: string;
+}
+
+export interface IntakeConfig {
+  strategy: "automatic" | "manual";
+  request: string;
+  sources: readonly string[];
+  kind: ProjectKind;
+  languages: readonly string[];
+  frameworks: readonly string[];
+  evidence: readonly IntakeEvidence[];
+  confidence: "high" | "medium" | "low";
+  questions: readonly string[];
+}
+
+export interface CompositionChoice {
+  id: string;
+  reason: string;
+}
+
+export interface CompositionConfig {
+  strategy: "automatic" | "manual";
+  packs: readonly string[];
+  selected: readonly CompositionChoice[];
+  excluded: readonly CompositionChoice[];
+  analysisSha256: string;
+}
+
+export interface AutonomyConfig {
+  level: "supervised" | "balanced" | "autonomous";
+  maxCostUsd?: number;
+  stopOnAmbiguity: true;
+  externalEffects: "ask";
+}
 
 export interface CatalogSelection {
   selection: CatalogSelectionMode;
@@ -45,6 +93,9 @@ export interface ForgeyardConfig {
     durationMinutes: number;
     offline: true;
   };
+  intake?: IntakeConfig;
+  composition?: CompositionConfig;
+  autonomy?: AutonomyConfig;
 }
 
 export interface InitRequest {

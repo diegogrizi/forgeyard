@@ -75,6 +75,29 @@ describe("Forgeyard configuration", () => {
       offline: true,
     });
     expect(result.catalog).toEqual({ selection: "curated", plugins: [] });
+    expect(result.intake).toEqual({
+      strategy: "manual",
+      request: "Demonstrate one trustworthy user journey.",
+      sources: [],
+      kind: "unknown",
+      languages: [],
+      frameworks: [],
+      evidence: [],
+      confidence: "low",
+      questions: [],
+    });
+    expect(result.composition).toEqual({
+      strategy: "manual",
+      packs: ["delivery", "ecosystem", "foundation", "presentation"],
+      selected: [],
+      excluded: [],
+      analysisSha256: "0".repeat(64),
+    });
+    expect(result.autonomy).toEqual({
+      level: "supervised",
+      stopOnAmbiguity: true,
+      externalEffects: "ask",
+    });
     expect(candidate).not.toHaveProperty("timeboxMinutes");
     expect(candidate.orchestration).toEqual({});
   });
@@ -87,7 +110,7 @@ describe("Forgeyard configuration", () => {
     expect(() => validateConfig({ ...validConfig(), ...override })).toThrow(ForgeyardError);
   });
 
-  test("accepts minimal, hackathon, and full profile catalog contracts", () => {
+  test("accepts minimal, hackathon, full, and tailored profile catalog contracts", () => {
     expect(validateConfig(validConfig()).profile).toBe("hackathon");
     expect(validateConfig({
       ...validConfig(),
@@ -100,6 +123,36 @@ describe("Forgeyard configuration", () => {
       profile: "full",
       catalog: { selection: "all", plugins: [] },
     }).profile).toBe("full");
+    expect(validateConfig({
+      ...validConfig(),
+      profile: "tailored",
+      catalog: { selection: "curated", plugins: ["developer-essentials"] },
+      intake: {
+        strategy: "automatic",
+        request: "Add accessible checkout recovery.",
+        sources: ["requirements.md"],
+        kind: "frontend",
+        languages: ["typescript"],
+        frameworks: ["next.js", "react"],
+        evidence: [{ path: "package.json", signal: "dependency:next" }],
+        confidence: "high",
+        questions: [],
+      },
+      composition: {
+        strategy: "automatic",
+        packs: ["foundation", "delivery", "ecosystem"],
+        selected: [{ id: "developer-essentials", reason: "Baseline delivery capability." }],
+        excluded: [{ id: "agent-orchestration", reason: "Forgeyard is the primary workflow." }],
+        analysisSha256: "a".repeat(64),
+      },
+      autonomy: {
+        level: "balanced",
+        maxCostUsd: 20,
+        stopOnAmbiguity: true,
+        externalEffects: "ask",
+      },
+      presentation: { ...validConfig().presentation, enabled: false },
+    }).profile).toBe("tailored");
   });
 
   test.each(["codex", "claude-code", "cursor"])("accepts the %s project adapter", (adapter) => {

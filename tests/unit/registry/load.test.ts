@@ -79,6 +79,21 @@ afterEach(async () => {
 });
 
 describe("registry loader", () => {
+  test("loads the packaged tailored profile", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+
+    expect(registry.profiles.get("tailored")).toEqual(expect.objectContaining({
+      id: "tailored",
+      catalog: {
+        selection: "curated",
+        plugins: expect.arrayContaining(["developer-essentials", "tdd-workflows"]),
+      },
+      defaults: expect.objectContaining({
+        orchestration: { mode: "guided", maxConcurrency: 2 },
+      }),
+    }));
+  });
+
   test("loads, validates, and hashes a canonical registry", async () => {
     const root = await registryFixture();
 

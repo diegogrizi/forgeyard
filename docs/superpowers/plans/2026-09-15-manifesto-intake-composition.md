@@ -39,7 +39,7 @@
 - Produces: optional `intake`, `composition`, and `autonomy` sections on `ForgeyardConfig`, normalized by `validateConfig`.
 - Produces: profile ID `tailored`.
 
-- [ ] **Step 1: Write failing backward-compatibility and tailored-config tests**
+- [x] **Step 1: Write failing backward-compatibility and tailored-config tests**
 
 Add assertions equivalent to:
 
@@ -66,13 +66,13 @@ test("accepts an automatic tailored configuration", () => {
 });
 ```
 
-- [ ] **Step 2: Run the narrow tests and confirm the new contract is rejected**
+- [x] **Step 2: Run the narrow tests and confirm the new contract is rejected**
 
 Run: `npx vitest run tests/unit/config/config.test.ts tests/unit/registry/load.test.ts`
 
 Expected: FAIL because `tailored` and the new sections are unsupported.
 
-- [ ] **Step 3: Add exact TypeScript and schema contracts**
+- [x] **Step 3: Add exact TypeScript and schema contracts**
 
 Use these shapes:
 
@@ -116,7 +116,7 @@ export interface AutonomyConfig {
 
 Default legacy values must be manual, conservative, and stable. Automatic tailored configurations require non-empty `composition.packs`, a 64-character lowercase SHA-256, and `catalog.selection: curated`.
 
-- [ ] **Step 4: Add and load the tailored profile**
+- [x] **Step 4: Add and load the tailored profile**
 
 `profiles/tailored.yaml` supplies conservative defaults and the normal pack set. Its stored composition may override the exact pack set later:
 
@@ -134,13 +134,13 @@ defaults:
   presentation: { enabled: false, audience: Project stakeholders, durationMinutes: 7, offline: true }
 ```
 
-- [ ] **Step 5: Run the narrow tests until green**
+- [x] **Step 5: Run the narrow tests until green**
 
 Run: `npx vitest run tests/unit/config/config.test.ts tests/unit/registry/load.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```sh
 git add src/core/contracts.ts src/config/config.ts schemas/forgeyard-config.schema.json schemas/profile.schema.json profiles/tailored.yaml tests/unit/config/config.test.ts tests/unit/registry/load.test.ts

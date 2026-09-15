@@ -26,7 +26,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex', 'claude-code', or 'cursor'.",
+    remediation: "Use profile 'minimal', 'hackathon', 'full', or 'tailored' with adapter 'codex', 'claude-code', or 'cursor'.",
     exitCode: 2,
   });
 }
@@ -60,6 +60,45 @@ function withDefaults(value: unknown): unknown {
     if (copy.presentation.enabled === undefined) copy.presentation.enabled = copy.profile !== "minimal";
     if (copy.presentation.durationMinutes === undefined) copy.presentation.durationMinutes = 7;
     if (copy.presentation.offline === undefined) copy.presentation.offline = true;
+  }
+
+  if (!isRecord(copy.intake)) {
+    const project = isRecord(copy.project) ? copy.project : {};
+    copy.intake = {
+      strategy: "manual",
+      request: typeof project.purpose === "string" ? project.purpose : "",
+      sources: [],
+      kind: "unknown",
+      languages: [],
+      frameworks: [],
+      evidence: [],
+      confidence: "low",
+      questions: [],
+    };
+  }
+
+  if (!isRecord(copy.composition)) {
+    const profile = typeof copy.profile === "string" ? copy.profile : "minimal";
+    const packs = profile === "minimal"
+      ? ["foundation"]
+      : profile === "tailored"
+        ? ["foundation", "delivery", "ecosystem"]
+        : ["foundation", "delivery", "presentation", "ecosystem"];
+    copy.composition = {
+      strategy: "manual",
+      packs,
+      selected: [],
+      excluded: [],
+      analysisSha256: "0".repeat(64),
+    };
+  }
+
+  if (!isRecord(copy.autonomy)) {
+    copy.autonomy = {
+      level: "supervised",
+      stopOnAmbiguity: true,
+      externalEffects: "ask",
+    };
   }
 
   return copy;
@@ -137,10 +176,30 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
       plugins: [...config.catalog.plugins].sort((left, right) => left.localeCompare(right, "en")),
     },
     paths: { mutableRoots, protectedPaths, presentation },
+    ...(config.intake === undefined ? {} : {
+      intake: {
+        ...config.intake,
+        sources: config.intake.sources.map(normalizedPath).sort((left, right) => left.localeCompare(right, "en")),
+        languages: [...config.intake.languages].sort((left, right) => left.localeCompare(right, "en")),
+        frameworks: [...config.intake.frameworks].sort((left, right) => left.localeCompare(right, "en")),
+        evidence: [...config.intake.evidence]
+          .map((item) => ({ ...item, path: normalizedPath(item.path) }))
+          .sort((left, right) => left.path.localeCompare(right.path, "en") || left.signal.localeCompare(right.signal, "en")),
+        questions: [...config.intake.questions],
+      },
+    }),
+    ...(config.composition === undefined ? {} : {
+      composition: {
+        ...config.composition,
+        packs: [...config.composition.packs].sort((left, right) => left.localeCompare(right, "en")),
+        selected: [...config.composition.selected].sort((left, right) => left.id.localeCompare(right.id, "en")),
+        excluded: [...config.composition.excluded].sort((left, right) => left.id.localeCompare(right.id, "en")),
+      },
+    }),
   };
 }
 
-const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "full"]);
+const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "full", "tailored"]);
 const SUPPORTED_HARNESSES = new Set<HarnessId>(HARNESS_IDS);
 
 export function validateConfig(value: unknown): ForgeyardConfig {
