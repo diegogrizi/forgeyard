@@ -3,6 +3,7 @@ id: hackathon
 version: 1.0.0
 packs:
   - foundation
+  - presentation
 defaults:
   timeboxMinutes: 300
   orchestration:

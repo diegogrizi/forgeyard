@@ -9,6 +9,7 @@ import { sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
 import { loadInstallManifest, type InstallManifest } from "../installer/manifest.js";
 import { scanGeneratedContent } from "./content-audit.js";
+import { auditPresentationBundle } from "./presentation-audit.js";
 
 interface LockComponent {
   id: string;
@@ -109,9 +110,11 @@ async function checkManagedFiles(root: string, manifest: InstallManifest, lock: 
 
 async function checkCodexOutput(root: string, manifest: InstallManifest): Promise<CheckResult> {
   try {
-    const foundation = manifest.files.filter((record) => record.componentId.startsWith("foundation."));
+    const adapterFiles = manifest.files.filter(
+      (record) => record.componentId.startsWith("foundation.") || record.componentId.startsWith("presentation."),
+    );
     const files: PlannedFile[] = await Promise.all(
-      foundation.map(async (record) => {
+      adapterFiles.map(async (record) => {
         const content = await readFile(resolveInsideRoot(root, record.path), "utf8");
         return {
           path: record.path,
@@ -123,9 +126,28 @@ async function checkCodexOutput(root: string, manifest: InstallManifest): Promis
       }),
     );
     await createCodexAdapter().validateOutput(files);
-    return passed("codex-output", "Codex instructions, skill, reviewer, and task are structurally valid.");
+    return passed("codex-output", "Codex instructions, skills, reviewer, task, and presentation are structurally valid.");
   } catch (error) {
     return failed("codex-output", "Codex generated output is missing or structurally invalid.", errorPaths(error));
+  }
+}
+
+async function checkPresentationOutput(
+  root: string,
+  directory: string,
+  denyTerms: readonly string[],
+): Promise<CheckResult> {
+  try {
+    const findings = await auditPresentationBundle({ root, directory, denyTerms });
+    return findings.length === 0
+      ? passed("presentation-output", "Presentation output is offline, accessible, responsive, and identity-neutral.")
+      : failed(
+          "presentation-output",
+          "Presentation output violates one or more bundle rules.",
+          [...new Set(findings.map((finding) => finding.path))].sort(),
+        );
+  } catch {
+    return failed("presentation-output", "Presentation output could not be audited safely.", [directory]);
   }
 }
 
@@ -176,6 +198,11 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   if (manifest !== undefined && lock !== undefined) {
     checks.push(await checkManagedFiles(root, manifest, lock));
     checks.push(await checkCodexOutput(root, manifest));
+    checks.push(
+      config === undefined
+        ? failed("presentation-output", "Presentation output cannot be located because configuration is invalid.")
+        : await checkPresentationOutput(root, config.paths.presentation, input.denyTerms ?? []),
+    );
     const findings = await scanGeneratedContent({
       root,
       paths: manifest.files.map((record) => record.path),
@@ -193,6 +220,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   } else {
     checks.push(failed("managed-files", "Managed payload cannot be checked because install metadata is invalid."));
     checks.push(failed("codex-output", "Codex output cannot be checked because install metadata is invalid."));
+    checks.push(failed("presentation-output", "Presentation output cannot be audited because install metadata is invalid."));
     checks.push(failed("content-audit", "Generated content cannot be audited because install metadata is invalid."));
   }
 
