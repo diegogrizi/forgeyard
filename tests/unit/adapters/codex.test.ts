@@ -71,4 +71,33 @@ describe("Codex adapter", () => {
       dagScheduling: "unsupported",
     });
   });
+
+  test("integrates a portable catalog with the foundation output", async () => {
+    const config = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+    const registry = await loadRegistry(path.resolve("."));
+    const resolved = resolveProfile(registry, "hackathon", "codex");
+    const ecosystem = registry.packs.get("ecosystem")!;
+    const declaration = ecosystem.manifest.components.find(
+      (component) => component.id === "ecosystem.portable-catalog",
+    )!;
+    const entry = ecosystem.entries.get(declaration.id)!;
+    const adapter = createCodexAdapter();
+
+    const files = await adapter.render([
+      ...resolved.components,
+      {
+        ...declaration,
+        packId: ecosystem.manifest.id,
+        packVersion: ecosystem.manifest.version,
+        sourcePath: entry.sourcePath,
+        sha256: entry.sha256,
+        treeFiles: entry.files!,
+      },
+    ], config);
+
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(203);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(290);
+    expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
+    await adapter.validateOutput(files);
+  }, 30_000);
 });

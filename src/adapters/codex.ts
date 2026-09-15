@@ -10,6 +10,7 @@ import type {
 import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { auditPresentationSources } from "../doctor/presentation-audit.js";
+import { renderCodexCatalog } from "./codex-catalog.js";
 import { renderComponent } from "./render.js";
 import {
   escapeHtmlText,
@@ -217,6 +218,16 @@ function validateTask(content: string, filePath: string): void {
   }
 }
 
+function assertUniquePaths(files: readonly PlannedFile[]): void {
+  assertNoCaseCollisions(files.map((file) => file.path));
+  const seen = new Set<string>();
+  for (const file of files) {
+    const key = file.path.normalize("NFKC").toLocaleLowerCase("en-US");
+    if (seen.has(key)) throw adapterError("Codex output contains duplicate target paths.", [file.path]);
+    seen.add(key);
+  }
+}
+
 export function createCodexAdapter(): HarnessAdapter {
   return {
     id: "codex",
@@ -235,8 +246,23 @@ export function createCodexAdapter(): HarnessAdapter {
     },
     async render(components: readonly ResolvedComponent[], config: ForgeyardConfig): Promise<readonly PlannedFile[]> {
       this.validateConfig(config);
-      const bySlot = new Map(components.map((component) => [component.slot, component]));
+      const catalogComponents = components.filter((component) => component.kind === "catalog");
+      if (catalogComponents.length > 1) {
+        throw adapterError("Codex currently supports one portable catalog component per profile.");
+      }
+      const foundationComponents = components.filter((component) => component.kind !== "catalog");
+      const bySlot = new Map(foundationComponents.map((component) => [component.slot, component]));
       for (const component of components) {
+        if (component.kind === "catalog") {
+          if (
+            component.slot !== "catalog.portable.primary" ||
+            component.entryType !== "tree" ||
+            component.format !== "portable-plugin-marketplace-v1"
+          ) {
+            throw adapterError(`Codex cannot transform catalog component '${component.id}'.`);
+          }
+          continue;
+        }
         if (!SLOT_ORDER.includes(component.slot as CodexSlot)) {
           throw adapterError(`Codex has no target for component slot '${component.slot}'.`);
         }
@@ -249,11 +275,12 @@ export function createCodexAdapter(): HarnessAdapter {
         const target = targetForSlot(slot, config);
         files.push(await renderComponent(component, target, variablesFor(slot, config)));
       }
-      assertNoCaseCollisions(files.map((file) => file.path));
+      for (const catalog of catalogComponents) files.push(...await renderCodexCatalog(catalog, "all"));
+      assertUniquePaths(files);
       return files;
     },
     async validateOutput(files: readonly PlannedFile[]): Promise<void> {
-      assertNoCaseCollisions(files.map((file) => file.path));
+      assertUniquePaths(files);
       const byPath = new Map(files.map((file) => [file.path, file.content]));
       const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
       if (presentationRoot === undefined) throw adapterError("Generated presentation index is missing.");
@@ -271,13 +298,41 @@ export function createCodexAdapter(): HarnessAdapter {
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Codex output '${filePath}' is missing.`, [filePath]);
       }
-      if (/\{\{[^}]*\}\}/.test(files.map((file) => file.content).join("\n"))) {
+      const authoredOutput = files.filter((file) => !file.componentId.startsWith("ecosystem."));
+      if (/\{\{[^}]*\}\}/.test(authoredOutput.map((file) => file.content).join("\n"))) {
         throw adapterError("Generated Codex output contains an unresolved template expression.");
       }
       validateSkill(byPath.get(".agents/skills/forgeyard-workflow/SKILL.md")!, ".agents/skills/forgeyard-workflow/SKILL.md", "forgeyard-workflow");
       validateSkill(byPath.get(".agents/skills/forgeyard-showcase/SKILL.md")!, ".agents/skills/forgeyard-showcase/SKILL.md", "forgeyard-showcase");
       validateReviewer(byPath.get(".codex/agents/reviewer.toml")!, ".codex/agents/reviewer.toml");
       validateTask(byPath.get(".forgeyard/tasks/T001.yaml")!, ".forgeyard/tasks/T001.yaml");
+      for (const file of files.filter(
+        (candidate) => candidate.componentId.startsWith("ecosystem.agent.") && candidate.path.endsWith(".toml"),
+      )) {
+        const parsed = parseToml(file.content);
+        if (
+          typeof parsed.name !== "string" ||
+          typeof parsed.description !== "string" ||
+          !["read-only", "workspace-write"].includes(String(parsed.sandbox_mode)) ||
+          typeof parsed.developer_instructions !== "string"
+        ) {
+          throw adapterError("Generated catalog agent has invalid TOML fields.", [file.path]);
+        }
+      }
+      for (const file of files.filter(
+        (candidate) => candidate.componentId.startsWith("ecosystem.") && candidate.path.endsWith("/SKILL.md"),
+      )) {
+        const metadata = frontmatter(file.content);
+        if (
+          typeof metadata !== "object" ||
+          metadata === null ||
+          typeof (metadata as Record<string, unknown>).name !== "string" ||
+          typeof (metadata as Record<string, unknown>).description !== "string" ||
+          Buffer.byteLength(file.content, "utf8") > 8_192
+        ) {
+          throw adapterError("Generated catalog skill is invalid or exceeds the 8 KB limit.", [file.path]);
+        }
+      }
       const presentationFindings = auditPresentationSources({
         directory: presentationRoot,
         html: byPath.get(`${presentationRoot}/index.html`)!,
