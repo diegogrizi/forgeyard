@@ -10,6 +10,8 @@ You do not need to choose a profile, compare skill repositories, name an orchest
 
 Forgeyard is an auditable factory and lifecycle manager, not an LLM runtime. It prepares instructions, roles, skills, task state, evidence rules, guards, and optional presentation support for Codex, Claude Code, or Cursor. The selected host executes model work; an installed role is not a running or billable process.
 
+After preparation, use ordinary product language in the selected host: “implement the checkout recovery,” “fix this without changing the public API,” or “resume the current work.” The installed `forgeyard-workflow` controller reads the project state and obtains bounded work orders; the user does not have to choose skills or sequence lifecycle commands.
+
 ## Problem-first preparation
 
 Preview the evidence and proposed composition without writing:
@@ -140,13 +142,16 @@ Drive the persistent task graph through separate CLI processes:
 
 ```sh
 forgeyard task status --root ./my-project
+forgeyard task next --root ./my-project --json
 forgeyard task claim T001 --worker implementer-1 --root ./my-project
 forgeyard task checkpoint T001 --worker implementer-1 --note "RED test captured" --root ./my-project
 forgeyard task resume T001 --worker implementer-1 --root ./my-project
 forgeyard task complete T001 --worker implementer-1 --receipt <receipt-id> --root ./my-project
 ```
 
-`claim` enforces dependency readiness, the configured concurrency cap, retry/time budgets, and overlapping write scopes. `checkpoint` and `resume` persist through process interruption. Check a proposed write explicitly with `forgeyard guard T001 src/feature.ts --root ./my-project`. Claude Code projects also invoke the installed guard automatically before native `Write`, `Edit`, and `NotebookEdit` tools.
+`task next --json` returns either one guided order or at most the remaining native capacity. Each order includes the actual objective, role, selected capabilities, scopes, acceptance criteria, exact verification argv, time/cost state, and a complete host prompt. It does not claim work or launch a client. The host prompt makes claim-before-editing explicit.
+
+`claim` enforces dependency readiness, the configured concurrency cap, retry/time/cost budgets, and overlapping write scopes. `checkpoint` and `resume` persist through process interruption. If a cost ceiling exists but the host has not reported usage, the order says `unmeasured`; Forgeyard never calls that zero. Explicit observations are recorded with `forgeyard ledger record` and can durably stop a claim or completion at the task ceiling. Check a proposed write explicitly with `forgeyard guard T001 src/feature.ts --root ./my-project`. Claude Code projects also invoke the installed guard automatically before native `Write`, `Edit`, and `NotebookEdit` tools.
 
 For isolated branch work, create and validate a task worktree, then integrate it from the clean target branch:
 

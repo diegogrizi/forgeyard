@@ -84,7 +84,7 @@
 - Modify: `docs/superpowers/specs/2026-09-15-manifesto-aligned-factory-design.md`
 - Modify: this plan
 
-- [ ] Update documentation only for behavior proved by tests.
-- [ ] Run `npm run verify`, `git diff --check`, and inspect `npm pack --dry-run --json`.
-- [ ] Confirm `main` is the only registered local worktree and no forbidden identity term exists.
-- [ ] Commit as `feat: complete governed project work orders`.
+- [x] Update documentation only for behavior proved by tests.
+- [x] Run `npm run verify`, `git diff --check`, and inspect `npm pack --dry-run --json`.
+- [x] Confirm `main` is the only registered local worktree and no forbidden identity term exists.
+- [x] Commit as `feat: complete governed project work orders`.

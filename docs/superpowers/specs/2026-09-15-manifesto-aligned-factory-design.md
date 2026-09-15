@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for implementation by the product owner on 2026-09-15 through the instruction to correct the audited gaps without further confirmation gates.
+Implemented on `main`; final release verification is tracked in the governed-work-orders implementation plan.
 
 This design supersedes any earlier claim that the local factory is complete. The existing installer, evidence, scheduler, worktree, provenance, and rollback kernel remains the trusted foundation; this work adds the missing project-intake, decision, composition, and host-control layers.
 
@@ -104,7 +104,7 @@ Every adapter renders the same canonical intent into its native layout. In addit
 
 Existing host instructions are authoritative user content. When automatic preparation detects an unknown root `AGENTS.md` or `CLAUDE.md` that Forgeyard does not own, it preserves that file and renders Forgeyard's navigation contract to `.forgeyard/HOST.md` instead. The namespaced native workflow skill remains the activation surface. Forgeyard never appends an opaque block to, replaces, or takes ownership of existing instructions. Cursor's namespaced rule paths follow the same non-overwrite rule.
 
-Task wording derives from the request and project class. A focused maintenance suite may contain one implementation task plus review. A delivery suite contains contract, implementation, and independent review. The optional presentation task exists only when presentation is selected. All tasks retain exact argv, scope, retry, time, evidence, and integration contracts.
+Task wording derives from the request and project class. A focused short maintenance suite may contain one bounded implementation-and-verification task. A normal delivery suite contains contract, implementation, and independent review. The optional presentation task exists only when presentation is selected. All tasks retain exact argv, scope, retry, time, cost, evidence, and integration contracts.
 
 ### 6. Host-control protocol
 
@@ -113,12 +113,14 @@ The generated `forgeyard-workflow` skill is the ordinary natural-language contro
 1. inspect current Forgeyard state;
 2. stop if unresolved product questions are recorded;
 3. request dependency-ready work orders;
-4. claim work before dispatch;
+4. dispatch a bounded prompt whose first required action is claiming the task before any edit;
 5. select installed capabilities from the work order rather than asking the user;
 6. use native host subagents when supported, bounded by available slots;
 7. record checkpoints and any observable usage;
 8. verify and integrate exact revisions;
 9. clean integrated worktrees and report evidence-backed state.
+
+The controller never interprets work-order generation as execution: `task next` changes no claim, launches no client, and records no provider usage.
 
 The CLI exposes work orders for hosts but does not pretend that a role file is a process. `guided` mode returns one recommended work order. `native` mode returns up to the remaining concurrency capacity. This makes `orchestration.mode` operational without silently launching paid clients.
 
@@ -212,15 +214,15 @@ Tests use real temporary repositories and no network or model calls.
 
 ### Milestone A: Understand and decide
 
-Deliver inspector, capability rules, composer, `inspect`, `prepare`, tailored configuration, and composition report. This is the first usable vertical slice because it removes the ecosystem-choice burden.
+Delivered: inspector, capability rules, composer, `inspect`, `prepare`, tailored configuration, and composition report remove the ecosystem-choice burden.
 
 ### Milestone B: Tailor and govern
 
-Deliver project-specific task rendering, optional presentation, meaningful orchestration mode, work orders, and budget enforcement.
+Delivered: project-specific task rendering, optional presentation, meaningful orchestration mode, work orders, and explicit-ledger budget enforcement.
 
 ### Milestone C: Prove ordinary use
 
-Strengthen the generated controller skill and add deterministic end-to-end fixtures showing that a host can act from a product request without the user sequencing lifecycle commands. Real authenticated client execution remains separately labeled evidence and is never inferred from structural tests.
+Delivered structurally: the generated controller skill and packaged end-to-end fixtures show the complete host contract from a product request without user-sequenced lifecycle commands. Real authenticated client execution remains separately labeled evidence and is never inferred from structural tests.
 
 ## Acceptance criteria
 
