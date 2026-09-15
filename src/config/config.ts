@@ -1,0 +1,171 @@
+import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+
+import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
+import * as formatsModule from "ajv-formats";
+import { parse, stringify } from "yaml";
+
+import type { ForgeyardConfig } from "../core/contracts.js";
+import { ForgeyardError } from "../core/errors.js";
+import { normalizePortablePath } from "../core/paths.js";
+
+let validator: ValidateFunction | undefined;
+
+function configError(message: string, paths?: readonly string[], cause?: unknown): ForgeyardError {
+  return new ForgeyardError({
+    code: "FY_CONFIG_INVALID",
+    message,
+    remediation: "Correct the Forgeyard configuration and retry.",
+    exitCode: 2,
+    ...(paths === undefined ? {} : { paths }),
+    ...(cause === undefined ? {} : { cause }),
+  });
+}
+
+function selectionError(message: string): ForgeyardError {
+  return new ForgeyardError({
+    code: "FY_UNSUPPORTED_SELECTION",
+    message,
+    remediation: "Use profile 'hackathon' with adapter 'codex' for Forgeyard M1.",
+    exitCode: 2,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function withDefaults(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  const copy = structuredClone(value);
+  if (copy.timeboxMinutes === undefined) copy.timeboxMinutes = 300;
+
+  if (!isRecord(copy.orchestration)) {
+    copy.orchestration = { mode: "guided", maxConcurrency: 4 };
+  } else {
+    if (copy.orchestration.mode === undefined) copy.orchestration.mode = "guided";
+    if (copy.orchestration.maxConcurrency === undefined) copy.orchestration.maxConcurrency = 4;
+  }
+
+  if (isRecord(copy.presentation)) {
+    if (copy.presentation.enabled === undefined) copy.presentation.enabled = true;
+    if (copy.presentation.durationMinutes === undefined) copy.presentation.durationMinutes = 7;
+    if (copy.presentation.offline === undefined) copy.presentation.offline = true;
+  }
+
+  return copy;
+}
+
+function getValidator(): ValidateFunction {
+  if (validator !== undefined) return validator;
+  const schemaUrl = new URL("../../schemas/forgeyard-config.schema.json", import.meta.url);
+  const schemaText = requireSchema(schemaUrl);
+  const ajv = new Ajv({ allErrors: true, strict: true, coerceTypes: false, useDefaults: false });
+  formatsModule.default.default(ajv);
+  const compiled = ajv.compile(JSON.parse(schemaText));
+  validator = compiled;
+  return compiled;
+}
+
+function requireSchema(url: URL): string {
+  // The schema is packaged beside dist/ and is read synchronously only during first validation.
+  const path = decodeURIComponent(url.pathname).replace(/^\/(?=[A-Za-z]:\/)/, "");
+  return readFileSync(path, "utf8");
+}
+
+function formatValidation(errors: readonly ErrorObject[] | null | undefined): string {
+  if (errors === undefined || errors === null || errors.length === 0) return "unknown schema error";
+  return errors
+    .map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`)
+    .sort((left, right) => left.localeCompare(right, "en"))
+    .join("; ");
+}
+
+function normalizedPath(candidate: string): string {
+  try {
+    return normalizePortablePath(candidate);
+  } catch (error) {
+    throw configError(`Configuration path '${candidate}' is not portable.`, [candidate], error);
+  }
+}
+
+function caseKey(value: string): string {
+  return value.normalize("NFKC").toLocaleLowerCase("en-US");
+}
+
+function overlaps(left: string, right: string): boolean {
+  const a = caseKey(left);
+  const b = caseKey(right);
+  return a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
+}
+
+function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
+  const mutableRoots = config.paths.mutableRoots.map(normalizedPath);
+  const protectedPaths = config.paths.protectedPaths.map(normalizedPath);
+  const presentation = normalizedPath(config.paths.presentation);
+
+  for (const mutable of mutableRoots) {
+    for (const protectedPath of protectedPaths) {
+      if (overlaps(mutable, protectedPath)) {
+        throw configError("Mutable and protected paths overlap.", [mutable, protectedPath]);
+      }
+    }
+  }
+
+  if (!mutableRoots.some((root) => overlaps(root, presentation) && !presentation.startsWith(`${root}/../`))) {
+    throw configError("The presentation path must be inside a mutable root.", [presentation]);
+  }
+
+  const duplicates = [...mutableRoots, ...protectedPaths].map(caseKey);
+  if (new Set(duplicates).size !== duplicates.length) {
+    throw configError("Configuration paths collide on a case-insensitive filesystem.");
+  }
+
+  return {
+    ...config,
+    paths: { mutableRoots, protectedPaths, presentation },
+  };
+}
+
+export function validateConfig(value: unknown): ForgeyardConfig {
+  if (isRecord(value)) {
+    if (value.profile !== undefined && value.profile !== "hackathon") {
+      throw selectionError(`Profile '${String(value.profile)}' is not supported by Forgeyard M1.`);
+    }
+    if (
+      value.harnesses !== undefined &&
+      (!Array.isArray(value.harnesses) || value.harnesses.length !== 1 || value.harnesses[0] !== "codex")
+    ) {
+      throw selectionError("The selected adapter set is not supported by Forgeyard M1.");
+    }
+  }
+
+  const candidate = withDefaults(value);
+  const validate = getValidator();
+  if (!validate(candidate)) {
+    throw configError(`Configuration failed schema validation: ${formatValidation(validate.errors)}`);
+  }
+
+  return normalizeAndCheckPaths(candidate as ForgeyardConfig);
+}
+
+export async function loadConfig(filePath: string): Promise<ForgeyardConfig> {
+  let source: string;
+  try {
+    source = await readFile(filePath, "utf8");
+  } catch (error) {
+    throw configError(`Unable to read configuration file '${filePath}'.`, [filePath], error);
+  }
+
+  try {
+    return validateConfig(parse(source));
+  } catch (error) {
+    if (error instanceof ForgeyardError) throw error;
+    throw configError(`Configuration file '${filePath}' is not valid YAML.`, [filePath], error);
+  }
+}
+
+export function serializeConfig(config: ForgeyardConfig): string {
+  const value = validateConfig(config);
+  return stringify(value, { indent: 2, lineWidth: 0, sortMapEntries: false });
+}
