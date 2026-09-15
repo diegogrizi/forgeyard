@@ -1,5 +1,13 @@
 schemaVersion: 1
 sources:
+  - id: github.wshobson-agents
+    name: Agentic Plugin Marketplace
+    url: https://github.com/wshobson/agents
+    revision: 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620
+    license: MIT
+    provenance: vendored-unmodified
+    retrievedAt: 2026-09-15
+    notes: Pinned English portable plugin catalog distributed unchanged with its MIT license.
   - id: npm.inquirer-prompts
     name: "@inquirer/prompts"
     url: https://github.com/SBoudrias/Inquirer.js

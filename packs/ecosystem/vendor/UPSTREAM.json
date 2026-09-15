@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "source": "https://github.com/wshobson/agents",
+  "revision": "4236bb91f8395b0435f1d8b8baf9e8e4c69a8620",
+  "license": "MIT",
+  "contentRoot": "plugins",
+  "fileCount": 1007,
+  "physicalLines": 211594,
+  "bytes": 6949496,
+  "treeSha256": "c576ecf5dfd20e5694cd305d696dc28a8cfeb3986d9abfefeeb888504eccff6d",
+  "licenseSha256": "402666abc624142a13aaf2a6fbeb46bd03b9f9dd53f77704991244134fe8169a"
+}
