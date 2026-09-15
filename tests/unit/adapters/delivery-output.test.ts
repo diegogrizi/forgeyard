@@ -138,6 +138,28 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
     expect(byPath.get(".forgeyard/COMPOSITION.md")).toContain("Maximum recorded cost: USD 20");
     expect(byPath.get("PROJECT.md")).toContain("Add accessible checkout recovery.");
     expect(byPath.get("PROJECT.md")).toContain("requirements.md");
+    const tasks = ["T001", "T002", "T003"].map((id) =>
+      parseYaml(byPath.get(`.forgeyard/tasks/${id}.yaml`)!) as {
+        title: string;
+        objective: string;
+        acceptanceCriteria: string[];
+        role: string;
+        capabilities: string[];
+        limits: { maxCostUsd?: number };
+      }
+    );
+    for (const task of tasks) {
+      expect(`${task.title}\n${task.objective}\n${task.acceptanceCriteria.join("\n")}`)
+        .toContain("Add accessible checkout recovery.");
+      expect(task.capabilities).toEqual(expect.arrayContaining(["developer-essentials", "tdd-workflows"]));
+    }
+    expect(tasks.map((task) => task.role)).toEqual([
+      "frontend-implementer",
+      "frontend-implementer",
+      "read-only-reviewer",
+    ]);
+    expect(tasks.every((task) => task.limits.maxCostUsd !== undefined)).toBe(true);
+    expect(tasks.reduce((sum, task) => sum + task.limits.maxCostUsd!, 0)).toBeCloseTo(20, 6);
     const instruction = files.find((file) => file.componentId === "foundation.project-instructions");
     expect(instruction?.content).toContain("Do not ask the user to choose catalog skills");
     expect(byPath.has(".forgeyard/tasks/T004.yaml")).toBe(false);

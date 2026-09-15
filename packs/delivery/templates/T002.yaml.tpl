@@ -1,8 +1,9 @@
 schemaVersion: 1
 id: T002
-title: "Harden the visible slice into a reliable demonstration"
-objective: "Complete the chosen end-to-end journey, including its critical edge states, without widening the product prematurely"
+title: {{task.title}}
+objective: {{task.objective}}
 acceptanceCriteria:
+  - {{task.requestCriterion}}
   - "The journey starts from a reproducible local state and reaches its visible outcome"
   - "Critical loading, empty, failure, and recovery states within the journey are handled"
   - "The configured verification command passes at the frozen Git revision"
@@ -10,15 +11,13 @@ dependsOn:
   - T001
 writeScopes:
 {{task.writeScopes}}
-role: "full-stack-implementer"
+role: {{task.role}}
 capabilities:
-  - "implementation"
-  - "testing"
-  - "accessibility"
+{{task.capabilities}}
 limits:
   minutes: {{task.implementationMinutes}}
   maxRetries: 2
-evidence:
+{{task.costLimit}}evidence:
   required: true
 integration:
   owner: "integrator"

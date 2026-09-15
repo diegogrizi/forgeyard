@@ -11,7 +11,12 @@ import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderCodexCatalog } from "./codex-catalog.js";
-import { compositionVariables, instructionTarget, projectContextVariables } from "./factory-context.js";
+import {
+  compositionVariables,
+  instructionTarget,
+  projectContextVariables,
+  taskContractVariables,
+} from "./factory-context.js";
 import { renderComponent } from "./render.js";
 import {
   escapeHtmlText,
@@ -200,6 +205,7 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
       };
     case "task.initial":
       return {
+        ...taskContractVariables(config, "task.initial"),
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.writeScopes": yamlSequence(config.paths.mutableRoots),
         "task.initialMinutes": config.profile === "minimal" ? String(config.timeboxMinutes) : allocatedMinutes(config, 0.3),
@@ -220,17 +226,20 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
       return compositionVariables(config);
     case "task.implementation":
       return {
+        ...taskContractVariables(config, "task.implementation"),
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.writeScopes": yamlSequence(config.paths.mutableRoots),
         "task.implementationMinutes": allocatedMinutes(config, 0.45),
       };
     case "task.review":
       return {
+        ...taskContractVariables(config, "task.review"),
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.reviewMinutes": allocatedMinutes(config, 0.1),
       };
     case "task.demo":
       return {
+        ...taskContractVariables(config, "task.demo"),
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.presentationScope": yamlSequence([config.paths.presentation]),
         "task.demoMinutes": allocatedMinutes(config, 0.15),

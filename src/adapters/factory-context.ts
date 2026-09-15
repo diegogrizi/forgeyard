@@ -1,5 +1,14 @@
 import type { ForgeyardConfig } from "../core/contracts.js";
-import { escapeMarkdownInline } from "./strict-template.js";
+import { escapeMarkdownInline, quoteYamlString } from "./strict-template.js";
+
+export type ProjectTaskSlot = "task.initial" | "task.implementation" | "task.review" | "task.demo";
+
+const TASK_WEIGHTS: Readonly<Record<ProjectTaskSlot, number>> = {
+  "task.initial": 0.3,
+  "task.implementation": 0.45,
+  "task.review": 0.1,
+  "task.demo": 0.15,
+};
 
 function inlineList(values: readonly string[], fallback: string): string {
   return values.length === 0 ? fallback : values.map(escapeMarkdownInline).join(", ");
@@ -79,5 +88,108 @@ export function projectContextVariables(config: ForgeyardConfig): Readonly<Recor
     "delivery.proofRequirement": config.presentation.enabled
       ? "The offline presentation shows the same behavior and cites only captured evidence."
       : "The delivered behavior is backed by revision-bound verification evidence.",
+  };
+}
+
+function taskRole(config: ForgeyardConfig, slot: ProjectTaskSlot): string {
+  if (slot === "task.review") return "read-only-reviewer";
+  if (slot === "task.demo") return "demo-producer";
+  const kind = config.intake?.kind ?? "unknown";
+  return ({
+    frontend: "frontend-implementer",
+    backend: "backend-implementer",
+    "full-stack": "full-stack-implementer",
+    mobile: "mobile-implementer",
+    data: "data-implementer",
+    infrastructure: "infrastructure-implementer",
+    library: "library-implementer",
+    cli: "cli-implementer",
+    unknown: "software-implementer",
+  } as const)[kind];
+}
+
+function activeTaskSlots(config: ForgeyardConfig): readonly ProjectTaskSlot[] {
+  const packs = new Set(config.composition?.packs ?? []);
+  return [
+    "task.initial" as const,
+    ...(packs.has("delivery") ? ["task.implementation" as const, "task.review" as const] : []),
+    ...(packs.has("presentation") && config.presentation.enabled ? ["task.demo" as const] : []),
+  ];
+}
+
+function rounded(value: number): number {
+  return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+}
+
+function taskBudget(config: ForgeyardConfig, slot: ProjectTaskSlot): number | undefined {
+  const total = config.autonomy?.maxCostUsd;
+  if (total === undefined) return undefined;
+  const slots = activeTaskSlots(config);
+  const index = slots.indexOf(slot);
+  if (index < 0) return undefined;
+  const totalWeight = slots.reduce((sum, candidate) => sum + TASK_WEIGHTS[candidate], 0);
+  const allocated = slots.slice(0, -1).map((candidate) => rounded(total * TASK_WEIGHTS[candidate] / totalWeight));
+  return index === slots.length - 1
+    ? rounded(total - allocated.reduce((sum, value) => sum + value, 0))
+    : allocated[index];
+}
+
+function taskCapabilities(config: ForgeyardConfig, slot: ProjectTaskSlot): readonly string[] {
+  const selected = config.composition?.selected.map((choice) => choice.id) ?? [];
+  if (selected.length > 0) return selected;
+  if (slot === "task.review") return ["code-review", "risk-analysis"];
+  if (slot === "task.demo") return ["demo-rehearsal", "evidence-curation", "presentation"];
+  return ["implementation", "testing"];
+}
+
+function taskWording(config: ForgeyardConfig, slot: ProjectTaskSlot): {
+  title: string;
+  objective: string;
+  criterion: string;
+} {
+  const request = config.project.purpose.trim().replaceAll(/[\r\n]+/g, " ");
+  const short = request.slice(0, 140);
+  const kind = config.intake?.kind ?? "software";
+  switch (slot) {
+    case "task.initial":
+      return {
+        title: `Deliver the first verified slice: ${short}`,
+        objective: `Establish an observable ${kind} slice for the requested outcome: ${request}`,
+        criterion: `The observable behavior advances this requested outcome: ${request}`,
+      };
+    case "task.implementation":
+      return {
+        title: `Harden the requested outcome: ${short}`,
+        objective: `Complete the critical path and edge states for the requested outcome: ${request}`,
+        criterion: `The reliable implementation satisfies this requested outcome: ${request}`,
+      };
+    case "task.review":
+      return {
+        title: `Review the requested outcome independently: ${short}`,
+        objective: `Review the frozen revision against the requested outcome: ${request}`,
+        criterion: `The review explicitly evaluates this requested outcome: ${request}`,
+      };
+    case "task.demo":
+      return {
+        title: `Demonstrate the requested outcome: ${short}`,
+        objective: `Make the verified result understandable and reproducible for this requested outcome: ${request}`,
+        criterion: `The demonstration visibly proves this requested outcome: ${request}`,
+      };
+  }
+}
+
+export function taskContractVariables(
+  config: ForgeyardConfig,
+  slot: ProjectTaskSlot,
+): Readonly<Record<string, string>> {
+  const wording = taskWording(config, slot);
+  const budget = taskBudget(config, slot);
+  return {
+    "task.title": quoteYamlString(wording.title),
+    "task.objective": quoteYamlString(wording.objective),
+    "task.requestCriterion": quoteYamlString(wording.criterion),
+    "task.role": quoteYamlString(taskRole(config, slot)),
+    "task.capabilities": taskCapabilities(config, slot).map((id) => `  - ${quoteYamlString(id)}`).join("\n"),
+    "task.costLimit": budget === undefined ? "" : `  maxCostUsd: ${String(budget)}\n`,
   };
 }

@@ -23,11 +23,11 @@
 - Modify: `src/adapters/cursor.ts`
 - Modify: `tests/unit/adapters/delivery-output.test.ts`
 
-- [ ] Add failing assertions that every rendered task contains the stored request, a project-kind role/capability selection, and—when configured—a deterministic share of the total USD budget.
-- [ ] Add shared bounded task wording and budget-allocation helpers.
-- [ ] Render valid YAML for manual and automatic configurations; omit `maxCostUsd` when no budget exists.
-- [ ] Run adapter and schema tests.
-- [ ] Commit as `feat: tailor generated project tasks`.
+- [x] Add failing assertions that every rendered task contains the stored request, a project-kind role/capability selection, and—when configured—a deterministic share of the total USD budget.
+- [x] Add shared bounded task wording and budget-allocation helpers.
+- [x] Render valid YAML for manual and automatic configurations; omit `maxCostUsd` when no budget exists.
+- [x] Run adapter and schema tests.
+- [x] Commit as `feat: tailor generated project tasks`.
 
 ## Task 2: Read explicit usage and enforce task cost limits
 

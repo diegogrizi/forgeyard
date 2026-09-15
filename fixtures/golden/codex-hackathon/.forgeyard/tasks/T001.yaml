@@ -1,18 +1,17 @@
-# Replace this generic title and command only when the first visible slice is explicit.
 schemaVersion: 1
 id: T001
-title: "Define and verify the first visible slice"
-objective: "Deliver one observable end-to-end user journey before generalized infrastructure"
+title: "Deliver the first verified slice: Help a small team demonstrate one trustworthy user journey."
+objective: "Establish an observable unknown slice for the requested outcome: Help a small team demonstrate one trustworthy user journey."
 acceptanceCriteria:
+  - "The observable behavior advances this requested outcome: Help a small team demonstrate one trustworthy user journey."
   - "A user can complete the selected journey locally"
   - "The configured verification command passes at the frozen Git revision"
 dependsOn: []
 writeScopes:
   - "src"
   - "presentation"
-role: "full-stack-implementer"
+role: "software-implementer"
 capabilities:
-  - "product-framing"
   - "implementation"
   - "testing"
 limits:
