@@ -31,6 +31,7 @@ function dependencies() {
       stopped: null,
       tasks: [],
     },
+    workOrders: [],
   } as const;
   const ledgerResult = {
     schemaVersion: 1,
@@ -129,6 +130,26 @@ describe("task and ledger CLI", () => {
       durationMs: 2400,
     });
     expect(capture.read().stderr).toBe("");
+  });
+
+  test("summarizes returned work orders in plain next output", async () => {
+    const deps = dependencies();
+    deps.service.task = vi.fn(async () => ({
+      schemaVersion: 1,
+      ok: true,
+      command: "task",
+      action: "next",
+      root: "C:/fixture",
+      snapshot: {
+        graphSha256: "a".repeat(64), activeCount: 0, maxConcurrency: 4,
+        readyTaskIds: ["T001"], stopped: null, tasks: [],
+      },
+      workOrders: [{ taskId: "T001", title: "Visible outcome" }],
+    } as never));
+    const capture = captureIo();
+
+    expect(await runCli(["task", "next", "--root", "fixture"], deps, capture.io)).toBe(0);
+    expect(capture.read().stdout).toContain("Work orders: T001 — Visible outcome");
   });
 
   test("maps explicit guard paths to the service", async () => {

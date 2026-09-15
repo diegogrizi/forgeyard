@@ -156,6 +156,9 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
         ...(result.task === undefined ? [] : [`Task: ${result.task.id} (${result.task.status})`]),
         `Active: ${result.snapshot.activeCount}/${result.snapshot.maxConcurrency}`,
         lineList("Ready", result.snapshot.readyTaskIds),
+        ...(result.action === "next"
+          ? [lineList("Work orders", (result.workOrders ?? []).map((order) => `${order.taskId} — ${order.title}`))]
+          : []),
         `Stop: ${result.snapshot.stopped?.reason ?? "none"}`,
       ].join("\n")}\n`;
     case "ledger":

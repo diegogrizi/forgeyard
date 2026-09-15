@@ -4,9 +4,11 @@ import { loadConfig } from "../config/config.js";
 import type { SchedulerSnapshot, TaskRuntimeState } from "../orchestrator/contracts.js";
 import { loadTaskGraph } from "../orchestrator/graph.js";
 import { createTaskScheduler } from "../orchestrator/scheduler.js";
+import { buildWorkOrders, type WorkOrder } from "../orchestrator/work-orders.js";
 import {
   appendTaskTransition,
   appendUsageObservation,
+  readUsageSummary,
   type TaskTransitionAction,
   type UsageObservationInput,
 } from "../observability/ledger.js";
@@ -26,6 +28,7 @@ export interface TaskCommandResult {
   action: TaskCommandInput["action"];
   root: string;
   task?: TaskRuntimeState & { id: string };
+  workOrders?: readonly WorkOrder[];
   snapshot: SchedulerSnapshot;
 }
 
@@ -52,7 +55,7 @@ export async function runTaskCommand(input: TaskCommandInput): Promise<TaskComma
   });
   const scheduler = createTaskScheduler({ root, graph, maxConcurrency: config.orchestration.maxConcurrency });
 
-  if (input.action === "status" || input.action === "next") {
+  if (input.action === "status") {
     return {
       schemaVersion: 1,
       ok: true,
@@ -60,6 +63,24 @@ export async function runTaskCommand(input: TaskCommandInput): Promise<TaskComma
       action: input.action,
       root,
       snapshot: await scheduler.status(),
+    };
+  }
+  if (input.action === "next") {
+    const snapshot = await scheduler.status();
+    const workOrders = buildWorkOrders({
+      graph,
+      snapshot,
+      mode: config.orchestration.mode,
+      usage: await readUsageSummary(root),
+    });
+    return {
+      schemaVersion: 1,
+      ok: true,
+      command: "task",
+      action: input.action,
+      root,
+      snapshot,
+      workOrders,
     };
   }
 

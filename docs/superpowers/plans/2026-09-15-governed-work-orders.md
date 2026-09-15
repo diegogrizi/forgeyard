@@ -56,12 +56,12 @@
 - Create: `tests/unit/orchestrator/work-orders.test.ts`
 - Modify: `tests/unit/cli/task-program.test.ts`
 
-- [ ] Add failing tests proving guided mode returns one order and native mode returns at most remaining capacity.
-- [ ] Include task ID, title, objective, role, capabilities, write scopes, remaining time, measured/unmeasured cost state, and an exact host prompt.
-- [ ] Make `task next --json` return work orders while `task status` remains a state view.
-- [ ] Keep lifecycle claims explicit; generating an order must not claim or launch a worker.
-- [ ] Run work-order, application, CLI, and scheduler tests.
-- [ ] Commit as `feat: expose bounded host work orders`.
+- [x] Add failing tests proving guided mode returns one order and native mode returns at most remaining capacity.
+- [x] Include task ID, title, objective, role, capabilities, write scopes, remaining time, measured/unmeasured cost state, and an exact host prompt.
+- [x] Make `task next --json` return work orders while `task status` remains a state view.
+- [x] Keep lifecycle claims explicit; generating an order must not claim or launch a worker.
+- [x] Run work-order, application, CLI, and scheduler tests.
+- [x] Commit as `feat: expose bounded host work orders`.
 
 ## Task 4: Turn the generated workflow skill into the ordinary controller
 
