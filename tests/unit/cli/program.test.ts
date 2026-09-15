@@ -6,6 +6,8 @@ import type {
   DoctorCommandResult,
   ForgeyardService,
   InitCommandResult,
+  InspectCommandResult,
+  PrepareCommandResult,
   RollbackCommandResult,
   UpdateCommandResult,
   VerifyCommandResult,
@@ -55,6 +57,59 @@ const initResult: InitCommandResult = {
     preserved: ["forgeyard.yaml"],
   },
   doctor: doctorResult.summary,
+};
+
+const inspection = {
+  schemaVersion: 1 as const,
+  root: path.resolve("fixture-target"),
+  name: "checkout-ui",
+  request: "Add accessible checkout recovery.",
+  mode: "existing" as const,
+  kind: "frontend" as const,
+  languages: ["typescript"],
+  frameworks: ["next.js", "react"],
+  packageManagers: ["npm"],
+  qualityCommands: [{ name: "test", argv: ["npm", "test"] as const }],
+  mutableRoots: ["app"],
+  instructionSurfaces: [],
+  sources: ["requirements.md"],
+  evidence: [{ path: "package.json", signal: "dependency:next" }],
+  questions: [],
+  warnings: [],
+  confidence: "high" as const,
+  analysisSha256: "f".repeat(64),
+};
+
+const decision = {
+  schemaVersion: 1 as const,
+  profile: "tailored" as const,
+  adapter: "codex" as const,
+  adapterReason: "Portable fallback.",
+  catalog: { selection: "curated" as const, plugins: ["ui-design"] },
+  packs: ["delivery", "ecosystem", "foundation"],
+  selected: [{ id: "ui-design", reason: "The project has a user interface." }],
+  excluded: [{ id: "agent-orchestration", reason: "Forgeyard is the primary workflow." }],
+  timeboxMinutes: 240,
+  orchestration: { mode: "native" as const, maxConcurrency: 2 },
+  presentation: { enabled: false, audience: "Project stakeholders", durationMinutes: 7, offline: true as const },
+  autonomy: { level: "balanced" as const, maxCostUsd: 20, stopOnAmbiguity: true as const, externalEffects: "ask" as const },
+  analysisSha256: "f".repeat(64),
+};
+
+const inspectResult: InspectCommandResult = {
+  schemaVersion: 1,
+  ok: true,
+  command: "inspect",
+  root: path.resolve("fixture-target"),
+  inspection,
+  decision,
+};
+
+const prepareResult: PrepareCommandResult = {
+  ...initResult,
+  command: "prepare",
+  inspection,
+  decision,
 };
 
 const updateResult: UpdateCommandResult = {
@@ -113,6 +168,8 @@ const verifyResult: VerifyCommandResult = {
 
 function service(): ForgeyardService {
   return {
+    inspect: vi.fn(async () => inspectResult),
+    prepare: vi.fn(async () => prepareResult),
     init: vi.fn(async () => initResult),
     doctor: vi.fn(async () => doctorResult),
     verify: vi.fn(async () => verifyResult),
@@ -135,12 +192,48 @@ function dependencies(overrides: Partial<CliDependencies> = {}): CliDependencies
 }
 
 describe("Forgeyard CLI boundary", () => {
-  test("lists the five M1 factory commands in help", () => {
+  test("lists problem-first preparation before the advanced factory commands", () => {
     const help = createProgram(dependencies()).helpInformation();
 
-    for (const command of ["init", "doctor", "verify", "update", "rollback"]) {
+    for (const command of ["inspect", "prepare", "init", "doctor", "verify", "update", "rollback"]) {
       expect(help).toContain(command);
     }
+  });
+
+  test("maps typed inspect and prepare options without ecosystem-selection arguments", async () => {
+    const capture = captureIo();
+    const deps = dependencies({ interactive: false });
+
+    expect(await runCli([
+      "inspect", "fixture-target", "--brief", "Add recovery", "--spec", "one.md", "--spec", "two.md",
+      "--adapter", "codex", "--json",
+    ], deps, capture.io)).toBe(0);
+    expect(deps.service.inspect).toHaveBeenCalledWith({
+      targetRoot: "fixture-target",
+      brief: "Add recovery",
+      specificationPaths: ["one.md", "two.md"],
+      adapter: "codex",
+    });
+
+    expect(await runCli([
+      "prepare", "fixture-target", "--brief", "Add recovery", "--spec", "one.md", "--adapter", "codex",
+      "--timebox", "240", "--max-concurrency", "8", "--budget-usd", "20.5", "--autonomy", "autonomous",
+      "--no-presentation", "--yes", "--dry-run", "--json",
+    ], deps, capture.io)).toBe(0);
+    expect(deps.service.prepare).toHaveBeenCalledWith({
+      targetRoot: "fixture-target",
+      brief: "Add recovery",
+      specificationPaths: ["one.md"],
+      adapter: "codex",
+      timeboxMinutes: 240,
+      maxConcurrency: 8,
+      maxCostUsd: 20.5,
+      autonomy: "autonomous",
+      presentation: false,
+      yes: true,
+      dryRun: true,
+      nonInteractive: true,
+    });
   });
 
   test("prints its injected version without touching the current directory", async () => {

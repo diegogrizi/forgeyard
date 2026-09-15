@@ -6,7 +6,8 @@ import {
   type ForgeyardService,
 } from "../application/forgeyard.js";
 import { createInquirerPromptDriver } from "../config/wizard.js";
-import { formatFailure } from "../core/errors.js";
+import type { HarnessId } from "../core/contracts.js";
+import { ForgeyardError, formatFailure } from "../core/errors.js";
 
 export interface CliDependencies {
   version: string;
@@ -41,6 +42,41 @@ function booleanOption(options: Record<string, unknown>, name: string): boolean 
   return options[name] === true;
 }
 
+function optionalBooleanOption(options: Record<string, unknown>, name: string): boolean | undefined {
+  const value = options[name];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function numberOption(options: Record<string, unknown>, name: string): number | undefined {
+  const value = options[name];
+  return typeof value === "number" ? value : undefined;
+}
+
+function numericOption(label: string, minimum: number, maximum: number, integer: boolean) {
+  return (value: string): number => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || (integer && !Number.isInteger(parsed)) || parsed < minimum || parsed > maximum) {
+      throw new ForgeyardError({
+        code: "FY_CONFIG_INVALID",
+        message: `${label} must be ${integer ? "an integer" : "a number"} between ${minimum} and ${maximum}.`,
+        remediation: "Provide a bounded numeric project constraint.",
+        exitCode: 2,
+      });
+    }
+    return parsed;
+  };
+}
+
+function autonomyOption(value: string): "supervised" | "balanced" | "autonomous" {
+  if (value === "supervised" || value === "balanced" || value === "autonomous") return value;
+  throw new ForgeyardError({
+    code: "FY_CONFIG_INVALID",
+    message: "Autonomy must be supervised, balanced, or autonomous.",
+    remediation: "Choose one of the documented autonomy levels.",
+    exitCode: 2,
+  });
+}
+
 function listOption(options: Record<string, unknown>, name: string): readonly string[] {
   const value = options[name];
   return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : [];
@@ -54,6 +90,32 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
   if (json) return `${JSON.stringify(result)}\n`;
 
   switch (result.command) {
+    case "inspect":
+      return `${[
+        "Forgeyard inspect: complete (read-only)",
+        `Project: ${result.inspection.name} (${result.inspection.kind})`,
+        lineList("Frameworks", result.inspection.frameworks),
+        `Adapter: ${result.decision.adapter} — ${result.decision.adapterReason}`,
+        lineList("Selected capabilities", result.decision.catalog.plugins),
+        lineList("Excluded capabilities", result.decision.excluded.map((choice) => choice.id)),
+        lineList("Open questions", result.inspection.questions),
+      ].join("\n")}\n`;
+    case "prepare":
+      return `${[
+        `Forgeyard prepare: ${result.status}`,
+        `Project: ${result.inspection.name} (${result.inspection.kind})`,
+        lineList("Frameworks", result.inspection.frameworks),
+        `Adapter: ${result.decision.adapter} — ${result.decision.adapterReason}`,
+        lineList("Selected capabilities", result.decision.catalog.plugins),
+        lineList("Excluded capabilities", result.decision.excluded.map((choice) => choice.id)),
+        lineList("Open questions", result.inspection.questions),
+        `Operation: ${result.operationId}`,
+        lineList("Created", result.changes.created),
+        lineList("Preserved", result.changes.preserved),
+        result.doctor === null
+          ? "Doctor: not run"
+          : `Doctor: passed (${result.doctor.passed} passed, ${result.doctor.skipped} skipped, ${result.doctor.unavailable} unavailable)`,
+      ].join("\n")}\n`;
     case "init":
     case "update":
       return `${[
@@ -119,9 +181,72 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
 
   program
     .name("forgeyard")
-    .description("Install and verify a project-scoped agentic development workflow.")
+    .description("Prepare and verify a project-specific agentic development environment.")
     .version(dependencies.version)
     .option("--debug", "include local diagnostic details");
+
+  program
+    .command("inspect")
+    .description("Inspect a software problem and propose a tailored factory without writing.")
+    .argument("[target]", "project directory", ".")
+    .option("--brief <text>", "software outcome or requested change")
+    .option("--spec <path>", "project-relative specification file", collect, [])
+    .option("--adapter <adapter>", "explicit supported host constraint")
+    .option("--json", "emit machine-readable output")
+    .action(async (target: string, options: Record<string, unknown>) => {
+      const brief = stringOption(options, "brief");
+      const adapter = stringOption(options, "adapter") as HarnessId | undefined;
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.inspect({
+        targetRoot: target,
+        ...(brief === undefined ? {} : { brief }),
+        specificationPaths: listOption(options, "spec"),
+        ...(adapter === undefined ? {} : { adapter }),
+      });
+      writeResult(result, json);
+    });
+
+  program
+    .command("prepare")
+    .description("Prepare a stable project-specific factory from the software problem.")
+    .argument("[target]", "project directory", ".")
+    .option("--brief <text>", "software outcome or requested change")
+    .option("--spec <path>", "project-relative specification file", collect, [])
+    .option("--adapter <adapter>", "explicit supported host constraint")
+    .option("--timebox <minutes>", "delivery timebox", numericOption("Timebox", 30, 1440, true))
+    .option("--max-concurrency <count>", "maximum active work items", numericOption("Maximum concurrency", 1, 16, true))
+    .option("--budget-usd <amount>", "maximum recorded model cost", numericOption("Budget", 0.01, 1_000_000, false))
+    .option("--autonomy <level>", "supervised, balanced, or autonomous", autonomyOption)
+    .option("--presentation", "include an offline presentation workflow")
+    .option("--no-presentation", "exclude presentation work")
+    .option("--yes", "apply without an interactive confirmation")
+    .option("--dry-run", "validate and show the plan without writing")
+    .option("--json", "emit machine-readable output")
+    .action(async (target: string, options: Record<string, unknown>) => {
+      const brief = stringOption(options, "brief");
+      const adapter = stringOption(options, "adapter") as HarnessId | undefined;
+      const timeboxMinutes = numberOption(options, "timebox");
+      const maxConcurrency = numberOption(options, "maxConcurrency");
+      const maxCostUsd = numberOption(options, "budgetUsd");
+      const autonomy = stringOption(options, "autonomy") as "supervised" | "balanced" | "autonomous" | undefined;
+      const presentation = optionalBooleanOption(options, "presentation");
+      const json = booleanOption(options, "json");
+      const result = await dependencies.service.prepare({
+        targetRoot: target,
+        ...(brief === undefined ? {} : { brief }),
+        specificationPaths: listOption(options, "spec"),
+        ...(adapter === undefined ? {} : { adapter }),
+        ...(timeboxMinutes === undefined ? {} : { timeboxMinutes }),
+        ...(maxConcurrency === undefined ? {} : { maxConcurrency }),
+        ...(maxCostUsd === undefined ? {} : { maxCostUsd }),
+        ...(autonomy === undefined ? {} : { autonomy }),
+        ...(presentation === undefined ? {} : { presentation }),
+        yes: booleanOption(options, "yes"),
+        dryRun: booleanOption(options, "dryRun"),
+        nonInteractive: !dependencies.interactive || json,
+      });
+      writeResult(result, json);
+    });
 
   program
     .command("init")

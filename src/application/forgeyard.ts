@@ -5,7 +5,7 @@ import path from "node:path";
 import { createHarnessAdapter } from "../adapters/create.js";
 import { loadConfig } from "../config/config.js";
 import { collectInitRequest, type PromptDriver } from "../config/wizard.js";
-import type { CheckResult, DoctorReport, VerificationReceipt } from "../core/contracts.js";
+import type { CheckResult, DoctorReport, ForgeyardConfig, HarnessId, VerificationReceipt } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { runDoctor, type DoctorInput } from "../doctor/run-doctor.js";
 import { getReceiptStatus } from "../evidence/receipts.js";
@@ -30,6 +30,12 @@ import {
   type WorkspaceCommandInput,
   type WorkspaceCommandResult,
 } from "./workspace.js";
+import {
+  analyzePreparation,
+  intakeIncomplete,
+  preparationConfig,
+} from "./preparation.js";
+import type { ComposeProjectOptions, PreparationDecision, ProjectInspection } from "../intake/contracts.js";
 
 export type { TaskCommandInput, TaskCommandResult, UsageCommandInput, UsageCommandResult } from "./orchestration.js";
 export type { GuardCommandInput, GuardCommandResult } from "./guard.js";
@@ -49,6 +55,18 @@ export interface InitCommandInput {
   profile?: string;
   adapter?: string;
   answersPath?: string;
+  yes: boolean;
+  dryRun: boolean;
+  nonInteractive: boolean;
+}
+
+export interface InspectCommandInput extends ComposeProjectOptions {
+  targetRoot: string;
+  brief?: string;
+  specificationPaths?: readonly string[];
+}
+
+export interface PrepareCommandInput extends InspectCommandInput {
   yes: boolean;
   dryRun: boolean;
   nonInteractive: boolean;
@@ -101,6 +119,21 @@ export interface InitCommandResult extends WriteCommandResult {
   command: "init";
 }
 
+export interface InspectCommandResult {
+  schemaVersion: 1;
+  ok: true;
+  command: "inspect";
+  root: string;
+  inspection: ProjectInspection;
+  decision: PreparationDecision;
+}
+
+export interface PrepareCommandResult extends WriteCommandResult {
+  command: "prepare";
+  inspection: ProjectInspection;
+  decision: PreparationDecision;
+}
+
 export interface UpdateCommandResult extends WriteCommandResult {
   command: "update";
 }
@@ -144,6 +177,8 @@ export interface RollbackCommandResult {
 }
 
 export type ForgeyardCommandResult =
+  | InspectCommandResult
+  | PrepareCommandResult
   | InitCommandResult
   | DoctorCommandResult
   | VerifyCommandResult
@@ -155,6 +190,8 @@ export type ForgeyardCommandResult =
   | WorkspaceCommandResult;
 
 export interface ForgeyardService {
+  inspect(input: InspectCommandInput): Promise<InspectCommandResult>;
+  prepare(input: PrepareCommandInput): Promise<PrepareCommandResult>;
   init(input: InitCommandInput): Promise<InitCommandResult>;
   doctor(input: DoctorCommandInput): Promise<DoctorCommandResult>;
   verify(input: VerifyCommandInput): Promise<VerifyCommandResult>;
@@ -170,7 +207,7 @@ export interface ForgeyardApplicationOptions {
   prompts: PromptDriver;
   forgeyardVersion?: string;
   registryRoot?: string;
-  operationId?: (kind: "init" | "update") => string;
+  operationId?: (kind: "prepare" | "init" | "update") => string;
   doctorRunner?: (input: DoctorInput) => Promise<DoctorReport>;
   verificationRunner?: (input: VerificationInput) => Promise<VerificationResult>;
 }
@@ -179,7 +216,7 @@ export function packagedRegistryRoot(metaUrl = import.meta.url): string {
   return path.resolve(fileURLToPath(new URL("../../", metaUrl)));
 }
 
-function defaultOperationId(kind: "init" | "update"): string {
+function defaultOperationId(kind: "prepare" | "init" | "update"): string {
   const timestamp = new Date().toISOString().replaceAll(/[^0-9]/g, "");
   return `${timestamp}-${kind}-${randomBytes(6).toString("hex")}`;
 }
@@ -277,7 +314,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
     throw doctorFailure(report, true, doctorError);
   }
 
-  async function renderPlan(root: string, config: Awaited<ReturnType<typeof loadConfig>>, nextOperationId: string) {
+  async function renderPlan(root: string, config: ForgeyardConfig, nextOperationId: string) {
     const registry = await loadRegistry(registryRoot);
     const adapterId = config.harnesses[0];
     const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog, config.composition?.packs);
@@ -295,6 +332,120 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
   }
 
   return {
+    async inspect(input) {
+      const root = path.resolve(input.targetRoot);
+      const analysis = await analyzePreparation({
+        root,
+        ...(input.brief === undefined ? {} : { brief: input.brief }),
+        ...(input.specificationPaths === undefined ? {} : { specificationPaths: input.specificationPaths }),
+        ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
+        ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
+        ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+        ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
+        ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
+        ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
+        ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
+      }, registryRoot);
+      return {
+        schemaVersion: 1,
+        ok: true,
+        command: "inspect",
+        root,
+        ...analysis,
+      };
+    },
+
+    async prepare(input) {
+      const root = path.resolve(input.targetRoot);
+      let analysis = await analyzePreparation({
+        root,
+        ...(input.brief === undefined ? {} : { brief: input.brief }),
+        ...(input.specificationPaths === undefined ? {} : { specificationPaths: input.specificationPaths }),
+        ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
+        ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
+        ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+        ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
+        ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
+        ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
+        ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
+      }, registryRoot);
+      if (analysis.inspection.request.trim().length === 0) {
+        if (input.nonInteractive) throw intakeIncomplete();
+        const purpose = (await options.prompts.input(
+          "project.purpose",
+          "What outcome should this software deliver?",
+        )).trim();
+        if (purpose.length === 0) throw intakeIncomplete();
+        analysis = await analyzePreparation({
+          root,
+          brief: purpose,
+          ...(input.specificationPaths === undefined ? {} : { specificationPaths: input.specificationPaths }),
+          ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
+          ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
+          ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+          ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
+          ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
+          ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
+          ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
+        }, registryRoot);
+      }
+      const config = preparationConfig(analysis.inspection, analysis.decision);
+      const nextOperationId = operationId("prepare");
+      const plan = await renderPlan(root, config, nextOperationId);
+      const preview = await applyInstallPlan(plan, { dryRun: true });
+      const status = await chooseWriteStatus(
+        preview.created.length,
+        input,
+        options.prompts,
+        `Prepare ${preview.created.length} Forgeyard files in ${root}?`,
+      );
+
+      if (status !== "applied") {
+        const doctor = status === "no-op" ? summarizeDoctor(await checkedDoctor(root)) : null;
+        return {
+          schemaVersion: 1,
+          ok: true,
+          command: "prepare",
+          root,
+          operationId: nextOperationId,
+          applied: false,
+          status,
+          changes: {
+            created: preview.created,
+            updated: [],
+            removed: [],
+            unchanged: preview.unchanged,
+            preserved: preview.preserved,
+          },
+          doctor,
+          ...analysis,
+        };
+      }
+
+      const result = await applyInstallPlan(plan);
+      const doctor = result.applied
+        ? await postWriteDoctor(root, result.operationId)
+        : summarizeDoctor(await checkedDoctor(root));
+      return {
+        schemaVersion: 1,
+        ok: true,
+        command: "prepare",
+        root,
+        operationId: result.operationId,
+        applied: result.applied,
+        status: result.applied ? "applied" : "no-op",
+        changes: {
+          created: result.created,
+          updated: [],
+          removed: [],
+          unchanged: result.unchanged,
+          preserved: result.preserved,
+        },
+        doctor,
+        ...analysis,
+      };
+    },
+
     async init(input) {
       const request = await collectInitRequest(
         {

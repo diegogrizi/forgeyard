@@ -411,7 +411,7 @@ git commit -m "feat: explain prepared factory decisions"
 - Produces CLI commands defined in the design spec.
 - Reuses: `buildInstallPlan`, dry-run preview, confirmation, post-write doctor, and rollback.
 
-- [ ] **Step 1: Write failing application tests**
+- [x] **Step 1: Write failing application tests**
 
 Use real temporary projects to prove:
 
@@ -424,13 +424,13 @@ Use real temporary projects to prove:
 - apply uses normal transactional recovery on doctor failure;
 - the resulting `forgeyard.yaml` stores the decision and a subsequent update does not re-inspect repository drift.
 
-- [ ] **Step 2: Run and observe missing service methods**
+- [x] **Step 2: Run and observe missing service methods**
 
 Run: `npx vitest run tests/integration/application/preparation.test.ts tests/unit/cli/program.test.ts`
 
 Expected: FAIL.
 
-- [ ] **Step 3: Implement preparation orchestration**
+- [x] **Step 3: Implement preparation orchestration**
 
 Build this exact flow:
 
@@ -444,17 +444,17 @@ const plan = await renderPlan(root, config, operationId("prepare"));
 
 Return inspection and decision in both preview and applied results. Use the same confirmation and rollback boundary as `init`.
 
-- [ ] **Step 4: Wire CLI options without raw string execution**
+- [x] **Step 4: Wire CLI options without raw string execution**
 
 Commander must collect repeated `--spec` values as strings, parse bounded numeric values, and pass typed options to the service. Human output summarizes observed kind/frameworks, selected adapter/plugins, exclusions, questions, file changes, and doctor state.
 
-- [ ] **Step 5: Run application and CLI tests until green**
+- [x] **Step 5: Run application and CLI tests until green**
 
 Run: `npx vitest run tests/integration/application/preparation.test.ts tests/unit/cli/program.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```sh
 git add src/application/preparation.ts src/application/forgeyard.ts src/cli/program.ts tests/integration/application/preparation.test.ts tests/unit/cli/program.test.ts tests/helpers/cli.ts
