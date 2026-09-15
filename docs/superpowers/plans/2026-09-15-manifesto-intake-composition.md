@@ -475,7 +475,7 @@ git commit -m "feat: prepare a factory from the project problem"
 - Documents: `prepare` as ordinary interface and `init` as advanced/manual.
 - Proves: frontend and backend fixtures receive different stored capability sets from the same factory.
 
-- [ ] **Step 1: Write the failing round-trip test**
+- [x] **Step 1: Write the failing round-trip test**
 
 Create one Next.js fixture and one FastAPI fixture. Prepare both with only a brief and `--yes`. Assert:
 
@@ -488,13 +488,13 @@ Create one Next.js fixture and one FastAPI fixture. Prepare both with only a bri
 - doctor passes;
 - a second dry-run/update is deterministic.
 
-- [ ] **Step 2: Run and observe the incomplete round trip**
+- [x] **Step 2: Run and observe the incomplete round trip**
 
 Run: `npm run build && npx vitest run tests/roundtrip/problem-first-preparation.test.ts`
 
 Expected: FAIL until the packaged CLI and registry include the new surface.
 
-- [ ] **Step 3: Rewrite the README entry point and correct completion claims**
+- [x] **Step 3: Rewrite the README entry point and correct completion claims**
 
 Lead with:
 
@@ -504,19 +504,19 @@ npx forgeyard prepare ./my-project --brief "Add accessible checkout recovery"
 
 Explain what was observed, chosen, excluded, and pinned. Move profile/adapter examples under “Advanced manual installation.” State that model-client launch remains host-provided and structurally tested unless separately exercised.
 
-- [ ] **Step 4: Update package-content assertions and run the round trip**
+- [x] **Step 4: Update package-content assertions and run the round trip**
 
 Run: `npm run build && npx vitest run tests/roundtrip/problem-first-preparation.test.ts tests/integration/package/package-contents.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Run the complete release gate**
+- [x] **Step 5: Run the complete release gate**
 
 Run: `npm run verify`
 
 Expected: typecheck, all tests, build, catalog attestation, provenance check, release audit, and package inspection PASS.
 
-- [ ] **Step 6: Inspect repository state and commit**
+- [x] **Step 6: Inspect repository state and commit**
 
 Run:
 

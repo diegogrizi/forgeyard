@@ -2,6 +2,12 @@
 
 Forgeyard deliberately separates the amount of useful material installed on disk from the amount of text placed in a model prompt.
 
+## Selection happens before installation
+
+The recommended `forgeyard prepare` path starts from the requested software outcome and repository evidence. It applies maintained capability rules, selects only the relevant catalog plugins, excludes overlapping orchestrators, and records the reasons in `.forgeyard/COMPOSITION.md`. The user can inspect or override concrete constraints, but does not need to compare skill authors or choose a workflow package.
+
+The catalog is therefore factory knowledge, not a menu that every project owner must study. The `minimal`, `hackathon`, and `full` profiles remain deliberate advanced/manual choices; automatically prepared projects use the stored `tailored` profile and pin their exact pack and plugin selection.
+
 ## What is actually distributed
 
 The pinned ecosystem snapshot contains **1,007 source files** and **211,594 physical lines**. Its portable inventory has **202 catalog agents**, **183 native skills**, **105 commands**, and supporting files. These are real local files verified by hash, not generated filler.
@@ -38,17 +44,21 @@ Forgeyard caps generated primary skill entrypoints at 8 KiB. Longer upstream ins
 | `hackathon` | Curated 22-plugin selection | 52 agent files, 119 skill entrypoints |
 | `full` | Every local plugin | 203 agent files, 290 skill entrypoints |
 
-An agent file is a role contract, not a process. Installing 203 roles does not start 203 models, terminals, or worktrees. The **maximum concurrency remains 4** by default, and the Forgeyard CLI coordinates claims without launching a worker fleet. Its local scheduler exposes only a small dependency-ready subset; the operator or compatible host starts the actual worker.
+An agent file is a role contract, not a process. Installing 203 roles does not start 203 models, terminals, or worktrees. Manual profiles default to four concurrent claims. Automatic composition infers one for a narrow short maintenance change, two for a typical single-domain project, three for full-stack work, and four for full-stack work with presentation; `--max-concurrency` can explicitly select any supported value from 1 through 16. This value is a scheduling limit, not a promise that a host will launch that many model clients. Subscription tier and price are never inferred.
+
+Forgeyard coordinates claims without launching a paid worker fleet. Its local scheduler exposes only dependency-ready work within the configured limit; a compatible host starts actual workers using its own authenticated runtime and provider limits.
 
 The practical advantage of a large library is preparation: architecture, product, frontend, backend, data, QA, security, accessibility, documentation, operations, and presentation capabilities are already locally discoverable when a short build begins. The advantage does not come from reading or running all of them.
 
-## Which profile to use
+## When to use a manual profile
 
 - Choose `minimal` when testing the lifecycle kernel or adding Forgeyard to a sensitive existing repository.
 - Choose `hackathon` for a short delivery window where discovery, implementation, proof, and presentation all matter.
 - Choose `full` when you want the whole offline library available and accept a larger project tree.
 
 All three profiles use the same path confinement, ownership hashes, update checks, rollback journal, evidence format, and default concurrency policy.
+
+For ordinary software work, use `forgeyard prepare` and let the factory produce a `tailored` composition instead of choosing from this table.
 
 ## Physical line inventory
 

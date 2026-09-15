@@ -2,17 +2,17 @@
 
 ## Status and correction
 
-**Status:** Complete for the local, project-scoped factory contract on 2026-09-15. Authenticated model-client launch, external effects, wider harnesses, and multi-repository coordination remain outside this milestone.
+**Status:** Historical catalog-and-kernel milestone completed on 2026-09-15; it is not a claim that the manifesto-level factory is complete. The later problem-first design supersedes its user-entry and composition assumptions. Authenticated model-client launch, external effects, wider harnesses, and multi-repository coordination remain outside this milestone.
 
-The first Forgeyard M1 was a reliable installer kernel, not the complete factory requested by the product owner. The completed expansion now combines that kernel with the licensed catalog, three adapters, executable local orchestration, guardrails, continuity assets, and the idea-to-demo workflow described below.
+The first Forgeyard M1 was a reliable installer kernel, not the complete factory requested by the product owner. This expansion combined that kernel with the licensed catalog, three adapters, executable local orchestration, guardrails, continuity assets, and the idea-to-demo workflow described below. It did not yet remove the user's obligation to choose profiles and ecosystem components; the later manifesto-aligned work adds that missing layer.
 
 The benchmark's bootstrap commit added 409 files and 81,997 physical lines in one operation. Its installed surface contained 32 direct agent definitions, 102 direct skills, 45 direct commands, 73 canonical tool files, 22 compatibility tool files, and a 64-file optional voice subsystem. The 32 agents were available roles, not 32 simultaneous workers: the installed scheduler capped parallel work at four.
 
 The correction is to preserve the tested kernel and add a large, licensed, English-language component catalog plus executable workflow layers. The catalog may be large on disk while remaining lazy in model context.
 
-### Completion evidence
+### Recorded milestone evidence
 
-- The clean gate passed 55 test files and 276 tests, then build, catalog attestation, provenance generation check, release audit, and package-content inspection.
+- At the recorded milestone revision, the clean gate passed 55 test files and 276 tests, then build, catalog attestation, provenance generation check, release audit, and package-content inspection. These counts are historical, not the current repository total.
 - The pinned source catalog remains 1,007 files and 211,594 physical lines with 202 agents, 183 skills, and 105 commands.
 - The package dry-run contains 1,149 entries.
 - The dependency audit reports zero known vulnerabilities at the configured threshold.
@@ -20,14 +20,14 @@ The correction is to preserve the tested kernel and add a large, licensed, Engli
 
 ## Product target
 
-Forgeyard is a project-scoped installer and lifecycle manager for agent-assisted development factories. A user selects a profile, harnesses, capabilities, and safety limits; Forgeyard installs native agents, skills, commands, workflow state, deterministic tools, and presentation assets into a blank or existing repository.
+Forgeyard is a project-scoped installer and lifecycle manager for agent-assisted development factories. In the current problem-first interface, the user describes the software outcome and material constraints; Forgeyard inspects the project and selects a tailored profile, harness layout, capabilities, and safety limits. Fixed manual profiles remain an advanced interface.
 
 Forgeyard must support two distinct ideas:
 
 1. A small trusted kernel that plans, installs, validates, updates, and rolls back files.
 2. A broad catalog that is discoverable on demand and can exceed the benchmark without injecting every instruction into every prompt.
 
-The `hackathon` profile installs a curated delivery team and five-hour workflow. The `full` profile installs the entire licensed catalog. Future domain profiles select smaller subsets without changing the kernel.
+The `hackathon` profile installs a curated delivery team and five-hour workflow. The `full` profile installs the entire licensed catalog. The automatic `tailored` profile selects smaller project-specific subsets without changing the kernel.
 
 ## Catalog strategy
 
@@ -160,7 +160,7 @@ Distributed presentation content remains original, offline, responsive, accessib
 
 ## Acceptance criteria
 
-The expansion is complete only when:
+This historical expansion milestone was considered complete only when:
 
 - `full` installs at least 80,000 licensed catalog lines;
 - `hackathon` exposes at least 32 roles and a complete idea-to-demo workflow;
