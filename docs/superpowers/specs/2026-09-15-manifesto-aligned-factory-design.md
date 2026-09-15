@@ -102,6 +102,8 @@ Every adapter renders the same canonical intent into its native layout. In addit
 
 `PROJECT.md` is pre-populated with the actual request, detected context, specification sources, and acceptance framing rather than an empty generic prompt.
 
+Existing host instructions are authoritative user content. When automatic preparation detects an unknown root `AGENTS.md` or `CLAUDE.md` that Forgeyard does not own, it preserves that file and renders Forgeyard's navigation contract to `.forgeyard/HOST.md` instead. The namespaced native workflow skill remains the activation surface. Forgeyard never appends an opaque block to, replaces, or takes ownership of existing instructions. Cursor's namespaced rule paths follow the same non-overwrite rule.
+
 Task wording derives from the request and project class. A focused maintenance suite may contain one implementation task plus review. A delivery suite contains contract, implementation, and independent review. The optional presentation task exists only when presentation is selected. All tasks retain exact argv, scope, retry, time, evidence, and integration contracts.
 
 ### 6. Host-control protocol
@@ -179,6 +181,7 @@ The new `tailored` profile supplies defaults only; its exact pack and plugin sel
 - Diagnostics expose paths and categories, not file contents.
 - Unknown stacks produce conservative generic choices and explicit uncertainty.
 - Conflicting existing harness instructions are reported and never overwritten without normal ownership checks.
+- Existing root host instructions are preserved; automatic preparation uses `.forgeyard/HOST.md` plus the native workflow skill instead of claiming ownership.
 - Automatic compositions never include competing workflow orchestrators.
 - Preparation is transactional and receives the same post-write doctor and rollback behavior as initialization.
 - No command string is passed through a shell; verification remains argv-based.
@@ -238,3 +241,4 @@ The implementation is complete when all of the following are true:
 13. The README leads with problem-first preparation and treats manual profiles as an advanced interface.
 14. Documentation no longer calls unimplemented project intake or worker launch complete.
 15. `npm run verify`, `npm run audit:release`, `git diff --check`, and package inspection pass from the final tree.
+16. Preparing a repository with existing host instructions preserves their bytes and installs Forgeyard through a non-conflicting namespaced surface.

@@ -190,7 +190,7 @@ test("recognizes a Python API without inventing pytest", async () => {
 });
 ```
 
-Also test a blank project, npm/pnpm/yarn lock detection, full-stack dependency signals, README purpose fallback, explicit spec precedence, symlink rejection, escaping spec rejection, binary rejection, per-file 256 KiB limit, and deterministic fingerprints independent of absolute root.
+Also test a blank project, npm/pnpm/yarn lock detection, full-stack dependency signals, README purpose fallback, explicit spec precedence, existing `AGENTS.md`/`CLAUDE.md` detection, symlink rejection, escaping spec rejection, binary rejection, per-file 256 KiB limit, and deterministic fingerprints independent of absolute root.
 
 - [ ] **Step 2: Run and observe the missing-module failure**
 
@@ -352,6 +352,7 @@ git commit -m "feat: resolve stored tailored packs"
 - Produces: managed `.forgeyard/COMPOSITION.md` in every prepared/manual suite.
 - Consumes: normalized intake/composition/autonomy data.
 - Preserves: existing adapter-native paths and catalog transforms.
+- Preserves: unknown existing root host instructions by targeting `.forgeyard/HOST.md` during automatic preparation.
 
 - [ ] **Step 1: Write failing adapter assertions**
 
@@ -364,6 +365,8 @@ expect(byPath.get(".forgeyard/COMPOSITION.md")).toContain("Excluded: agent-orche
 expect(byPath.get("PROJECT.md")).toContain(config.intake!.request);
 expect(byPath.get("AGENTS.md")).toContain("Do not ask the user to choose catalog skills");
 ```
+
+Add a second case where intake evidence names an existing `AGENTS.md`: the rendered plan must contain `.forgeyard/HOST.md`, must not contain `AGENTS.md`, and installation must preserve the original root file byte-for-byte. Cover the equivalent `CLAUDE.md` behavior in the Claude adapter.
 
 - [ ] **Step 2: Run and confirm the report is absent**
 
@@ -481,6 +484,7 @@ Create one Next.js fixture and one FastAPI fixture. Prepare both with only a bri
 - selected plugin sets differ;
 - neither contains an overlapping orchestrator plugin;
 - both contain evidence paths and a composition report;
+- an existing host-instruction fixture keeps its original instruction bytes and receives `.forgeyard/HOST.md`;
 - doctor passes;
 - a second dry-run/update is deterministic.
 
