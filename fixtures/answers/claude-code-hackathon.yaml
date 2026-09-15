@@ -1,0 +1,35 @@
+schemaVersion: 1
+project:
+  name: Signal Garden
+  purpose: Help a small team demonstrate one trustworthy user journey.
+  mode: new
+harnesses:
+  - claude-code
+profile: hackathon
+catalog:
+  selection: curated
+  plugins: []
+timeboxMinutes: 300
+quality:
+  commands:
+    - name: test
+      argv:
+        - node
+        - -e
+        - process.exit(0)
+paths:
+  mutableRoots:
+    - src
+    - presentation
+  protectedPaths:
+    - .git
+    - .env
+  presentation: presentation
+orchestration:
+  mode: guided
+  maxConcurrency: 4
+presentation:
+  enabled: true
+  audience: Product reviewers
+  durationMinutes: 7
+  offline: true

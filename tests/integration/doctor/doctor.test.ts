@@ -4,8 +4,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import { createCodexAdapter } from "../../../src/adapters/codex.js";
-import { loadConfig } from "../../../src/config/config.js";
+import { createHarnessAdapter } from "../../../src/adapters/create.js";
+import { loadConfig, validateConfig } from "../../../src/config/config.js";
+import type { HarnessId } from "../../../src/core/contracts.js";
 import { runDoctor } from "../../../src/doctor/run-doctor.js";
 import { applyInstallPlan } from "../../../src/installer/apply.js";
 import { buildInstallPlan } from "../../../src/installer/plan.js";
@@ -14,13 +15,14 @@ import { resolveProfile } from "../../../src/registry/resolve.js";
 
 const temporaryRoots: string[] = [];
 
-async function installedRoot(): Promise<string> {
+async function installedRoot(adapterId: HarnessId = "codex"): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-doctor-"));
   temporaryRoots.push(root);
-  const config = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+  const baseConfig = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+  const config = validateConfig({ ...baseConfig, harnesses: [adapterId] });
   const registry = await loadRegistry(path.resolve("."));
-  const resolved = resolveProfile(registry, "hackathon", "codex");
-  const renderedFiles = await createCodexAdapter().render(resolved.components, config);
+  const resolved = resolveProfile(registry, "hackathon", adapterId);
+  const renderedFiles = await createHarnessAdapter(adapterId).render(resolved.components, config);
   const plan = buildInstallPlan({
     targetRoot: root,
     config,
@@ -66,6 +68,27 @@ describe("Forgeyard doctor", () => {
     expect(report.ok).toBe(true);
     expect(report.checks.find((check) => check.id === "managed-files")?.status).toBe("passed");
   });
+
+  test("validates a Claude Code install and probes the correct executable name", async () => {
+    const root = await installedRoot("claude-code");
+    const lookedUp: string[] = [];
+
+    const report = await runDoctor({
+      root,
+      commandLookup: async (name) => {
+        lookedUp.push(name);
+        return false;
+      },
+    });
+
+    expect(report.ok).toBe(true);
+    expect(lookedUp).toEqual(["claude"]);
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "claude-code-output", status: "passed", required: true }),
+      expect.objectContaining({ id: "claude-code-executable", status: "unavailable", required: false }),
+      expect.objectContaining({ id: "claude-code-roundtrip", status: "skipped", required: false }),
+    ]));
+  }, 30_000);
 
   test("reports managed drift as a required failure", async () => {
     const root = await installedRoot();
