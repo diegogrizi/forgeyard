@@ -8,11 +8,11 @@
 
 ## Task 1: Define and validate the workflow graph
 
-- [ ] Extend task schema and contracts with objective, acceptance criteria, dependencies, write scopes, role, capabilities, limits, evidence policy, and integration metadata while retaining verification compatibility.
-- [ ] Load all task files deterministically and reject missing dependencies, cycles, duplicate IDs, invalid paths, protected-scope overlap, and definition drift.
-- [ ] Compute a canonical graph hash and dependency-ready task set.
-- [ ] Cover valid, cyclic, missing-dependency, path-escape, case-collision, and legacy verification fixtures with unit tests.
-- [ ] Commit as `feat: validate executable Forgeyard task graphs`.
+- [x] Extend task schema and contracts with objective, acceptance criteria, dependencies, write scopes, role, capabilities, limits, evidence policy, and integration metadata while retaining verification compatibility.
+- [x] Load all task files deterministically and reject missing dependencies, cycles, duplicate IDs, invalid paths, protected-scope overlap, and definition drift.
+- [x] Compute a canonical graph hash and dependency-ready task set.
+- [x] Cover valid, cyclic, missing-dependency, path-escape, case-collision, and legacy verification fixtures with unit tests.
+- [x] Commit as `feat: validate executable Forgeyard task graphs`.
 
 ## Task 2: Persist resumable scheduling state
 

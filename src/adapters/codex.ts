@@ -162,6 +162,8 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
     case "task.initial":
       return {
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "workflow.timeboxMinutes": String(config.timeboxMinutes),
       };
     case "presentation.index":
       return {

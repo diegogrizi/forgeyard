@@ -188,6 +188,24 @@ export interface VerificationTask {
   title: string;
   command: NonEmptyArgv;
   required: true;
+  objective?: string;
+  acceptanceCriteria?: readonly string[];
+  dependsOn?: readonly string[];
+  writeScopes?: readonly string[];
+  role?: string;
+  capabilities?: readonly string[];
+  limits?: {
+    minutes: number;
+    maxRetries: number;
+    maxCostUsd?: number;
+  };
+  evidence?: {
+    required: boolean;
+  };
+  integration?: {
+    owner: string;
+    target: string;
+  };
 }
 
 export interface VerificationReceipt {

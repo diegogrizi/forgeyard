@@ -152,7 +152,11 @@ function variablesFor(slot: CursorSlot, config: ForgeyardConfig): Readonly<Recor
         ),
       };
     case "task.initial":
-      return { "task.command": yamlSequence(config.quality.commands[0]!.argv) };
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "workflow.timeboxMinutes": String(config.timeboxMinutes),
+      };
     case "presentation.index":
       return {
         "project.name": escapeHtmlText(config.project.name),
