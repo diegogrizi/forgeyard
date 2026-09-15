@@ -5,7 +5,7 @@ import { loadTaskGraph } from "../orchestrator/graph.js";
 import { createWorktreeService, type WorkspaceResult } from "../worktrees/service.js";
 
 export interface WorkspaceCommandInput {
-  action: "status" | "create" | "validate" | "integrate";
+  action: "status" | "create" | "validate" | "integrate" | "cleanup";
   root: string;
   taskId: string;
   workerId: string;

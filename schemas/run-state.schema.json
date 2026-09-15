@@ -91,7 +91,8 @@
             "validatedCommit": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
             "validatedReceiptId": { "type": "string", "minLength": 2, "maxLength": 128 },
             "integratedCommit": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
-            "integratedReceiptId": { "type": "string", "minLength": 2, "maxLength": 128 }
+            "integratedReceiptId": { "type": "string", "minLength": 2, "maxLength": 128 },
+            "cleanedAt": { "type": "string", "format": "date-time" }
           }
         }
       }

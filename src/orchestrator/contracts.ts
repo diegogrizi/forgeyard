@@ -77,6 +77,7 @@ export interface TaskRuntimeState {
     validatedReceiptId?: string;
     integratedCommit?: string;
     integratedReceiptId?: string;
+    cleanedAt?: string;
   };
 }
 

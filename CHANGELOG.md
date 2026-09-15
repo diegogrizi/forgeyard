@@ -16,7 +16,7 @@ All notable changes to Forgeyard are documented here. This project follows seman
 - Clean-Git verification receipts bound to the exact task bytes, argv array, and Git revision without persisted stdout or stderr bodies.
 - A persistent dependency-aware task scheduler with claims, checkpoints, resume, retry and time stops, overlapping-scope prevention, and a default concurrency cap of four.
 - Deterministic task write guards, including an original Claude Code `PreToolUse` file-tool hook and an advisory CLI contract for Codex and Cursor.
-- Real Git task worktrees with frozen bases, independent validation, serialized no-commit integration, combined-tree verification, and conflict-safe aborts.
+- Real Git task worktrees with frozen bases, independent validation, owner-token serialized integration, combined-tree verification, conflict-safe aborts, exact revision-bound post-merge cleanup, dead-owner lock recovery, and an idempotent cleanup recovery command.
 - A 300-minute visible-slice DAG that allocates 90 minutes to the first journey, 135 to reliability, 30 to independent review, and 45 to the demo freeze.
 - Project brief, durable knowledge policy, decision, handoff, explicit usage, and revision-bound run-report assets with seed-aware rollback behavior.
 - An original ten-slide offline presentation pack with keyboard, pointer, responsive, reduced-motion, and print behavior.

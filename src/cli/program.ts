@@ -106,6 +106,7 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
         `Task: ${result.workspace.taskId}`,
         `Branch: ${result.workspace.branch}`,
         `Path: ${result.workspace.workspaceRoot}`,
+        ...(result.workspace.cleanedAt === undefined ? [] : [`Cleanup: completed at ${result.workspace.cleanedAt}`]),
       ].join("\n")}\n`;
   }
 }
@@ -360,9 +361,9 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     });
 
   const workspace = program.command("workspace").description("Manage isolated Git task worktrees and integration.");
-  for (const action of ["status", "create", "validate", "integrate"] as const) {
+  for (const action of ["status", "create", "validate", "integrate", "cleanup"] as const) {
     workspace.command(action)
-      .argument("<task-id>", "active task identifier")
+      .argument("<task-id>", "task identifier")
       .requiredOption("--worker <id>", "stable worker identifier")
       .option("--root <target>", "integration project directory", ".")
       .option("--json", "emit machine-readable output")

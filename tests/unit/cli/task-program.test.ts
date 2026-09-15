@@ -60,11 +60,12 @@ function dependencies() {
       root: "C:/fixture",
       workspace: {
         taskId: "T001",
-        status: input.action === "integrate" ? "integrated" : "created",
+        status: input.action === "integrate" || input.action === "cleanup" ? "integrated" : "created",
         workspaceRoot: "C:/fixture/.forgeyard/state/worktrees/t001-worker-one",
         branch: "forgeyard/t001-worker-one",
         targetBranch: "main",
         baseCommit: "a".repeat(40),
+        ...(input.action === "cleanup" ? { cleanedAt: "2026-09-15T20:00:00.000Z" } : {}),
       },
     })),
   } as unknown as ForgeyardService;
@@ -143,7 +144,7 @@ describe("task and ledger CLI", () => {
     });
   });
 
-  test.each(["status", "create", "validate", "integrate"])("maps workspace %s", async (action) => {
+  test.each(["status", "create", "validate", "integrate", "cleanup"])("maps workspace %s", async (action) => {
     const deps = dependencies();
     const capture = captureIo();
     expect(await runCli([
@@ -155,5 +156,15 @@ describe("task and ledger CLI", () => {
       workerId: "worker-one",
       root: "fixture",
     });
+  });
+
+  test("reports completed worktree cleanup in plain output", async () => {
+    const deps = dependencies();
+    const capture = captureIo();
+    expect(await runCli([
+      "workspace", "cleanup", "T001", "--worker", "worker-one", "--root", "fixture",
+    ], deps, capture.io)).toBe(0);
+    expect(capture.read().stdout).toContain("Cleanup: completed at 2026-09-15T20:00:00.000Z");
+    expect(capture.read().stderr).toBe("");
   });
 });

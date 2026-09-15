@@ -117,9 +117,11 @@ For isolated branch work, create and validate a task worktree, then integrate it
 forgeyard workspace create T001 --worker implementer-1 --root ./my-project
 forgeyard workspace validate T001 --worker implementer-1 --root ./my-project
 forgeyard workspace integrate T001 --worker implementer-1 --root ./my-project
+# Only needed if automatic post-merge cleanup was interrupted:
+forgeyard workspace cleanup T001 --worker implementer-1 --root ./my-project
 ```
 
-Integration is serialized by a project lock. Forgeyard verifies the task branch, stages a no-commit merge, runs the combined-tree command, aborts a failed or conflicted merge, creates the merge commit only after that gate, verifies the frozen integration commit again, and then completes the task. It never pushes or silently removes a worker branch.
+Integration is serialized by an atomic, owner-token Git-ref lock that can recover a dead local owner without expiring a live long-running integration. Forgeyard verifies the task branch, stages a no-commit merge, runs the combined-tree command, aborts a failed or conflicted merge, creates the merge commit only after that gate, verifies the frozen integration commit again, and then completes the task. After that durable success point it runs `git worktree remove`, verifies that the exact `.git/worktrees` registration disappeared, and uses one Git ref transaction to confirm the target branch is unchanged while deleting `refs/heads/<worker-branch>` only at the exact validated commit. If the directory is already missing, the same non-force command removes only that worktree's stale Git registration instead of pruning the repository. If cleanup is interrupted, the completed integration remains recorded and `workspace cleanup` retries only the cleanup; Forgeyard never repeats the merge, pushes, deploys, force-deletes an unmerged branch, or deletes an unregistered directory.
 
 Preview or apply an update from the human-owned configuration and packaged registry:
 

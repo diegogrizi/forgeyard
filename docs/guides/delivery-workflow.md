@@ -43,9 +43,13 @@ Claude Code invokes the same project-local decision automatically for native fil
 forgeyard workspace create T001 --worker implementer-1 --root .
 forgeyard workspace validate T001 --worker implementer-1 --root .
 forgeyard workspace integrate T001 --worker implementer-1 --root .
+# Recovery only, when automatic cleanup reports an interruption:
+forgeyard workspace cleanup T001 --worker implementer-1 --root .
 ```
 
-Each claimed task gets a deterministic Git branch and worktree from a frozen base. Validation happens in that worktree. Integration is serialized, requires clean checkouts and valid ancestry, performs a no-commit merge, tests the combined tree, aborts on conflict or failure, commits only after the gate passes, and verifies the resulting commit again. It does not push, deploy, delete the worker branch, or resolve a conflict on the operator's behalf.
+Each claimed task gets a deterministic Git branch and worktree from a frozen base. Validation happens in that worktree. Integration is serialized, requires clean checkouts and valid ancestry, performs a no-commit merge, tests the combined tree, aborts on conflict or failure, commits only after the gate passes, and verifies the resulting commit again. Once that success is durable, Forgeyard uses `git worktree remove` to remove the checkout and its exact `.git/worktrees` administration entry, verifies that the registration disappeared, then uses one Git ref transaction to confirm the target branch is unchanged while deleting `refs/heads/<worker-branch>` only at the validated commit. If the directory was already removed manually, the same non-force command targets only that exact stale registration; Forgeyard does not run repository-wide pruning. An existing directory that is no longer registered is never deleted automatically.
+
+If the filesystem or Git interrupts either cleanup step, the merge and completed task state remain intact. Re-running `workspace cleanup` resumes the idempotent cleanup without repeating integration. Forgeyard checks the worker branch both before and after worktree removal, proves that it is still the validated task revision, and verifies that the target branch still contains the recorded integration. The serialized lock is an atomic Git ref whose immutable owner record contains a token, host, and process; a later invocation can recover a dead local owner without using an unsafe elapsed-time timeout. Forgeyard does not push, deploy, force-delete an unmerged branch, or resolve a conflict on the operator's behalf.
 
 The default concurrency cap is four actual claims. Hundreds of installed agent descriptions are a searchable library; they are not hundreds of simultaneous processes and are not loaded into one prompt.
 

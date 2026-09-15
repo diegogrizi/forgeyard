@@ -1,4 +1,6 @@
-import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
 import path from "node:path";
 
 import { execa } from "execa";
@@ -19,6 +21,17 @@ import {
 
 const COMMIT_PATTERN = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const WORKER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const LOCK_TOKEN_PATTERN = /^[a-f0-9]{32}$/;
+const INTEGRATION_LOCK_REF = "refs/forgeyard/locks/integration";
+const activeIntegrationLockTokens = new Set<string>();
+
+interface IntegrationLockRecord {
+  schemaVersion: 1;
+  token: string;
+  pid: number;
+  hostname: string;
+  createdAt: string;
+}
 
 export interface GitResult {
   exitCode: number;
@@ -27,7 +40,7 @@ export interface GitResult {
 }
 
 export interface WorktreeGitPort {
-  run(cwd: string, args: readonly string[]): Promise<GitResult>;
+  run(cwd: string, args: readonly string[], input?: string): Promise<GitResult>;
 }
 
 export interface WorktreeServiceOptions {
@@ -54,6 +67,7 @@ export interface WorkspaceResult {
   validatedCommit?: string;
   integratedCommit?: string;
   receiptId?: string;
+  cleanedAt?: string;
 }
 
 export interface WorktreeService {
@@ -61,12 +75,18 @@ export interface WorktreeService {
   create(input: WorkspaceInput): Promise<WorkspaceResult>;
   validate(input: WorkspaceInput): Promise<WorkspaceResult>;
   integrate(input: WorkspaceInput): Promise<WorkspaceResult>;
+  cleanup(input: WorkspaceInput): Promise<WorkspaceResult>;
 }
 
 const systemClock: StateClock = { now: () => new Date() };
 export const nodeWorktreeGitPort: WorktreeGitPort = {
-  async run(cwd, args) {
-    const result = await execa("git", [...args], { cwd, shell: false, reject: false, stdin: "ignore" });
+  async run(cwd, args, input) {
+    const result = await execa("git", [...args], {
+      cwd,
+      shell: false,
+      reject: false,
+      ...(input === undefined ? { stdin: "ignore" as const } : { input }),
+    });
     return { exitCode: result.exitCode ?? 1, stdout: result.stdout, stderr: result.stderr };
   },
 };
@@ -110,6 +130,7 @@ function workspaceResult(root: string, taskId: string, workspace: NonNullable<Ta
     baseCommit: workspace.baseCommit,
     ...(workspace.validatedCommit === undefined ? {} : { validatedCommit: workspace.validatedCommit }),
     ...(workspace.integratedCommit === undefined ? {} : { integratedCommit: workspace.integratedCommit }),
+    ...(workspace.cleanedAt === undefined ? {} : { cleanedAt: workspace.cleanedAt }),
     ...(workspace.integratedReceiptId !== undefined
       ? { receiptId: workspace.integratedReceiptId }
       : workspace.validatedReceiptId === undefined ? {} : { receiptId: workspace.validatedReceiptId }),
@@ -148,24 +169,154 @@ async function loadWorkspaceReceipt(workspaceRoot: string, taskId: string, recei
   return receipt;
 }
 
-async function withIntegrationLock<T>(root: string, operation: () => Promise<T>): Promise<T> {
-  const lockPath = resolveInsideRoot(root, ".forgeyard/state/integration.lock");
-  await mkdir(path.dirname(lockPath), { recursive: true });
-  let handle;
+function parseIntegrationLock(source: string): IntegrationLockRecord | undefined {
   try {
-    handle = await open(lockPath, "wx", 0o600);
-    await handle.writeFile(`${JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() })}\n`, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw worktreeError("FY_INTEGRATION_BUSY", "Another process owns the serialized integration lock.", [lockPath]);
-    }
-    throw worktreeError("FY_INTEGRATION_FAILED", "The serialized integration lock could not be created.", [lockPath]);
+    const value = JSON.parse(source) as Partial<IntegrationLockRecord>;
+    if (
+      value.schemaVersion !== 1 ||
+      typeof value.token !== "string" ||
+      !LOCK_TOKEN_PATTERN.test(value.token) ||
+      !Number.isSafeInteger(value.pid) ||
+      value.pid! < 1 ||
+      typeof value.hostname !== "string" ||
+      value.hostname.length === 0 ||
+      typeof value.createdAt !== "string" ||
+      !Number.isFinite(Date.parse(value.createdAt))
+    ) return undefined;
+    return value as IntegrationLockRecord;
+  } catch {
+    return undefined;
   }
+}
+
+async function currentIntegrationLockOid(git: WorktreeGitPort, root: string): Promise<string | undefined> {
+  const exists = await git.run(root, ["show-ref", "--verify", "--quiet", INTEGRATION_LOCK_REF]);
+  if (exists.exitCode === 1) return undefined;
+  if (exists.exitCode !== 0) {
+    throw worktreeError("FY_INTEGRATION_FAILED", "Git could not inspect the serialized integration lock.");
+  }
+  const result = await git.run(root, ["show-ref", "--verify", "--hash", INTEGRATION_LOCK_REF]);
+  if (result.exitCode !== 0) {
+    throw worktreeError("FY_INTEGRATION_FAILED", "The serialized integration lock changed while it was inspected.");
+  }
+  const oid = result.stdout.trim().toLowerCase();
+  if (!COMMIT_PATTERN.test(oid)) {
+    throw worktreeError("FY_INTEGRATION_FAILED", "Git returned an invalid serialized integration lock revision.");
+  }
+  return oid;
+}
+
+async function readIntegrationLock(
+  git: WorktreeGitPort,
+  root: string,
+  oid: string,
+): Promise<IntegrationLockRecord | undefined> {
+  const result = await git.run(root, ["cat-file", "blob", oid]);
+  if (result.exitCode !== 0) return undefined;
+  return parseIntegrationLock(result.stdout);
+}
+
+function localProcessIsAlive(pid: number, token: string): boolean {
+  if (pid === process.pid) return activeIntegrationLockTokens.has(token);
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+async function createIntegrationLockBlob(
+  git: WorktreeGitPort,
+  root: string,
+  record: IntegrationLockRecord,
+): Promise<string> {
+  const stagingRoot = resolveInsideRoot(root, ".forgeyard/state/staging");
+  const recordPath = resolveInsideRoot(root, `.forgeyard/state/staging/integration-lock-${record.token}.json`);
+  await mkdir(stagingRoot, { recursive: true });
+  try {
+    await writeFile(recordPath, `${JSON.stringify(record)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    const result = await git.run(root, ["hash-object", "-w", recordPath]);
+    const oid = result.stdout.trim().toLowerCase();
+    if (result.exitCode !== 0 || !COMMIT_PATTERN.test(oid)) {
+      throw worktreeError("FY_INTEGRATION_FAILED", "Git could not record the serialized integration lock owner.");
+    }
+    return oid;
+  } finally {
+    await rm(recordPath, { force: true }).catch(() => undefined);
+  }
+}
+
+async function acquireIntegrationLock(
+  git: WorktreeGitPort,
+  root: string,
+  record: IntegrationLockRecord,
+): Promise<string> {
+  const ownOid = await createIntegrationLockBlob(git, root, record);
+  const missingOid = "0".repeat(ownOid.length);
+  activeIntegrationLockTokens.add(record.token);
+
+  try {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const existingOid = await currentIntegrationLockOid(git, root);
+      if (existingOid === undefined) {
+        const created = await git.run(root, ["update-ref", INTEGRATION_LOCK_REF, ownOid, missingOid]);
+        if (created.exitCode === 0) return ownOid;
+        continue;
+      }
+
+      const owner = await readIntegrationLock(git, root, existingOid);
+      if (
+        owner === undefined ||
+        owner.hostname.toLocaleLowerCase("en-US") !== hostname().toLocaleLowerCase("en-US") ||
+        localProcessIsAlive(owner.pid, owner.token)
+      ) {
+        throw worktreeError("FY_INTEGRATION_BUSY", "Another process owns the serialized integration lock.");
+      }
+
+      const replaced = await git.run(root, ["update-ref", INTEGRATION_LOCK_REF, ownOid, existingOid]);
+      if (replaced.exitCode === 0) return ownOid;
+    }
+
+    throw worktreeError("FY_INTEGRATION_BUSY", "Another process acquired the serialized integration lock.");
+  } catch (error) {
+    activeIntegrationLockTokens.delete(record.token);
+    throw error;
+  }
+}
+
+async function releaseIntegrationLock(
+  git: WorktreeGitPort,
+  root: string,
+  ownerOid: string,
+): Promise<void> {
+  const released = await git.run(root, ["update-ref", "-d", INTEGRATION_LOCK_REF, ownerOid]);
+  if (released.exitCode !== 0) {
+    throw worktreeError(
+      "FY_INTEGRATION_LOCK_LOST",
+      "The serialized integration lock changed before its owner could release it.",
+    );
+  }
+}
+
+async function withIntegrationLock<T>(root: string, git: WorktreeGitPort, operation: () => Promise<T>): Promise<T> {
+  const token = randomBytes(16).toString("hex");
+  const record: IntegrationLockRecord = {
+    schemaVersion: 1,
+    token,
+    pid: process.pid,
+    hostname: hostname(),
+    createdAt: new Date().toISOString(),
+  };
+  const ownerOid = await acquireIntegrationLock(git, root, record);
   try {
     return await operation();
   } finally {
-    await handle.close().catch(() => undefined);
-    await rm(lockPath, { force: true }).catch(() => undefined);
+    try {
+      await releaseIntegrationLock(git, root, ownerOid);
+    } finally {
+      activeIntegrationLockTokens.delete(token);
+    }
   }
 }
 
@@ -188,6 +339,206 @@ export function createWorktreeService(options: WorktreeServiceOptions): Worktree
     const runtime = assertOwnedActive(state, input);
     if (runtime.workspace === undefined) throw worktreeError("FY_WORKTREE_MISSING", `Task ${input.taskId} has no isolated workspace.`);
     return runtime.workspace;
+  }
+
+  async function integratedWorkspace(input: WorkspaceInput) {
+    taskById(graph, input.taskId);
+    if (!WORKER_PATTERN.test(input.workerId)) throw worktreeError("FY_TASK_INVALID", "Worker ID is invalid.");
+    const state = await readPersistedRunState(root, graph);
+    const runtime = state.tasks[input.taskId];
+    const workspace = runtime?.workspace;
+    const expectedBranch = `forgeyard/${slug(input.taskId)}-${slug(input.workerId)}`;
+    if (runtime?.status !== "completed" || workspace?.status !== "integrated") {
+      throw worktreeError("FY_WORKTREE_NOT_INTEGRATED", `Task ${input.taskId} has no completed integration to clean up.`);
+    }
+    if (workspace.branch !== expectedBranch) {
+      throw worktreeError("FY_TASK_OWNERSHIP", `Task ${input.taskId} was not assigned to worker ${input.workerId}.`);
+    }
+    return workspace;
+  }
+
+  async function exists(candidate: string): Promise<boolean> {
+    try {
+      await stat(candidate);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
+  }
+
+  async function registeredWorktreePaths(): Promise<readonly string[]> {
+    const output = await requiredGit(
+      git,
+      root,
+      ["worktree", "list", "--porcelain", "-z"],
+      "FY_WORKTREE_CLEANUP_FAILED",
+      "Git could not list registered worktrees during cleanup.",
+    );
+    return output
+      .split("\0")
+      .filter((entry) => entry.startsWith("worktree "))
+      .map((entry) => path.resolve(entry.slice("worktree ".length)));
+  }
+
+  function sameFilesystemPath(left: string, right: string): boolean {
+    const normalizedLeft = path.normalize(left);
+    const normalizedRight = path.normalize(right);
+    return process.platform === "win32"
+      ? normalizedLeft.toLocaleLowerCase("en-US") === normalizedRight.toLocaleLowerCase("en-US")
+      : normalizedLeft === normalizedRight;
+  }
+
+  async function localRefHead(ref: string, label: string): Promise<string | undefined> {
+    const exists = await git.run(root, ["show-ref", "--verify", "--quiet", ref]);
+    if (exists.exitCode === 1) return undefined;
+    if (exists.exitCode !== 0) {
+      throw worktreeError("FY_WORKTREE_CLEANUP_FAILED", `Git could not inspect ${label}.`);
+    }
+    const result = await git.run(root, ["show-ref", "--verify", "--hash", ref]);
+    if (result.exitCode !== 0) {
+      throw worktreeError("FY_WORKTREE_CLEANUP_FAILED", `${label} changed while Git inspected it.`);
+    }
+    const head = result.stdout.trim().toLowerCase();
+    if (!COMMIT_PATTERN.test(head)) {
+      throw worktreeError("FY_WORKTREE_CLEANUP_FAILED", `Git returned an invalid revision for ${label}.`);
+    }
+    return head;
+  }
+
+  async function localBranchHead(branch: string): Promise<string | undefined> {
+    return localRefHead(`refs/heads/${branch}`, `worker branch ${branch}`);
+  }
+
+  async function requireCleanupAncestry(ancestor: string, descendant: string, staleMessage: string): Promise<void> {
+    const result = await git.run(root, ["merge-base", "--is-ancestor", ancestor, descendant]);
+    if (result.exitCode === 0) return;
+    if (result.exitCode === 1) throw worktreeError("FY_WORKTREE_STALE", staleMessage);
+    throw worktreeError("FY_WORKTREE_CLEANUP_FAILED", "Git could not verify cleanup ancestry.");
+  }
+
+  async function cleanupIntegrated(input: WorkspaceInput, workspace: NonNullable<TaskRuntimeState["workspace"]>) {
+    if (workspace.cleanedAt !== undefined) return workspace;
+    if (
+      workspace.validatedCommit === undefined ||
+      workspace.integratedCommit === undefined ||
+      !COMMIT_PATTERN.test(workspace.validatedCommit) ||
+      !COMMIT_PATTERN.test(workspace.integratedCommit)
+    ) {
+      throw worktreeError("FY_WORKTREE_STALE", `Task ${input.taskId} has incomplete integration revision metadata.`);
+    }
+    const workspaceRoot = resolveInsideRoot(root, workspace.relativePath);
+    const branchHead = await localBranchHead(workspace.branch);
+    if (branchHead !== undefined && branchHead !== workspace.validatedCommit) {
+      throw worktreeError(
+        "FY_WORKTREE_STALE",
+        `Worker branch ${workspace.branch} no longer points to the revision validated for task ${input.taskId}.`,
+      );
+    }
+    await requireCleanupAncestry(
+      workspace.validatedCommit,
+      workspace.integratedCommit,
+      `The recorded integration commit no longer contains the validated revision for task ${input.taskId}.`,
+    );
+    const targetRef = `refs/heads/${workspace.targetBranch}`;
+    const targetHead = await localRefHead(targetRef, `target branch ${workspace.targetBranch}`);
+    if (targetHead === undefined) {
+      throw worktreeError("FY_WORKTREE_STALE", `Target branch ${workspace.targetBranch} no longer exists.`);
+    }
+    await requireCleanupAncestry(
+      workspace.integratedCommit,
+      targetHead,
+      `Target branch ${workspace.targetBranch} no longer contains the recorded integration for task ${input.taskId}.`,
+    );
+    const registered = (await registeredWorktreePaths()).some((candidate) => sameFilesystemPath(candidate, workspaceRoot));
+    const directoryExists = await exists(workspaceRoot);
+
+    if (registered) {
+      const removed = await git.run(root, ["worktree", "remove", workspaceRoot]);
+      if (removed.exitCode !== 0) {
+        throw worktreeError(
+          "FY_WORKTREE_CLEANUP_FAILED",
+          directoryExists
+            ? `Task ${input.taskId} was integrated, but Git could not remove its isolated worktree.`
+            : `Task ${input.taskId} was integrated, but Git could not remove its stale worktree registration.`,
+          [workspace.relativePath],
+        );
+      }
+      if ((await registeredWorktreePaths()).some((candidate) => sameFilesystemPath(candidate, workspaceRoot))) {
+        throw worktreeError(
+          "FY_WORKTREE_CLEANUP_FAILED",
+          `Task ${input.taskId} was integrated, but its worktree registration still exists after removal.`,
+          [workspace.relativePath],
+        );
+      }
+    } else if (directoryExists) {
+      throw worktreeError(
+        "FY_WORKTREE_CLEANUP_FAILED",
+        `Task ${input.taskId} was integrated, but its workspace path is no longer registered with Git and will not be deleted automatically.`,
+        [workspace.relativePath],
+      );
+    }
+
+    if (branchHead !== undefined) {
+      const confirmedBranchHead = await localBranchHead(workspace.branch);
+      if (confirmedBranchHead === undefined) {
+        // Another actor already removed the exact branch after the worktree disappeared.
+      } else if (confirmedBranchHead !== workspace.validatedCommit) {
+        throw worktreeError(
+          "FY_WORKTREE_STALE",
+          `Worker branch ${workspace.branch} changed after its worktree was removed and will not be deleted automatically.`,
+        );
+      } else {
+        const branchRef = `refs/heads/${workspace.branch}`;
+        const transaction = [
+          "start",
+          `verify ${targetRef} ${targetHead}`,
+          `delete ${branchRef} ${workspace.validatedCommit}`,
+          "prepare",
+          "commit",
+          "",
+        ].join("\n");
+        const deleted = await git.run(root, ["update-ref", "--stdin"], transaction);
+        if (deleted.exitCode !== 0) {
+          const currentTargetHead = await localRefHead(targetRef, `target branch ${workspace.targetBranch}`);
+          if (currentTargetHead !== targetHead) {
+            throw worktreeError(
+              "FY_WORKTREE_STALE",
+              `Target branch ${workspace.targetBranch} changed during worker branch deletion; the worker branch was preserved.`,
+            );
+          }
+          const currentBranchHead = await localBranchHead(workspace.branch);
+          if (currentBranchHead === undefined) {
+            // Another actor already removed the exact branch.
+          } else if (currentBranchHead !== workspace.validatedCommit) {
+            throw worktreeError(
+              "FY_WORKTREE_STALE",
+              `Worker branch ${workspace.branch} changed during deletion and was preserved.`,
+            );
+          } else {
+            throw worktreeError(
+              "FY_WORKTREE_CLEANUP_FAILED",
+              `Task ${input.taskId} was integrated and its worktree was removed, but Git could not safely delete branch ${workspace.branch}.`,
+            );
+          }
+        }
+      }
+    }
+
+    return store.transact(graph, clock, async (state) => {
+      const completed = state.tasks[input.taskId];
+      if (
+        completed?.status !== "completed" ||
+        completed.workspace?.status !== "integrated" ||
+        completed.workspace.branch !== workspace.branch ||
+        completed.workspace.integratedCommit !== workspace.integratedCommit
+      ) {
+        throw worktreeError("FY_WORKTREE_STALE", "Completed task state changed during worktree cleanup.");
+      }
+      const changed = completed.workspace.cleanedAt === undefined;
+      if (changed) completed.workspace.cleanedAt = clock.now().toISOString();
+      return { value: completed.workspace, changed };
+    });
   }
 
   return {
@@ -257,7 +608,7 @@ export function createWorktreeService(options: WorktreeServiceOptions): Worktree
     },
 
     async integrate(input) {
-      return withIntegrationLock(root, async () => {
+      return withIntegrationLock(root, git, async () => {
       const workspace = await stateWorkspace(input);
       if (
         workspace.status !== "validated" ||
@@ -317,7 +668,15 @@ export function createWorktreeService(options: WorktreeServiceOptions): Worktree
         completed.workspace.integratedReceiptId = finalVerification.receipt.receiptId;
         return { value: completed.workspace, changed: true };
       });
-      return workspaceResult(root, input.taskId, updated);
+      const cleaned = await cleanupIntegrated(input, updated);
+      return workspaceResult(root, input.taskId, cleaned);
+      });
+    },
+
+    async cleanup(input) {
+      return withIntegrationLock(root, git, async () => {
+        const cleaned = await cleanupIntegrated(input, await integratedWorkspace(input));
+        return workspaceResult(root, input.taskId, cleaned);
       });
     },
   };

@@ -25,7 +25,7 @@ This is a {{project.mode}} project initialized with a {{workflow.timeboxMinutes}
 
 Prioritize the smallest visible user outcome before generalized infrastructure. Claim only dependency-ready tasks and keep no more than {{workflow.maxConcurrency}} independent work items active. Use isolated Git worktrees for concurrent writes. Installed agents and skills are a catalog of capabilities; they are not running workers and should be loaded only when relevant.
 
-Use `forgeyard task claim`, `checkpoint`, `resume`, `verify`, and `complete` to make progress resumable. Use `forgeyard guard` before uncertain writes. For isolated work, use `forgeyard workspace create`, `validate`, and `integrate`; integration remains serialized and never pushes.
+Use `forgeyard task claim`, `checkpoint`, `resume`, `verify`, and `complete` to make progress resumable. Use `forgeyard guard` before uncertain writes. For isolated work, use `forgeyard workspace create`, `validate`, and `integrate`; successful integration removes the registered worktree and merged worker branch. If that cleanup is interrupted, retry `forgeyard workspace cleanup`; integration remains serialized and never pushes.
 
 Required quality commands:
 
