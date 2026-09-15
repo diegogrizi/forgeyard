@@ -58,6 +58,7 @@ It will:
 It will not:
 
 - ship model credentials or read secrets into generated prompts;
+- include competition organizer, sponsor, employer, team, participant, or event-brand references in distributed instructions, skills, templates, examples, metadata, or assets;
 - claim that a prompt permission list is an operating-system sandbox;
 - launch dozens of workers merely because dozens of role definitions are installed;
 - silently install global software, mutate shell profiles, push repositories, or enable telemetry;
@@ -378,6 +379,7 @@ The schedule is configurable. The invariant is that the visible slice precedes g
 The presentation pack produces and validates a responsive HTML deck or microsite with:
 
 - a deliberate visual system rather than default framework styling;
+- brand-neutral defaults with no inherited organizer, sponsor, employer, team, participant, or event identity;
 - problem, user, insight, solution, live demo, evidence, architecture, value, and closing ask;
 - licensed or original assets with attribution;
 - desktop and mobile viewport checks;
@@ -621,6 +623,7 @@ Forgeyard v1 is ready when:
 - completion evidence becomes stale automatically after relevant code changes;
 - update, rollback, and uninstall preserve user-owned files;
 - every distributed byte has a known license and provenance path;
+- distributed content and presentation assets contain no inherited competition or participant branding;
 - a five-hour simulation produces a runnable visible slice, captured evidence, a fallback demo, and a polished responsive HTML presentation;
 - documentation never claims a capability that `doctor` reports as advisory or unsupported.
 
