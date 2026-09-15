@@ -100,6 +100,13 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
       return `Forgeyard ledger: recorded\nEvent: ${result.eventId}\n`;
     case "guard":
       return `Forgeyard guard: allowed\nTask: ${result.taskId}\n${lineList("Paths", result.paths)}\n`;
+    case "workspace":
+      return `${[
+        `Forgeyard workspace ${result.action}: ${result.workspace.status}`,
+        `Task: ${result.workspace.taskId}`,
+        `Branch: ${result.workspace.branch}`,
+        `Path: ${result.workspace.workspaceRoot}`,
+      ].join("\n")}\n`;
   }
 }
 
@@ -351,6 +358,25 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
       });
       writeResult(result, json);
     });
+
+  const workspace = program.command("workspace").description("Manage isolated Git task worktrees and integration.");
+  for (const action of ["status", "create", "validate", "integrate"] as const) {
+    workspace.command(action)
+      .argument("<task-id>", "active task identifier")
+      .requiredOption("--worker <id>", "stable worker identifier")
+      .option("--root <target>", "integration project directory", ".")
+      .option("--json", "emit machine-readable output")
+      .action(async (taskId: string, options: Record<string, unknown>) => {
+        const json = booleanOption(options, "json");
+        const result = await dependencies.service.workspace({
+          action,
+          taskId,
+          workerId: stringOption(options, "worker")!,
+          root: stringOption(options, "root") ?? ".",
+        });
+        writeResult(result, json);
+      });
+  }
 
   return program;
 }

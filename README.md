@@ -109,6 +109,16 @@ forgeyard task complete T001 --worker implementer-1 --receipt <receipt-id> --roo
 
 `claim` enforces dependency readiness, the configured concurrency cap, retry/time budgets, and overlapping write scopes. `checkpoint` and `resume` persist through process interruption. Check a proposed write explicitly with `forgeyard guard T001 src/feature.ts --root ./my-project`. Claude Code projects also invoke the installed guard automatically before native `Write`, `Edit`, and `NotebookEdit` tools.
 
+For isolated branch work, create and validate a task worktree, then integrate it from the clean target branch:
+
+```sh
+forgeyard workspace create T001 --worker implementer-1 --root ./my-project
+forgeyard workspace validate T001 --worker implementer-1 --root ./my-project
+forgeyard workspace integrate T001 --worker implementer-1 --root ./my-project
+```
+
+Integration is serialized by a project lock. Forgeyard verifies the task branch, stages a no-commit merge, runs the combined-tree command, aborts a failed or conflicted merge, creates the merge commit only after that gate, verifies the frozen integration commit again, and then completes the task. It never pushes or silently removes a worker branch.
+
 Preview or apply an update from the human-owned configuration and packaged registry:
 
 ```sh

@@ -77,6 +77,22 @@
               "items": { "type": "string", "minLength": 1, "maxLength": 4096 }
             }
           }
+        },
+        "workspace": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relativePath", "branch", "targetBranch", "baseCommit", "status"],
+          "properties": {
+            "relativePath": { "type": "string", "pattern": "^\\.forgeyard/state/worktrees/[A-Za-z0-9._-]+$" },
+            "branch": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "targetBranch": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "baseCommit": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
+            "status": { "enum": ["created", "validated", "integrated"] },
+            "validatedCommit": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
+            "validatedReceiptId": { "type": "string", "minLength": 2, "maxLength": 128 },
+            "integratedCommit": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
+            "integratedReceiptId": { "type": "string", "minLength": 2, "maxLength": 128 }
+          }
         }
       }
     }

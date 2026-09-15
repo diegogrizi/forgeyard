@@ -17,6 +17,7 @@ The source snapshot exposes **202 agents, 183 skills, and 105 commands**. Every 
 | Imported hooks | Disabled | Disabled | Disabled |
 | Project write guard | Advisory `forgeyard guard` | Native `PreToolUse` for file tools plus CLI | Advisory `forgeyard guard` |
 | Task DAG scheduler | Shared local CLI | Shared local CLI | Shared local CLI |
+| Git task isolation | Shared worktree service | Shared worktree service | Shared worktree service |
 | Default concurrency | 4 | 4 | 4 |
 
 ## Codex

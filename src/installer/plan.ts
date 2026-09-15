@@ -96,7 +96,7 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
     plannedFile("forgeyard.lock", lockContent(input), "forgeyard.lock", "managed"),
     plannedFile(
       ".forgeyard/.gitignore",
-      "evidence/\nledger/\nstate/run.json\nstate/run.lock\nstate/run.json.tmp-*\nstate/staging/\nstate/backups/\nstate/worktrees/\n",
+      "evidence/\nledger/\nstate/run.json\nstate/run.lock\nstate/integration.lock\nstate/run.json.tmp-*\nstate/staging/\nstate/backups/\nstate/worktrees/\n",
       "forgeyard.runtime-ignore",
       "managed",
     ),

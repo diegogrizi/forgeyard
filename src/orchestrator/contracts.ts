@@ -67,6 +67,17 @@ export interface TaskRuntimeState {
     writeScopes: readonly string[];
     protectedPaths: readonly string[];
   };
+  workspace?: {
+    relativePath: string;
+    branch: string;
+    targetBranch: string;
+    baseCommit: string;
+    status: "created" | "validated" | "integrated";
+    validatedCommit?: string;
+    validatedReceiptId?: string;
+    integratedCommit?: string;
+    integratedReceiptId?: string;
+  };
 }
 
 export interface RunStop {

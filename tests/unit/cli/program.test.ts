@@ -121,6 +121,7 @@ function service(): ForgeyardService {
     task: vi.fn(async () => { throw new Error("not used"); }),
     recordUsage: vi.fn(async () => { throw new Error("not used"); }),
     guard: vi.fn(async () => { throw new Error("not used"); }),
+    workspace: vi.fn(async () => { throw new Error("not used"); }),
   };
 }
 

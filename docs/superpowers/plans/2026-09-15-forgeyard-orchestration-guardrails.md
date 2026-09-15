@@ -42,12 +42,12 @@
 
 ## Task 5: Add isolated Git workspaces and serialized integration
 
-- [ ] Add a Git-port worktree service with deterministic task branch and directory names.
-- [ ] Create worktrees only for claimed tasks, bind the base revision, and keep workspace metadata in scheduler state.
-- [ ] Validate the task branch independently and allow integration only in dependency order from a clean target branch.
-- [ ] Stop on conflicts or moving-target revisions; never push or discard user changes.
-- [ ] Cover create, reuse, dirty target, stale base, failed validation, and successful integration with mocked and real local Git tests.
-- [ ] Commit as `feat: isolate parallel tasks in Git worktrees`.
+- [x] Add a Git-port worktree service with deterministic task branch and directory names.
+- [x] Create worktrees only for claimed tasks, bind the base revision, and keep workspace metadata in scheduler state.
+- [x] Validate the task branch independently and allow integration only in dependency order from a clean target branch.
+- [x] Stop on conflicts or incompatible target revisions; never push or discard user changes.
+- [x] Cover create, reuse, dirty target, stale base, failed validation, and successful integration with mocked and real local Git tests.
+- [x] Commit as `feat: isolate parallel tasks in Git worktrees`.
 
 ## Task 6: Install memory, decision, report, and demo workflow assets
 

@@ -25,9 +25,15 @@ import {
   type UsageCommandResult,
 } from "./orchestration.js";
 import { runGuardCommand, type GuardCommandInput, type GuardCommandResult } from "./guard.js";
+import {
+  runWorkspaceCommand,
+  type WorkspaceCommandInput,
+  type WorkspaceCommandResult,
+} from "./workspace.js";
 
 export type { TaskCommandInput, TaskCommandResult, UsageCommandInput, UsageCommandResult } from "./orchestration.js";
 export type { GuardCommandInput, GuardCommandResult } from "./guard.js";
+export type { WorkspaceCommandInput, WorkspaceCommandResult } from "./workspace.js";
 
 export type WriteStatus = "applied" | "preview" | "declined" | "no-op";
 
@@ -145,7 +151,8 @@ export type ForgeyardCommandResult =
   | RollbackCommandResult
   | TaskCommandResult
   | UsageCommandResult
-  | GuardCommandResult;
+  | GuardCommandResult
+  | WorkspaceCommandResult;
 
 export interface ForgeyardService {
   init(input: InitCommandInput): Promise<InitCommandResult>;
@@ -156,6 +163,7 @@ export interface ForgeyardService {
   task(input: TaskCommandInput): Promise<TaskCommandResult>;
   recordUsage(input: UsageCommandInput): Promise<UsageCommandResult>;
   guard(input: GuardCommandInput): Promise<GuardCommandResult>;
+  workspace(input: WorkspaceCommandInput): Promise<WorkspaceCommandResult>;
 }
 
 export interface ForgeyardApplicationOptions {
@@ -476,5 +484,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
     recordUsage: recordUsageCommand,
 
     guard: runGuardCommand,
+
+    workspace: runWorkspaceCommand,
   };
 }

@@ -52,6 +52,21 @@ function dependencies() {
       allowed: true,
       paths: ["src/feature.ts"],
     })),
+    workspace: vi.fn(async (input: { action: string }) => ({
+      schemaVersion: 1,
+      ok: true,
+      command: "workspace",
+      action: input.action,
+      root: "C:/fixture",
+      workspace: {
+        taskId: "T001",
+        status: input.action === "integrate" ? "integrated" : "created",
+        workspaceRoot: "C:/fixture/.forgeyard/state/worktrees/t001-worker-one",
+        branch: "forgeyard/t001-worker-one",
+        targetBranch: "main",
+        baseCommit: "a".repeat(40),
+      },
+    })),
   } as unknown as ForgeyardService;
   return { version: "0.1.0", service, interactive: false } satisfies CliDependencies;
 }
@@ -61,6 +76,7 @@ describe("task and ledger CLI", () => {
     const help = createProgram(dependencies()).helpInformation();
     expect(help).toContain("task");
     expect(help).toContain("ledger");
+    expect(help).toContain("workspace");
   });
 
   test.each([
@@ -124,6 +140,20 @@ describe("task and ledger CLI", () => {
       root: "fixture",
       taskId: "T001",
       paths: ["src/feature.ts", "src/other.ts"],
+    });
+  });
+
+  test.each(["status", "create", "validate", "integrate"])("maps workspace %s", async (action) => {
+    const deps = dependencies();
+    const capture = captureIo();
+    expect(await runCli([
+      "workspace", action, "T001", "--worker", "worker-one", "--root", "fixture", "--json",
+    ], deps, capture.io)).toBe(0);
+    expect(deps.service.workspace).toHaveBeenCalledWith({
+      action,
+      taskId: "T001",
+      workerId: "worker-one",
+      root: "fixture",
     });
   });
 });
