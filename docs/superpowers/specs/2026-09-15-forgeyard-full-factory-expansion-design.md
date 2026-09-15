@@ -2,11 +2,21 @@
 
 ## Status and correction
 
-The existing Forgeyard M1 is a reliable installer kernel, not the complete factory requested by the product owner. It must not be presented or released as capability-equivalent to the benchmark.
+**Status:** Complete for the local, project-scoped factory contract on 2026-09-15. Authenticated model-client launch, external effects, wider harnesses, and multi-repository coordination remain outside this milestone.
+
+The first Forgeyard M1 was a reliable installer kernel, not the complete factory requested by the product owner. The completed expansion now combines that kernel with the licensed catalog, three adapters, executable local orchestration, guardrails, continuity assets, and the idea-to-demo workflow described below.
 
 The benchmark's bootstrap commit added 409 files and 81,997 physical lines in one operation. Its installed surface contained 32 direct agent definitions, 102 direct skills, 45 direct commands, 73 canonical tool files, 22 compatibility tool files, and a 64-file optional voice subsystem. The 32 agents were available roles, not 32 simultaneous workers: the installed scheduler capped parallel work at four.
 
 The correction is to preserve the tested kernel and add a large, licensed, English-language component catalog plus executable workflow layers. The catalog may be large on disk while remaining lazy in model context.
+
+### Completion evidence
+
+- The clean gate passed 55 test files and 276 tests, then build, catalog attestation, provenance generation check, release audit, and package-content inspection.
+- The pinned source catalog remains 1,007 files and 211,594 physical lines with 202 agents, 183 skills, and 105 commands.
+- The package dry-run contains 1,149 entries.
+- The dependency audit reports zero known vulnerabilities at the configured threshold.
+- The five-hour fixture resumes through fresh CLI processes, proves an older receipt stale after a new code commit, completes all four DAG tasks, and passes the offline presentation audit.
 
 ## Product target
 
@@ -109,8 +119,8 @@ The registry recursively validates tree components, rejects links and case-fold 
 
 ### Claude Code
 
-- plugins retain native `.claude-plugin`, `agents`, `skills`, `commands`, and supported hooks;
-- the generated project settings contain only project-scoped, explicitly selected hooks;
+- agents, skills, and commands render into native project directories;
+- imported catalog hooks remain disabled, while Forgeyard's original project-scoped file-tool guard is activated explicitly;
 - no global marketplace or shell-profile mutation occurs.
 
 ### Cursor
@@ -163,3 +173,4 @@ The expansion is complete only when:
 - install, update, rollback, and uninstall preserve user-owned files;
 - every distributed byte has attributable provenance and the release gate passes from a clean install.
 
+All criteria above that are enforceable without an authenticated external model client pass in the recorded local gate. Real-client invocation remains a separate optional host-evidence claim, not an inferred success.

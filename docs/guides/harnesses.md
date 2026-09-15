@@ -20,6 +20,7 @@ The `hackathon` and `full` profiles also share the same four-stage task DAG, 300
 | Project write guard | Advisory `forgeyard guard` | Native `PreToolUse` for file tools plus CLI | Advisory `forgeyard guard` |
 | Task DAG scheduler | Shared local CLI | Shared local CLI | Shared local CLI |
 | Git task isolation | Shared worktree service | Shared worktree service | Shared worktree service |
+| Model worker launch | Unsupported | Unsupported | Unsupported |
 | Default concurrency | 4 | 4 | 4 |
 
 ## Codex

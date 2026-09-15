@@ -1,13 +1,13 @@
 # Forgeyard: Open Agentic Development Factory
 
 **Date:** 2026-09-15  
-**Status:** Kernel and three licensed project adapters implemented; native orchestration remains staged work
+**Status:** Local factory milestone complete; authenticated model-client launch remains outside the release claim
 **Working name:** Forgeyard  
 **Tagline:** Build the development system before it builds the product.
 
 ## 1. Executive summary
 
-Forgeyard will be an independent, installable, open-source factory for setting up reliable agent-assisted software development in new, existing, monorepo, and multi-repository projects.
+Forgeyard is an independent, installable, open-source factory for setting up reliable agent-assisted software development. The current release covers new and existing single-repository projects; monorepo and multi-repository coordination remain future profile work.
 
 It will not be a fork, translation, or renamed copy of any hackathon scaffold. It will reproduce the useful capabilities we observed, use properly licensed upstream material where reuse is allowed, and independently implement the remaining behavior. Every shipped component will have machine-readable provenance and license metadata.
 
@@ -19,7 +19,7 @@ Forgeyard will be small at runtime even when the `full` profile is installed. A 
 
 ### Implemented catalog checkpoint
 
-The catalog expansion described in the companion [full-factory specification](2026-09-15-forgeyard-full-factory-expansion-design.md) is implemented for Codex, Claude Code, and Cursor. Forgeyard vendors an attested MIT snapshot with 1,007 files and 211,594 physical lines, parses its portable plugin model, and deterministically renders curated or complete project-scoped output. This checkpoint does not imply that the scheduler described later in this document is already complete.
+The catalog expansion described in the companion [full-factory specification](2026-09-15-forgeyard-full-factory-expansion-design.md) is implemented for Codex, Claude Code, and Cursor. Forgeyard vendors an attested MIT snapshot with 1,007 files and 211,594 physical lines, parses its portable plugin model, and deterministically renders curated or complete project-scoped output. The local scheduler, persistent run state, revision-bound evidence, task write guard, Git worktrees, serialized integration, continuity records, and four-stage delivery DAG are also implemented. Forgeyard coordinates these surfaces but does not start model clients.
 
 ## 2. Why this architecture
 
@@ -318,13 +318,13 @@ Only dependency-ready tasks are eligible to run.
 
 ### 10.2 Execution modes
 
-Forgeyard supports three execution modes:
+The architecture distinguishes three execution intents. The current release implements local guided coordination and worktree isolation; it does not launch model processes:
 
 | Mode | Meaning |
 |---|---|
-| `native` | The host provides real subagent/delegation tools. The adapter configures and invokes them. |
-| `process` | Forgeyard starts separate supported CLI processes in isolated Git worktrees. |
-| `guided` | The host cannot safely schedule workers; Forgeyard emits the next task and handoff explicitly. |
+| `native` | Recorded project intent only; the current adapters do not invoke host delegation APIs. |
+| `process` | Not implemented; Forgeyard creates and validates isolated worktrees but does not start a model CLI inside them. |
+| `guided` | Implemented; Forgeyard exposes dependency-ready tasks, claims, checkpoints, resume, stops, and handoff explicitly. |
 
 The default maximum concurrency is 4, further limited by the host, machine, repository conflict graph, and user budget. A profile may recommend a different value but cannot bypass a host cap.
 
@@ -601,9 +601,9 @@ This proves the factory before we expand the catalog.
 
 The licensed portable catalog, curated/full profile selection, three project adapters, adversarial tree tests, and public provenance output are complete. Real-client smoke checks remain optional host validation rather than a release claim.
 
-### M3 — Real orchestration
+### M3 — Local orchestration and guardrails
 
-Implement DAG state, worktree isolation, native/process/guided execution, bounded concurrency, integration gates, cancellation, and evidence invalidation.
+The executable DAG, persistent run state, bounded claims, cancellation and stop rules, write-scope decisions, Git worktree isolation, serialized integration gates, and revision-bound evidence are complete. Native delegation and model-process launch remain explicitly unsupported rather than simulated.
 
 ### M4 — Full profile and wider harness matrix
 
@@ -633,7 +633,7 @@ Forgeyard v1 is ready when:
 
 ## 22. Immediate next design boundary
 
-The kernel and three catalog adapters are complete checkpoints. The next plan covers executable task-graph orchestration, resumability, work scopes, and pre-tool guards. It must retain the existing offline install, provenance, context-budget, ownership, evidence, and rollback contracts instead of bypassing them.
+The kernel, three catalog adapters, and local orchestration layer are complete checkpoints. The next design boundary is optional authenticated client execution, wider harness adapters, monorepo and multi-repository graphs, and cross-platform real-client smoke evidence. Those additions must retain the existing offline install, provenance, context-budget, ownership, evidence, guard, and rollback contracts.
 
 ## 23. Primary references
 

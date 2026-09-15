@@ -28,7 +28,7 @@ async function exists(filePath: string): Promise<boolean> {
 }
 
 describe("operation-scoped rollback", () => {
-  test("reverses an initial install while preserving config and unrelated files", async () => {
+  test("reverses an initial install while preserving human-owned seeds and unrelated files", async () => {
     const root = await freshLifecycleRoot();
     const initial = await basePlan(root);
     await applyInstallPlan(initial);
@@ -40,7 +40,12 @@ describe("operation-scoped rollback", () => {
     expect(result.applied).toBe(true);
     expect(await exists(path.join(root, "forgeyard.yaml"))).toBe(true);
     expect(await readFile(path.join(root, "sentinel.txt"), "utf8")).toBe("unrelated\n");
-    expect(manifest.files.map((file) => file.path)).toEqual(["forgeyard.yaml"]);
+    expect(manifest.files.map((file) => file.path)).toEqual([
+      "forgeyard.yaml",
+      "PROJECT.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+    ]);
     for (const file of initial.files.filter((file) => file.ownership === "managed")) {
       expect(await exists(path.join(root, ...file.path.split("/"))), file.path).toBe(false);
     }

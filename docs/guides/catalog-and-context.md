@@ -38,7 +38,7 @@ Forgeyard caps generated primary skill entrypoints at 8 KiB. Longer upstream ins
 | `hackathon` | Curated 22-plugin selection | 52 agent files, 119 skill entrypoints |
 | `full` | Every local plugin | 203 agent files, 290 skill entrypoints |
 
-An agent file is a role contract, not a process. Installing 203 roles does not start 203 models, terminals, or worktrees. The **maximum concurrency remains 4** by default, and the current Forgeyard CLI does not launch a worker fleet. A compatible host or a future scheduler chooses a small dependency-ready subset.
+An agent file is a role contract, not a process. Installing 203 roles does not start 203 models, terminals, or worktrees. The **maximum concurrency remains 4** by default, and the Forgeyard CLI coordinates claims without launching a worker fleet. Its local scheduler exposes only a small dependency-ready subset; the operator or compatible host starts the actual worker.
 
 The practical advantage of a large library is preparation: architecture, product, frontend, backend, data, QA, security, accessibility, documentation, operations, and presentation capabilities are already locally discoverable when a short build begins. The advantage does not come from reading or running all of them.
 
@@ -49,3 +49,19 @@ The practical advantage of a large library is preparation: architecture, product
 - Choose `full` when you want the whole offline library available and accept a larger project tree.
 
 All three profiles use the same path confinement, ownership hashes, update checks, rollback journal, evidence format, and default concurrency policy.
+
+## Physical line inventory
+
+The 0.1.0 acceptance snapshot counts UTF-8 physical lines from `git ls-files`; generated `dist/` output and `node_modules/` are not tracked and are excluded. Categories below are stated separately because a repository total is not the same thing as authored implementation.
+
+| Measurement | Files | Physical lines |
+|---|---:|---:|
+| Authored executable implementation (`src/`, release tooling, build/test configuration, and the two shipped JavaScript runtimes) | 55 | 10,327 |
+| Authored tests | 57 | 6,416 |
+| Test and golden fixtures | 18 | 1,368 |
+| Attested upstream catalog source | 1,007 | 211,594 |
+| Packaged vendor directory, including its license, attestation, and npm carrier | 1,010 | 211,649 |
+| All tracked non-vendor material, including authored assets, documentation, generated SBOM/notices, manifests, and lockfiles | 189 | 37,059 |
+| Entire tracked repository | 1,199 | 248,708 |
+
+The implementation, test, and fixture rows are focused measurements, while the two final rows are complete partitions against the packaged vendor directory. Generated provenance and dependency lock data are deliberately not described as hand-authored code.

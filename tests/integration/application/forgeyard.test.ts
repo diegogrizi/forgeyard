@@ -127,7 +127,12 @@ describe("Forgeyard application transaction boundary", () => {
 
     expect(await exists(path.join(targetRoot, "forgeyard.yaml"))).toBe(true);
     expect(await exists(path.join(targetRoot, "AGENTS.md"))).toBe(false);
-    expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual(["forgeyard.yaml"]);
+    expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual([
+      "forgeyard.yaml",
+      "PROJECT.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+    ]);
     expect(await readdir(path.join(targetRoot, ".forgeyard", "state", "operations"))).toEqual(
       [`${operationId}.json`, `rollback-${operationId}.json`].sort((left, right) => left.localeCompare(right, "en")),
     );
@@ -184,6 +189,11 @@ describe("Forgeyard application transaction boundary", () => {
       nonInteractive: true,
     })).rejects.toEqual(expect.objectContaining({ code: "FY_DOCTOR_FAILED", exitCode: 6 }));
     expect(await exists(path.join(targetRoot, "AGENTS.md"))).toBe(false);
-    expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual(["forgeyard.yaml"]);
+    expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual([
+      "forgeyard.yaml",
+      "PROJECT.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+    ]);
   });
 });

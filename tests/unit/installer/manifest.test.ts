@@ -32,7 +32,7 @@ describe("install metadata", () => {
     const first = await makePlan("20260915T120000000Z-a1b2c3");
     const second = await makePlan("20260915T120001000Z-d4e5f6");
 
-    expect(first.plan.files.map((file) => file.path).slice(0, 13)).toEqual([
+    expect(first.plan.files.map((file) => file.path).slice(0, 22)).toEqual([
       "forgeyard.yaml",
       "forgeyard.lock",
       ".forgeyard/.gitignore",
@@ -41,6 +41,15 @@ describe("install metadata", () => {
       ".codex/agents/reviewer.toml",
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/bin/write-guard.mjs",
+      "PROJECT.md",
+      ".forgeyard/tasks/T002.yaml",
+      ".forgeyard/tasks/T003.yaml",
+      ".forgeyard/tasks/T004.yaml",
+      ".forgeyard/knowledge/README.md",
+      ".forgeyard/decisions/0000-template.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+      ".forgeyard/usage/README.md",
       ".agents/skills/forgeyard-showcase/SKILL.md",
       "presentation/index.html",
       "presentation/styles.css",

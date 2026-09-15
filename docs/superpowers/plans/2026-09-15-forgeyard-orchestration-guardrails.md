@@ -59,10 +59,10 @@
 
 ## Task 7: Close the factory acceptance gate
 
-- [ ] Run clean install, typecheck, all deterministic tests, all built-CLI round trips, catalog attestation, provenance, release audit, package audit, dependency audit, deny-term scan, and `git diff --check`.
-- [ ] Record separately the authored implementation lines and immutable vendored catalog lines.
-- [ ] Update architecture, changelog, capability matrix, and expansion status only for behavior proven by the gate.
-- [ ] Commit as `docs: close the Forgeyard orchestration milestone`.
+- [x] Run clean install, typecheck, all deterministic tests, all built-CLI round trips, catalog attestation, provenance, release audit, package audit, dependency audit, deny-term scan, and `git diff --check`.
+- [x] Record separately the authored implementation lines and immutable vendored catalog lines.
+- [x] Update architecture, changelog, capability matrix, and expansion status only for behavior proven by the gate.
+- [x] Commit as `docs: close the Forgeyard orchestration milestone`.
 
 ## Completion boundary
 
