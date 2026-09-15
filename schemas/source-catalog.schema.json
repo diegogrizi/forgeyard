@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeyard.dev/schemas/source-catalog.schema.json",
+  "title": "Forgeyard source catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "sources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sources": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "url", "revision", "license", "provenance", "retrievedAt", "notes"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{1,127}$" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "revision": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "license": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+          "provenance": {
+            "enum": [
+              "dependency",
+              "vendored-unmodified",
+              "adapted",
+              "generated-from-spec",
+              "clean-room-reimplementation",
+              "reference-only"
+            ]
+          },
+          "retrievedAt": { "type": "string", "format": "date" },
+          "notes": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        }
+      }
+    }
+  }
+}

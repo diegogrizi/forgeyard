@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeyard.dev/schemas/profile.schema.json",
+  "title": "Forgeyard profile manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "packs", "defaults"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "const": "hackathon" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "packs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeboxMinutes", "orchestration", "presentation"],
+      "properties": {
+        "timeboxMinutes": { "type": "integer", "minimum": 30, "maximum": 1440 },
+        "orchestration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "maxConcurrency"],
+          "properties": {
+            "mode": { "enum": ["native", "guided"] },
+            "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 16 }
+          }
+        },
+        "presentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "audience", "durationMinutes", "offline"],
+          "properties": {
+            "enabled": { "const": true },
+            "audience": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "durationMinutes": { "type": "integer", "minimum": 1, "maximum": 60 },
+            "offline": { "const": true }
+          }
+        }
+      }
+    }
+  }
+}

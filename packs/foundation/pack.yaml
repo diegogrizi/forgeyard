@@ -1,0 +1,42 @@
+schemaVersion: 1
+id: foundation
+version: 1.0.0
+license: Apache-2.0
+provenance:
+  mode: original
+components:
+  - id: foundation.project-instructions
+    kind: instruction
+    entry: templates/AGENTS.md.tpl
+    slot: project.instructions
+    template: true
+    ownership: managed
+    requires: []
+    conflicts: []
+  - id: foundation.workflow-skill
+    kind: skill
+    entry: skills/forgeyard-workflow/SKILL.md.tpl
+    slot: workflow.primary
+    template: true
+    ownership: managed
+    requires:
+      - foundation.project-instructions
+    conflicts: []
+  - id: foundation.reviewer-agent
+    kind: agent
+    entry: agents/reviewer.toml.tpl
+    slot: review.readonly
+    template: true
+    ownership: managed
+    requires:
+      - foundation.project-instructions
+    conflicts: []
+  - id: foundation.initial-task
+    kind: template
+    entry: templates/task.yaml.tpl
+    slot: task.initial
+    template: true
+    ownership: managed
+    requires:
+      - foundation.workflow-skill
+    conflicts: []

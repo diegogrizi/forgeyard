@@ -90,6 +90,17 @@ export interface ProfileManifest {
   defaults: Pick<ForgeyardConfig, "timeboxMinutes" | "orchestration" | "presentation">;
 }
 
+export interface SourceRecord {
+  id: string;
+  name: string;
+  url: string;
+  revision: string;
+  license: string;
+  provenance: Exclude<ProvenanceMode, "original">;
+  retrievedAt: string;
+  notes: string;
+}
+
 export interface ResolvedComponent extends ComponentDeclaration {
   packId: string;
   packVersion: string;

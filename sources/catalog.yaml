@@ -1,0 +1,114 @@
+schemaVersion: 1
+sources:
+  - id: npm.inquirer-prompts
+    name: "@inquirer/prompts"
+    url: https://github.com/SBoudrias/Inquirer.js
+    revision: 8.7.2
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used by the interactive wizard.
+  - id: npm.ajv
+    name: ajv
+    url: https://github.com/ajv-validator/ajv
+    revision: 8.20.0
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for JSON Schema validation.
+  - id: npm.ajv-formats
+    name: ajv-formats
+    url: https://github.com/ajv-validator/ajv-formats
+    revision: 3.0.1
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for standard schema formats.
+  - id: npm.commander
+    name: commander
+    url: https://github.com/tj/commander.js
+    revision: 15.0.0
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for command-line parsing.
+  - id: npm.diff
+    name: diff
+    url: https://github.com/kpdecker/jsdiff
+    revision: 9.0.0
+    license: BSD-3-Clause
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for human-readable install plans.
+  - id: npm.execa
+    name: execa
+    url: https://github.com/sindresorhus/execa
+    revision: 10.0.1
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for shell-free command execution.
+  - id: npm.picocolors
+    name: picocolors
+    url: https://github.com/alexeyraspopov/picocolors
+    revision: 1.1.1
+    license: ISC
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for optional terminal emphasis.
+  - id: npm.smol-toml
+    name: smol-toml
+    url: https://github.com/squirrelchat/smol-toml
+    revision: 1.8.0
+    license: BSD-3-Clause
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used to validate generated TOML.
+  - id: npm.yaml
+    name: yaml
+    url: https://github.com/eemeli/yaml
+    revision: 2.9.1
+    license: ISC
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct runtime dependency used for portable configuration and manifests.
+  - id: npm.types-node
+    name: "@types/node"
+    url: https://github.com/DefinitelyTyped/DefinitelyTyped
+    revision: 26.5.1
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct development dependency providing Node.js type declarations.
+  - id: npm.tsup
+    name: tsup
+    url: https://github.com/egoist/tsup
+    revision: 8.5.1
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct development dependency used to bundle the CLI.
+  - id: npm.tsx
+    name: tsx
+    url: https://github.com/privatenumber/tsx
+    revision: 4.23.13
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct development dependency used to run TypeScript scripts.
+  - id: npm.typescript
+    name: typescript
+    url: https://github.com/microsoft/TypeScript
+    revision: 7.0.2
+    license: Apache-2.0
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct development dependency used for static types and declarations.
+  - id: npm.vitest
+    name: vitest
+    url: https://github.com/vitest-dev/vitest
+    revision: 5.0.1
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-15
+    notes: Direct development dependency used for deterministic tests.
