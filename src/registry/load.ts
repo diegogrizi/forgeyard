@@ -212,7 +212,7 @@ async function loadEntries(packDirectory: string, manifest: PackManifest): Promi
 
     const canonicalEntry = await realpath(candidate);
     ensureInside(canonicalPackDirectory, canonicalEntry, `Component entry '${component.entry}'`);
-    const source = await readFile(canonicalEntry, "utf8");
+    const source = (await readFile(canonicalEntry, "utf8")).replaceAll("\r\n", "\n").replaceAll("\r", "\n");
     entries.set(component.id, { sourcePath: canonicalEntry, sha256: sha256Text(source) });
   }
 

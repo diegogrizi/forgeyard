@@ -5,7 +5,9 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { stringify } from "yaml";
 
+import { renderComponent } from "../../../src/adapters/render.js";
 import { loadRegistry } from "../../../src/registry/load.js";
+import { resolveProfile } from "../../../src/registry/resolve.js";
 import { sha256Text } from "../../../src/core/hash.js";
 
 const temporaryRoots: string[] = [];
@@ -88,6 +90,18 @@ describe("registry loader", () => {
       sourcePath: path.join(root, "packs", "foundation", "entry.md"),
       sha256: sha256Text("original entry\n"),
     });
+  });
+
+  test("renders CRLF component sources with canonical LF output", async () => {
+    const root = await registryFixture();
+    await writeFile(path.join(root, "packs", "foundation", "entry.md"), "first\r\nsecond\r\n", "utf8");
+
+    const registry = await loadRegistry(root);
+    const [component] = resolveProfile(registry, "hackathon", "codex").components;
+
+    await expect(renderComponent(component!, "rendered.md", {})).resolves.toEqual(
+      expect.objectContaining({ content: "first\nsecond\n" }),
+    );
   });
 
   test("rejects unknown manifest fields", async () => {
