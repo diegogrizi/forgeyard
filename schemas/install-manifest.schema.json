@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeyard.dev/schemas/install-manifest.schema.json",
+  "title": "Forgeyard installed-file manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "forgeyardVersion", "profile", "adapter", "latestOperationId", "files"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "forgeyardVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "profile": { "const": "hackathon" },
+    "adapter": { "const": "codex" },
+    "latestOperationId": { "type": "string", "minLength": 6, "maxLength": 128 },
+    "files": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "componentId", "ownership", "installedSha256", "operationId"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "maxLength": 260 },
+          "componentId": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "ownership": { "enum": ["managed", "seed"] },
+          "installedSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "operationId": { "type": "string", "minLength": 6, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}
