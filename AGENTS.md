@@ -1,6 +1,6 @@
 # Forgeyard repository instructions
 
-Forgeyard is a stack-neutral factory kernel plus a pinned, licensed capability catalog. Its current executable adapter is Codex. Keep product-specific semantics in fixtures and installed configuration, never in the kernel or shared catalog transforms.
+Forgeyard is a stack-neutral factory kernel plus a pinned, licensed capability catalog with Codex, Claude Code, and Cursor project adapters. Keep product-specific semantics in fixtures and installed configuration, never in the kernel or shared catalog transforms.
 
 - Write repository content in English.
 - Use test-driven development for behavior changes and run the narrow test before the full release gate.

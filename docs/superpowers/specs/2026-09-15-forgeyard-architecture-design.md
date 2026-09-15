@@ -1,7 +1,7 @@
 # Forgeyard: Open Agentic Development Factory
 
 **Date:** 2026-09-15  
-**Status:** Kernel and licensed Codex catalog implemented; native orchestration and additional adapters remain staged work
+**Status:** Kernel and three licensed project adapters implemented; native orchestration remains staged work
 **Working name:** Forgeyard  
 **Tagline:** Build the development system before it builds the product.
 
@@ -19,7 +19,7 @@ Forgeyard will be small at runtime even when the `full` profile is installed. A 
 
 ### Implemented catalog checkpoint
 
-The catalog expansion described in the companion [full-factory specification](2026-09-15-forgeyard-full-factory-expansion-design.md) is now implemented for Codex. Forgeyard vendors an attested MIT snapshot with 1,007 files and 211,594 physical lines, parses its portable plugin model, and deterministically renders curated or complete project-scoped output. This checkpoint does not imply that the scheduler or the Claude Code and Cursor adapters described later in this document are already complete.
+The catalog expansion described in the companion [full-factory specification](2026-09-15-forgeyard-full-factory-expansion-design.md) is implemented for Codex, Claude Code, and Cursor. Forgeyard vendors an attested MIT snapshot with 1,007 files and 211,594 physical lines, parses its portable plugin model, and deterministically renders curated or complete project-scoped output. This checkpoint does not imply that the scheduler described later in this document is already complete.
 
 ## 2. Why this architecture
 
@@ -599,7 +599,7 @@ This proves the factory before we expand the catalog.
 
 ### M2 — Canonical packs and three adapters
 
-The licensed portable catalog, curated/full profile selection, Codex rendering, adversarial tree tests, and public provenance output are complete. Claude Code and Cursor native rendering remain before this milestone closes.
+The licensed portable catalog, curated/full profile selection, three project adapters, adversarial tree tests, and public provenance output are complete. Real-client smoke checks remain optional host validation rather than a release claim.
 
 ### M3 — Real orchestration
 
@@ -633,7 +633,7 @@ Forgeyard v1 is ready when:
 
 ## 22. Immediate next design boundary
 
-The kernel and Codex catalog expansion are complete checkpoints. The next plans cover Claude Code and Cursor rendering, followed by executable task-graph orchestration, resumability, work scopes, and pre-tool guards. Those plans must retain the existing offline install, provenance, context-budget, ownership, evidence, and rollback contracts instead of bypassing them.
+The kernel and three catalog adapters are complete checkpoints. The next plan covers executable task-graph orchestration, resumability, work scopes, and pre-tool guards. It must retain the existing offline install, provenance, context-budget, ownership, evidence, and rollback contracts instead of bypassing them.
 
 ## 23. Primary references
 

@@ -134,6 +134,25 @@ describe("non-leaking release audit", () => {
     expect(readme).not.toContain("Forgeyard M1 launches no worker fleet");
   });
 
+  test("documents all executable harness mappings without stale single-adapter claims", async () => {
+    const [readme, harnessGuide] = await Promise.all([
+      readFile(path.join(repositoryRoot, "README.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "guides", "harnesses.md"), "utf8"),
+    ]);
+    const publicDocs = `${readme}\n${harnessGuide}`;
+
+    for (const requiredClaim of [
+      "Codex",
+      "Claude Code",
+      "Cursor",
+      "202 agents, 183 skills, and 105 commands",
+      "490 agent-requested rules",
+      "disableSkillShellExecution",
+    ]) expect(publicDocs).toContain(requiredClaim);
+    expect(publicDocs).not.toContain("The current executable adapter is Codex");
+    expect(publicDocs).not.toContain("Claude Code and Cursor output are not yet claimed");
+  });
+
   test("reports generic rules for unfinished, unresolved, logged, remote, and identity-bearing content", async () => {
     const root = await freshRoot();
     await put(root, "README.md", "TODO: finish public wording.\n");

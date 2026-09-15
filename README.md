@@ -22,6 +22,18 @@ Catalog size is not prompt size. Root instructions remain navigational, the host
 
 See [Catalog and context](docs/guides/catalog-and-context.md) for the loading model and [Catalog sources](docs/provenance/catalog-sources.md) for exact provenance.
 
+## Supported project adapters
+
+Forgeyard renders the same selected profile into three project-scoped layouts:
+
+| Adapter | Native project surface | Full-profile result |
+|---|---|---|
+| `codex` | `AGENTS.md`, `.agents/skills/`, `.codex/agents/` | 203 agent files, 290 skill entrypoints |
+| `claude-code` | `CLAUDE.md`, `.claude/agents/`, `.claude/skills/`, `.claude/commands/` | 203 agent files, 185 skills, 105 commands |
+| `cursor` | `AGENTS.md`, `.cursor/rules/`, lazily referenced `.cursor/forgeyard/` sources | 493 rules: 490 catalog rules plus 3 Forgeyard rules |
+
+One installation targets one adapter. The catalog selection, project intent, ownership model, evidence, presentation, and default concurrency are otherwise shared. See the [harness guide](docs/guides/harnesses.md) for exact transformations and unsupported features.
+
 ## Install from this checkout
 
 ```sh
@@ -48,6 +60,13 @@ forgeyard init ./my-project --profile minimal --adapter codex
 forgeyard init ./my-project --profile full --adapter codex
 ```
 
+Target Claude Code or Cursor with the same profile:
+
+```sh
+forgeyard init ./my-project --profile hackathon --adapter claude-code
+forgeyard init ./my-project --profile full --adapter cursor
+```
+
 Use a reviewed answer file without prompts:
 
 ```sh
@@ -60,7 +79,7 @@ Resolve, render, validate, and preflight without creating the target:
 forgeyard init ./my-project --profile hackathon --adapter codex --answers ./answers.yaml --dry-run --json
 ```
 
-The current executable adapter is Codex. The source catalog also carries portable and harness-specific metadata, but unsupported hooks are catalogued and left disabled instead of being silently simulated.
+Codex, Claude Code, and Cursor adapters are executable through the same CLI. Unsupported imported hooks are catalogued and left disabled instead of being silently simulated; Cursor also reports that Claude-style per-agent model, tool, and isolation fields are descriptive rather than enforced.
 
 ## Lifecycle commands
 
@@ -95,7 +114,7 @@ Rolling back the initial installation is the supported uninstall path. It remove
 
 ## Installed shape
 
-The exact tree depends on the profile. A full or curated Codex project contains:
+The exact tree depends on the profile and adapter. A full or curated Codex project contains:
 
 ```text
 AGENTS.md
@@ -112,6 +131,8 @@ presentation/README.md
 forgeyard.yaml
 forgeyard.lock
 ```
+
+Claude Code uses `.claude/agents`, `.claude/skills`, and `.claude/commands`; Cursor uses `.cursor/rules` with complete backing instructions below `.cursor/forgeyard`. Forgeyard does not write user-global harness configuration.
 
 `forgeyard.yaml` is a human-owned seed and is never overwritten. Managed output hashes are recorded in `.forgeyard/manifest.json`. Update and rollback stop on an ownership conflict if a managed file changed or an unknown destination would be replaced.
 

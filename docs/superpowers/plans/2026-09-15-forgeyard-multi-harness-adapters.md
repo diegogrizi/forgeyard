@@ -6,6 +6,8 @@
 
 **Verified references:** Current official Claude Code plugin, skill, subagent, and hook documentation; current official Cursor project-rule and CLI documentation; the pinned MIT portable catalog already attested in Forgeyard.
 
+**Status:** Complete on 2026-09-15. All three adapters pass unit, golden, doctor, and built-CLI profile tests; the clean release gate is recorded by the closing documentation commit.
+
 ## Constraints
 
 - Supported harness IDs are `codex`, `claude-code`, and `cursor`.
@@ -19,48 +21,48 @@
 
 ## Task 1: Generalize the harness boundary
 
-- [ ] Add a `HarnessId` contract and widen configuration, profile resolution, install plans, lock files, manifests, schemas, and wizard choices.
-- [ ] Add an adapter factory and make the application and doctor select adapters from installed metadata.
-- [ ] Preserve existing Codex outputs and stable check IDs.
-- [ ] Test all accepted harness IDs, unknown-ID rejection, lock/manifest parsing, and executable discovery names.
-- [ ] Commit as `feat: generalize Forgeyard harness selection`.
+- [x] Add a `HarnessId` contract and widen configuration, profile resolution, install plans, lock files, manifests, schemas, and wizard choices.
+- [x] Add an adapter factory and make the application and doctor select adapters from installed metadata.
+- [x] Preserve existing Codex outputs and stable check IDs.
+- [x] Test all accepted harness IDs, unknown-ID rejection, lock/manifest parsing, and executable discovery names.
+- [x] Commit as `feat: generalize Forgeyard harness selection`.
 
 ## Task 2: Render the portable catalog for Claude Code
 
-- [ ] Write transform tests for namespaced agents, native skills, native commands, supporting files, metadata filtering, command collisions, license/index output, and disabled shell expansion.
-- [ ] Generate `.claude/agents/`, `.claude/skills/`, `.claude/commands/`, `.claude/settings.json`, and Forgeyard catalog/license metadata.
-- [ ] Preserve supported Claude frontmatter and source bodies; never copy or enable imported hook configuration.
-- [ ] Run a full-catalog golden test expecting 202 catalog agents, 183 catalog skills, and 105 catalog commands.
-- [ ] Commit as `feat: render the licensed catalog for Claude Code`.
+- [x] Write transform tests for namespaced agents, native skills, native commands, supporting files, metadata filtering, command collisions, license/index output, and disabled shell expansion.
+- [x] Generate `.claude/agents/`, `.claude/skills/`, `.claude/commands/`, `.claude/settings.json`, and Forgeyard catalog/license metadata.
+- [x] Preserve supported Claude frontmatter and source bodies; never copy or enable imported hook configuration.
+- [x] Run a full-catalog golden test expecting 202 catalog agents, 183 catalog skills, and 105 catalog commands.
+- [x] Commit as `feat: render the licensed catalog for Claude Code`.
 
 ## Task 3: Complete the Claude Code project adapter
 
-- [ ] Map foundation and presentation slots to `CLAUDE.md`, native Forgeyard skills, a read-only reviewer agent, task state, and offline presentation assets.
-- [ ] Validate every generated Markdown frontmatter document, settings JSON, task YAML, path, and catalog count.
-- [ ] Add minimal, hackathon, and full built-CLI round trips plus doctor coverage.
-- [ ] Commit as `feat: add the Claude Code factory adapter`.
+- [x] Map foundation and presentation slots to `CLAUDE.md`, native Forgeyard skills, a read-only reviewer agent, task state, and offline presentation assets.
+- [x] Validate every generated Markdown frontmatter document, settings JSON, task YAML, path, and catalog count.
+- [x] Add minimal, hackathon, and full built-CLI round trips plus doctor coverage.
+- [x] Commit as `feat: add the Claude Code factory adapter`.
 
 ## Task 4: Render the portable catalog for Cursor
 
-- [ ] Write transform tests for agent-requested `.cursor/rules/*.mdc` files and lazily referenced local instruction trees.
-- [ ] Preserve full agent, skill, command, and supporting-file content below `.cursor/forgeyard/` while keeping each discovery rule compact.
-- [ ] Emit an explicit capability report for unenforced models, tool allowlists, hooks, and subagent isolation.
-- [ ] Run a full-catalog golden test expecting 490 catalog rules backed by 202 agent, 183 skill, and 105 command instruction entries.
-- [ ] Commit as `feat: render the licensed catalog for Cursor`.
+- [x] Write transform tests for agent-requested `.cursor/rules/*.mdc` files and lazily referenced local instruction trees.
+- [x] Preserve full agent, skill, command, and supporting-file content below `.cursor/forgeyard/` while keeping each discovery rule compact.
+- [x] Emit an explicit capability report for unenforced models, tool allowlists, hooks, and subagent isolation.
+- [x] Run a full-catalog golden test expecting 490 catalog rules backed by 202 agent, 183 skill, and 105 command instruction entries.
+- [x] Commit as `feat: render the licensed catalog for Cursor`.
 
 ## Task 5: Complete the Cursor project adapter
 
-- [ ] Map foundation and presentation slots to `AGENTS.md`, Forgeyard MDC rules, task state, and offline presentation assets.
-- [ ] Validate MDC frontmatter, local references, task YAML, path uniqueness, and presentation output.
-- [ ] Add minimal, hackathon, and full built-CLI round trips plus doctor coverage.
-- [ ] Commit as `feat: add the Cursor factory adapter`.
+- [x] Map foundation and presentation slots to `AGENTS.md`, Forgeyard MDC rules, task state, and offline presentation assets.
+- [x] Validate MDC frontmatter, local references, task YAML, path uniqueness, and presentation output.
+- [x] Add minimal, hackathon, and full built-CLI round trips plus doctor coverage.
+- [x] Commit as `feat: add the Cursor factory adapter`.
 
 ## Task 6: Close documentation and release gates
 
-- [ ] Document exact per-harness mappings and capability differences.
-- [ ] Add package and release assertions for all adapter modules and public claims.
-- [ ] Run `npm ci`, `npm run verify`, `npm run audit:dependencies`, a dynamic forbidden-identity scan, and `git diff --check`.
-- [ ] Commit as `docs: publish the Forgeyard harness matrix`.
+- [x] Document exact per-harness mappings and capability differences.
+- [x] Add package and release assertions for all adapter modules and public claims.
+- [x] Run `npm ci`, `npm run verify`, `npm run audit:dependencies`, a dynamic forbidden-identity scan, and `git diff --check`.
+- [x] Commit as `docs: publish the Forgeyard harness matrix`.
 
 ## Completion boundary
 
