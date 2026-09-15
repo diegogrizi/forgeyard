@@ -1,0 +1,96 @@
+schemaVersion: 1
+baseline:
+  - id: comprehensive-review
+    reason: Independent correctness and risk review is required for verified delivery.
+  - id: debugging-toolkit
+    reason: Evidence-led diagnosis is a cross-cutting delivery capability.
+  - id: developer-essentials
+    reason: Core implementation practices apply across supported project types.
+  - id: documentation-generation
+    reason: Decisions and operational handoff must remain understandable.
+  - id: git-pr-workflows
+    reason: Revision-aware integration is part of the delivery lifecycle.
+  - id: tdd-workflows
+    reason: Behavior changes require test-first verification.
+rules:
+  - id: frontend
+    when:
+      kinds:
+        - frontend
+        - full-stack
+    include:
+      - id: accessibility-compliance
+        reason: User interfaces require accessible behavior and review.
+      - id: application-performance
+        reason: Interactive delivery needs observable performance checks.
+      - id: frontend-mobile-development
+        reason: Frontend implementation practices match the detected project class.
+      - id: ui-design
+        reason: The detected project exposes a user interface.
+  - id: backend
+    when:
+      kinds:
+        - backend
+        - full-stack
+    include:
+      - id: application-performance
+        reason: Service delivery needs observable performance checks.
+      - id: backend-development
+        reason: Backend implementation practices match the detected project class.
+      - id: database-design
+        reason: Backend changes commonly cross persistence boundaries and need explicit data review.
+      - id: security-scanning
+        reason: Service inputs and data boundaries require security checks.
+  - id: mobile
+    when:
+      kinds:
+        - mobile
+    include:
+      - id: accessibility-compliance
+        reason: Mobile interfaces require accessible behavior and review.
+      - id: frontend-mobile-development
+        reason: Mobile implementation practices match the detected project class.
+      - id: frontend-mobile-security
+        reason: Mobile application boundaries require platform-specific security review.
+      - id: ui-design
+        reason: The detected project exposes a mobile user interface.
+  - id: data
+    when:
+      kinds:
+        - data
+    include:
+      - id: data-engineering
+        reason: Data pipeline practices match the detected project class.
+      - id: data-validation-suite
+        reason: Data quality must be verified independently from code execution.
+  - id: infrastructure
+    when:
+      kinds:
+        - infrastructure
+    include:
+      - id: cloud-infrastructure
+        reason: Infrastructure architecture practices match the detected project class.
+      - id: deployment-validation
+        reason: Infrastructure changes require deployment-oriented validation.
+      - id: security-scanning
+        reason: Infrastructure permissions and exposed surfaces require security checks.
+  - id: llm-application
+    when:
+      frameworks:
+        - anthropic
+        - langchain
+        - openai
+      requestPatterns:
+        - "\\b(ai|llm|language model)\\b"
+    include:
+      - id: llm-application-dev
+        reason: The repository or request contains a model-integration boundary.
+exclusions:
+  - id: agent-orchestration
+    reason: Forgeyard is the single primary delivery workflow.
+  - id: agent-teams
+    reason: Forgeyard is the single primary delivery workflow.
+  - id: conductor
+    reason: Forgeyard is the single primary delivery workflow.
+  - id: full-stack-orchestration
+    reason: Forgeyard is the single primary delivery workflow.

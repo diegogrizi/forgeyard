@@ -231,7 +231,7 @@ git commit -m "feat: inspect project evidence safely"
 - Produces: `composeProject(inspection, options, rules): PreparationDecision`.
 - Consumes: `ProjectInspection`, optional adapter/timebox/concurrency/budget/autonomy/presentation overrides, and harness availability evidence.
 
-- [ ] **Step 1: Write failing composition tests**
+- [x] **Step 1: Write failing composition tests**
 
 Assert that:
 
@@ -245,13 +245,13 @@ Assert that:
 - explicit adapter wins, otherwise existing instruction evidence wins, then available host order, then a disclosed Codex-format fallback;
 - identical inspection/options/rules produce identical decisions.
 
-- [ ] **Step 2: Run the tests and confirm failure**
+- [x] **Step 2: Run the tests and confirm failure**
 
 Run: `npx vitest run tests/unit/intake/compose.test.ts`
 
 Expected: FAIL because the rules and composer do not exist.
 
-- [ ] **Step 3: Add the validated capability rule document**
+- [x] **Step 3: Add the validated capability rule document**
 
 The baseline must include only:
 
@@ -267,17 +267,17 @@ baseline:
 
 Frontend, backend, LLM, infrastructure, data, mobile, and presentation additions must be separate rules with reasons. The four overlapping orchestrator plugins must be explicit exclusions. Validate every referenced plugin against the portable catalog during load.
 
-- [ ] **Step 4: Implement deterministic composition**
+- [x] **Step 4: Implement deterministic composition**
 
 Use sorted sets and stable reasons. Store chosen catalog plugins in both `catalog.plugins` and `composition.selected`. Compute packs from workflow shape and presentation, not from catalog size. Never select `full` automatically.
 
-- [ ] **Step 5: Run the narrow tests until green**
+- [x] **Step 5: Run the narrow tests until green**
 
 Run: `npx vitest run tests/unit/intake/compose.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```sh
 git add sources/capabilities.yaml schemas/capability-rules.schema.json src/intake/capability-rules.ts src/intake/compose.ts tests/unit/intake/compose.test.ts
