@@ -1,0 +1,54 @@
+{
+  "name": "forgeyard",
+  "version": "0.1.0",
+  "description": "A project-scoped factory for trustworthy agentic development workflows.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "forgeyard": "dist/cli/main.js"
+  },
+  "files": [
+    "dist/",
+    "schemas/",
+    "profiles/",
+    "packs/",
+    "sources/",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md",
+    "SBOM.spdx.json"
+  ],
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration tests/adversarial tests/golden",
+    "test:roundtrip": "npm run build && vitest run tests/roundtrip",
+    "verify": "npm run typecheck && npm test && npm run build",
+    "pack:check": "npm pack --dry-run --json",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "8.7.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "commander": "15.0.0",
+    "diff": "9.0.0",
+    "execa": "10.0.1",
+    "picocolors": "1.1.1",
+    "smol-toml": "1.8.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.5.1",
+    "tsup": "8.5.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}

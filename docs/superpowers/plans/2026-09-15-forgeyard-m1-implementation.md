@@ -35,7 +35,7 @@ forgeyard init [target] --profile hackathon --adapter codex [--answers file] [--
 forgeyard doctor [target] [--deny-term value]... [--json]
 forgeyard verify <task-id> [--root target] [--json]
 forgeyard update [target] [--yes] [--dry-run] [--json]
-forgeyard rollback <operation-id> [--root target] [--json]
+forgeyard rollback <operation-id> [--root target] [--yes] [--json]
 ```
 
 The canonical smoke path is:
@@ -83,6 +83,7 @@ forgeyard/
 ├── package.json                               # ESM package, bin, scripts, engines, published files
 ├── package-lock.json                          # exact dependency graph
 ├── tsconfig.json                              # strict compiler contract
+├── tsconfig.build.json                        # TypeScript 7 declaration-only build
 ├── tsup.config.ts                             # CLI/library build with executable banner
 ├── vitest.config.ts                           # deterministic test roots and coverage exclusions
 ├── .gitattributes                             # normalized text output
@@ -369,6 +370,7 @@ All expected failures are `ForgeyardError` instances containing `code`, plain-la
 - Create: `package.json`
 - Create: `package-lock.json`
 - Create: `tsconfig.json`
+- Create: `tsconfig.build.json`
 - Create: `tsup.config.ts`
 - Create: `vitest.config.ts`
 - Create: `.gitignore`
@@ -387,7 +389,7 @@ All expected failures are `ForgeyardError` instances containing `code`, plain-la
 
 Create an ESM `package.json` at version `0.1.0` with package name `forgeyard`, `bin.forgeyard = dist/cli/main.js`, Node engine `>=24.19.0 <25`, an explicit publish `files` allow-list, and scripts `build`, `typecheck`, `test`, `test:unit`, `test:integration`, `test:roundtrip`, `verify`, and `pack:check`. Pin the dependency versions named in this plan exactly; do not use floating ranges for M1.
 
-Configure TypeScript with `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, NodeNext modules, JSON module support, declarations, and no emit for type-check. Configure tsup to emit ESM, declarations, source maps, and a Unix executable banner. Normalize repository text to LF while leaving generated output platform-independent.
+Configure TypeScript with `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, NodeNext modules, JSON module support, declarations, and no emit for type-check. Because tsup 8.5.1's declaration plugin is not compatible with TypeScript 7.0.2, configure tsup to emit ESM plus source maps and run a separate `tsconfig.build.json` declaration-only pass with TypeScript itself. Add a Unix executable banner. Normalize repository text to LF while leaving generated output platform-independent.
 
 Run:
 
@@ -440,7 +442,7 @@ Expected: all tests pass; help lists exactly five M1 commands; version is `0.1.0
 **Step 5: Commit the task**
 
 ```powershell
-git add package.json package-lock.json tsconfig.json tsup.config.ts vitest.config.ts .gitignore .gitattributes src tests/unit
+git add package.json package-lock.json tsconfig.json tsconfig.build.json tsup.config.ts vitest.config.ts .gitignore .gitattributes src tests/unit docs/superpowers/plans/2026-09-15-forgeyard-m1-implementation.md
 git commit -m "feat: bootstrap Forgeyard CLI"
 ```
 
