@@ -7,7 +7,14 @@ import {
   select as promptSelect,
 } from "@inquirer/prompts";
 
-import type { ForgeyardConfig, InitRequest, NonEmptyArgv, ProfileId } from "../core/contracts.js";
+import {
+  HARNESS_IDS,
+  type ForgeyardConfig,
+  type HarnessId,
+  type InitRequest,
+  type NonEmptyArgv,
+  type ProfileId,
+} from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { loadConfig, validateConfig } from "./config.js";
 
@@ -67,7 +74,7 @@ function unsupported(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex', 'claude-code', or 'cursor'.",
     exitCode: 2,
   });
 }
@@ -88,7 +95,7 @@ function assertSupportedSelection(profile: string | undefined, adapter: string |
   if (profile !== undefined && !["minimal", "hackathon", "full"].includes(profile)) {
     throw unsupported(`Profile '${profile}' is not supported by Forgeyard.`);
   }
-  if (adapter !== undefined && adapter !== "codex") {
+  if (adapter !== undefined && !HARNESS_IDS.includes(adapter as HarnessId)) {
     throw unsupported(`Adapter '${adapter}' is not supported by Forgeyard.`);
   }
 }
@@ -105,7 +112,7 @@ export async function collectInitRequest(
     if (input.profile !== undefined && config.profile !== input.profile) {
       throw unsupported("The CLI profile does not match the answer file.");
     }
-    if (input.adapter !== undefined && !config.harnesses.includes(input.adapter as "codex")) {
+    if (input.adapter !== undefined && !config.harnesses.includes(input.adapter as HarnessId)) {
       throw unsupported("The CLI adapter does not match the answer file.");
     }
     return { targetRoot, config };
@@ -121,7 +128,7 @@ export async function collectInitRequest(
     ["minimal", "hackathon", "full"],
     "hackathon",
   ));
-  const adapter = input.adapter ?? (await prompts.select("adapter", "Adapter", ["codex"], "codex"));
+  const adapter = input.adapter ?? (await prompts.select("adapter", "Adapter", HARNESS_IDS, "codex"));
   assertSupportedSelection(profile, adapter);
   const profileId = profile as ProfileId;
 
@@ -139,7 +146,7 @@ export async function collectInitRequest(
         | "new"
         | "existing",
     },
-    harnesses: ["codex"],
+    harnesses: [adapter as HarnessId],
     profile: profileId,
     catalog: profileId === "minimal"
       ? { selection: "none", plugins: [] }

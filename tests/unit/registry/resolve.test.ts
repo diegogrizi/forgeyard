@@ -157,9 +157,17 @@ describe("profile resolver", () => {
     expect(() => resolveProfile(registry, "unknown", "codex")).toThrowError(
       expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }),
     );
-    expect(() => resolveProfile(registry, "hackathon", "cursor")).toThrowError(
+    expect(() => resolveProfile(registry, "hackathon", "unknown")).toThrowError(
       expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }),
     );
+  });
+
+  test.each(["codex", "claude-code", "cursor"])("resolves the same canonical profile for %s", async (adapter) => {
+    const registry = await loadRegistry(path.resolve("."));
+    const resolved = resolveProfile(registry, "hackathon", adapter);
+
+    expect(resolved.adapter).toBe(adapter);
+    expect(resolved.packIds).toEqual(expect.arrayContaining(["foundation", "presentation", "ecosystem"]));
   });
 
   test("resolves minimal, curated hackathon, and full catalog selections", async () => {

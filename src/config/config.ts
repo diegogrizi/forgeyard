@@ -5,7 +5,7 @@ import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
 import * as formatsModule from "ajv-formats";
 import { parse, stringify } from "yaml";
 
-import type { ForgeyardConfig, ProfileId } from "../core/contracts.js";
+import { HARNESS_IDS, type ForgeyardConfig, type HarnessId, type ProfileId } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { normalizePortablePath } from "../core/paths.js";
 
@@ -26,7 +26,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex', 'claude-code', or 'cursor'.",
     exitCode: 2,
   });
 }
@@ -141,6 +141,7 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
 }
 
 const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "full"]);
+const SUPPORTED_HARNESSES = new Set<HarnessId>(HARNESS_IDS);
 
 export function validateConfig(value: unknown): ForgeyardConfig {
   if (isRecord(value)) {
@@ -149,7 +150,9 @@ export function validateConfig(value: unknown): ForgeyardConfig {
     }
     if (
       value.harnesses !== undefined &&
-      (!Array.isArray(value.harnesses) || value.harnesses.length !== 1 || value.harnesses[0] !== "codex")
+      (!Array.isArray(value.harnesses) ||
+        value.harnesses.length !== 1 ||
+        !SUPPORTED_HARNESSES.has(value.harnesses[0] as HarnessId))
     ) {
       throw selectionError("The selected adapter set is not supported by Forgeyard.");
     }

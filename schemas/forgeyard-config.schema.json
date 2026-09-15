@@ -30,7 +30,10 @@
     },
     "harnesses": {
       "type": "array",
-      "const": ["codex"]
+      "minItems": 1,
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["codex", "claude-code", "cursor"] }
     },
     "profile": { "enum": ["minimal", "hackathon", "full"] },
     "catalog": {

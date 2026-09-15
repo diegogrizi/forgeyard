@@ -1,9 +1,16 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createCodexAdapter } from "../adapters/codex.js";
+import { createHarnessAdapter } from "../adapters/create.js";
 import { loadConfig } from "../config/config.js";
-import type { CheckResult, DoctorReport, PlannedFile, ProfileId } from "../core/contracts.js";
+import {
+  HARNESS_IDS,
+  type CheckResult,
+  type DoctorReport,
+  type HarnessId,
+  type PlannedFile,
+  type ProfileId,
+} from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
@@ -22,7 +29,7 @@ interface LockDocument {
   schemaVersion: 1;
   forgeyardVersion: string;
   profile: { id: ProfileId; version: string };
-  adapter: "codex";
+  adapter: HarnessId;
   components: LockComponent[];
 }
 
@@ -59,7 +66,7 @@ function parseLock(source: string): LockDocument {
     value === null ||
     (value as Record<string, unknown>).schemaVersion !== 1 ||
     typeof (value as Record<string, unknown>).forgeyardVersion !== "string" ||
-    (value as Record<string, unknown>).adapter !== "codex" ||
+    !HARNESS_IDS.includes((value as Record<string, unknown>).adapter as HarnessId) ||
     !Array.isArray((value as Record<string, unknown>).components)
   ) {
     throw new TypeError("Lock file has an invalid structure.");
@@ -109,7 +116,8 @@ async function checkManagedFiles(root: string, manifest: InstallManifest, lock: 
     : failed("managed-files", "Managed payload drift or unknown ownership was detected.", failures.sort());
 }
 
-async function checkCodexOutput(root: string, manifest: InstallManifest): Promise<CheckResult> {
+async function checkHarnessOutput(root: string, manifest: InstallManifest): Promise<CheckResult> {
+  const label = manifest.adapter === "claude-code" ? "Claude Code" : manifest.adapter === "cursor" ? "Cursor" : "Codex";
   try {
     const adapterFiles = manifest.files.filter(
       (record) =>
@@ -129,10 +137,10 @@ async function checkCodexOutput(root: string, manifest: InstallManifest): Promis
         };
       }),
     );
-    await createCodexAdapter().validateOutput(files);
-    return passed("codex-output", "Codex instructions, skills, reviewer, task, and presentation are structurally valid.");
+    await createHarnessAdapter(manifest.adapter).validateOutput(files);
+    return passed(`${manifest.adapter}-output`, `${label} instructions, capabilities, task, and presentation are structurally valid.`);
   } catch (error) {
-    return failed("codex-output", "Codex generated output is missing or structurally invalid.", errorPaths(error));
+    return failed(`${manifest.adapter}-output`, `${label} generated output is missing or structurally invalid.`, errorPaths(error));
   }
 }
 
@@ -201,7 +209,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
 
   if (manifest !== undefined && lock !== undefined) {
     checks.push(await checkManagedFiles(root, manifest, lock));
-    checks.push(await checkCodexOutput(root, manifest));
+    checks.push(await checkHarnessOutput(root, manifest));
     checks.push(
       config === undefined
         ? failed("presentation-output", "Presentation output cannot be located because configuration is invalid.")
@@ -234,29 +242,33 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     );
   } else {
     checks.push(failed("managed-files", "Managed payload cannot be checked because install metadata is invalid."));
-    checks.push(failed("codex-output", "Codex output cannot be checked because install metadata is invalid."));
+    const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
+    checks.push(failed(`${adapterId}-output`, "Harness output cannot be checked because install metadata is invalid."));
     checks.push(failed("presentation-output", "Presentation output cannot be audited because install metadata is invalid."));
     checks.push(failed("content-audit", "Generated content cannot be audited because install metadata is invalid."));
   }
 
   const lookup = input.commandLookup ?? defaultCommandLookup;
-  const codexAvailable = await lookup("codex").catch(() => false);
+  const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
+  const executable = adapterId === "claude-code" ? "claude" : adapterId === "cursor" ? "cursor-agent" : "codex";
+  const label = adapterId === "claude-code" ? "Claude Code" : adapterId === "cursor" ? "Cursor" : "Codex";
+  const executableAvailable = await lookup(executable).catch(() => false);
   checks.push(
-    codexAvailable
-      ? passed("codex-executable", "Codex executable is discoverable without invoking it.", false)
+    executableAvailable
+      ? passed(`${adapterId}-executable`, `${label} executable is discoverable without invoking it.`, false)
       : {
-          id: "codex-executable",
+          id: `${adapterId}-executable`,
           status: "unavailable",
           required: false,
-          message: "Codex executable is not available on this host; structural validation still ran.",
+          message: `${label} executable is not available on this host; structural validation still ran.`,
         },
   );
   checks.push({
-    id: "codex-roundtrip",
+    id: `${adapterId}-roundtrip`,
     status: "skipped",
     required: false,
     message: input.realClient
-      ? "Real-client roundtrip is not implemented in M1 and was not claimed."
+      ? "Real-client roundtrip is not implemented for this adapter and was not claimed."
       : "Real-client roundtrip was not requested; structural validation ran instead.",
   });
 

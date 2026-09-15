@@ -1,16 +1,18 @@
 import type {
   CatalogSelection,
+  HarnessId,
   ProfileId,
   ProfileManifest,
   ResolvedComponent,
 } from "../core/contracts.js";
+import { HARNESS_IDS } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import type { LoadedPack, RegistrySnapshot } from "./load.js";
 
 export interface ResolvedProfile {
   profileId: ProfileId;
   profileVersion: string;
-  adapter: "codex";
+  adapter: HarnessId;
   packIds: readonly string[];
   defaults: ProfileManifest["defaults"];
   components: readonly ResolvedComponent[];
@@ -20,7 +22,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex'.",
+    remediation: "Use a supported profile with adapter 'codex', 'claude-code', or 'cursor'.",
     exitCode: 2,
   });
 }
@@ -68,7 +70,9 @@ export function resolveProfile(
   if (!["minimal", "hackathon", "full"].includes(profileId)) {
     throw selectionError(`Profile '${profileId}' is not supported by Forgeyard.`);
   }
-  if (adapterId !== "codex") throw selectionError(`Adapter '${adapterId}' is not supported by Forgeyard.`);
+  if (!HARNESS_IDS.includes(adapterId as HarnessId)) {
+    throw selectionError(`Adapter '${adapterId}' is not supported by Forgeyard.`);
+  }
 
   const profile = registry.profiles.get(profileId);
   if (profile === undefined) throw registryError(`Profile '${profileId}' is missing from the registry.`);
@@ -157,7 +161,7 @@ export function resolveProfile(
   return {
     profileId: profile.id,
     profileVersion: profile.version,
-    adapter: "codex",
+    adapter: adapterId as HarnessId,
     packIds: packs.map((pack) => pack.manifest.id),
     defaults: profile.defaults,
     components: ordered,

@@ -102,10 +102,14 @@ describe("Forgeyard configuration", () => {
     }).profile).toBe("full");
   });
 
+  test.each(["codex", "claude-code", "cursor"])("accepts the %s project adapter", (adapter) => {
+    expect(validateConfig({ ...validConfig(), harnesses: [adapter] }).harnesses).toEqual([adapter]);
+  });
+
   test("rejects unknown profiles and adapters with the selection error", () => {
     for (const candidate of [
       { ...validConfig(), profile: "unknown" },
-      { ...validConfig(), harnesses: ["cursor"] },
+      { ...validConfig(), harnesses: ["unknown"] },
     ]) {
       expect(() => validateConfig(candidate)).toThrowError(
         expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION", exitCode: 2 }),

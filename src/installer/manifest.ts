@@ -5,7 +5,7 @@ import path from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
 import * as formatsModule from "ajv-formats";
 
-import type { ProfileId } from "../core/contracts.js";
+import type { HarnessId, ProfileId } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 
@@ -23,7 +23,7 @@ export interface InstallManifest {
   schemaVersion: 1;
   forgeyardVersion: string;
   profile: ProfileId;
-  adapter: "codex";
+  adapter: HarnessId;
   latestOperationId: string;
   files: readonly InstalledFileRecord[];
 }

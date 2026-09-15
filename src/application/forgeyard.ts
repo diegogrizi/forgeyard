@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import { createCodexAdapter } from "../adapters/codex.js";
+import { createHarnessAdapter } from "../adapters/create.js";
 import { loadConfig } from "../config/config.js";
 import { collectInitRequest, type PromptDriver } from "../config/wizard.js";
 import type { CheckResult, DoctorReport, VerificationReceipt } from "../core/contracts.js";
@@ -255,7 +255,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
     const registry = await loadRegistry(registryRoot);
     const adapterId = config.harnesses[0];
     const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog);
-    const adapter = createCodexAdapter();
+    const adapter = createHarnessAdapter(adapterId);
     const renderedFiles = await adapter.render(resolved.components, config);
     await adapter.validateOutput(renderedFiles);
     return buildInstallPlan({

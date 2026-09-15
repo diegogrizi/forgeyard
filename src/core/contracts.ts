@@ -1,5 +1,8 @@
 export type NonEmptyArgv = readonly [executable: string, ...args: string[]];
 
+export const HARNESS_IDS = ["codex", "claude-code", "cursor"] as const;
+export type HarnessId = (typeof HARNESS_IDS)[number];
+
 export interface QualityCommand {
   name: string;
   argv: NonEmptyArgv;
@@ -20,7 +23,7 @@ export interface ForgeyardConfig {
     purpose: string;
     mode: "new" | "existing";
   };
-  harnesses: readonly ["codex"];
+  harnesses: readonly [HarnessId];
   profile: ProfileId;
   catalog: CatalogSelection;
   timeboxMinutes: number;
@@ -148,12 +151,12 @@ export interface InstallPlan {
   operationId: string;
   targetRoot: string;
   profile: ProfileId;
-  adapter: "codex";
+  adapter: HarnessId;
   files: readonly PlannedFile[];
 }
 
 export interface HarnessAdapter {
-  id: "codex";
+  id: HarnessId;
   capabilities: Readonly<Record<string, CapabilityState>>;
   validateConfig(config: ForgeyardConfig): void;
   render(

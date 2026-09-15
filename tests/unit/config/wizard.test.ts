@@ -106,6 +106,30 @@ describe("initialization wizard", () => {
     }));
   });
 
+  test.each(["claude-code", "cursor"])("collects the %s adapter selected by the user", async (adapter) => {
+    const request = await collectInitRequest(
+      { targetRoot: ".", nonInteractive: false, profile: "minimal", adapter },
+      promptDriver({
+        "project.name": "Portable Factory",
+        "project.purpose": "Render one canonical workflow for another harness.",
+        "project.mode": "new",
+        timeboxMinutes: 300,
+        qualityCommandName: "test",
+        qualityCommandArgv: '["npm","test"]',
+        mutableRoots: '["src","presentation"]',
+        protectedPaths: '[".git",".env"]',
+        presentationPath: "presentation",
+        orchestrationMode: "guided",
+        maxConcurrency: 4,
+        presentationAudience: "Product reviewers",
+        presentationDurationMinutes: 7,
+        presentationOffline: true,
+      }),
+    );
+
+    expect(request.config.harnesses).toEqual([adapter]);
+  });
+
   test("rejects missing answers in non-interactive mode", async () => {
     await expect(
       collectInitRequest(
