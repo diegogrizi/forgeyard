@@ -159,7 +159,7 @@ git commit -m "feat: add tailored factory configuration"
 - Consumes: explicit brief and project-relative specification paths.
 - Produces: normalized name, request, mode, kind, languages, frameworks, package managers, quality commands, mutable roots, instruction surfaces, evidence, questions, confidence, and `analysisSha256`.
 
-- [ ] **Step 1: Write failing tests using real temporary repositories**
+- [x] **Step 1: Write failing tests using real temporary repositories**
 
 Cover these exact behaviors:
 
@@ -192,25 +192,25 @@ test("recognizes a Python API without inventing pytest", async () => {
 
 Also test a blank project, npm/pnpm/yarn lock detection, full-stack dependency signals, README purpose fallback, explicit spec precedence, existing `AGENTS.md`/`CLAUDE.md` detection, symlink rejection, escaping spec rejection, binary rejection, per-file 256 KiB limit, and deterministic fingerprints independent of absolute root.
 
-- [ ] **Step 2: Run and observe the missing-module failure**
+- [x] **Step 2: Run and observe the missing-module failure**
 
 Run: `npx vitest run tests/unit/intake/inspect.test.ts`
 
 Expected: FAIL because `src/intake/inspect.ts` does not exist.
 
-- [ ] **Step 3: Implement bounded manifest readers and evidence normalization**
+- [x] **Step 3: Implement bounded manifest readers and evidence normalization**
 
 Read only root metadata and explicitly supplied specs. Ignore `.git`, `.env*`, dependency/build directories, and arbitrary source bodies. Parse `package.json` structurally; inspect other manifests as bounded text. Every detected framework/language/command must add a portable evidence path and signal.
 
 Hash a canonical JSON object that excludes the absolute root and sorts all set-like arrays.
 
-- [ ] **Step 4: Run the inspector tests until green**
+- [x] **Step 4: Run the inspector tests until green**
 
 Run: `npx vitest run tests/unit/intake/inspect.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```sh
 git add src/intake/contracts.ts src/intake/inspect.ts tests/unit/intake/inspect.test.ts
