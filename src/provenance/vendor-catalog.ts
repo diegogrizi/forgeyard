@@ -46,6 +46,15 @@ function physicalLines(bytes: Uint8Array): number {
   return newlines + (text.endsWith("\n") ? 0 : 1);
 }
 
+function canonicalRepositoryBytes(bytes: Uint8Array): Uint8Array {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextEncoder().encode(text.replaceAll("\r\n", "\n"));
+  } catch {
+    return bytes;
+  }
+}
+
 function requireAttestation(value: unknown, filePath: string): VendorAttestation {
   const record = value as Partial<VendorAttestation> | null;
   const issues: string[] = [];
@@ -111,7 +120,7 @@ async function inventoryTree(root: string): Promise<readonly VendorFile[]> {
       if (!stats.isFile()) {
         throw new ProvenanceValidationError([`Vendor tree entry is not a regular file: ${candidate}`]);
       }
-      const bytes = await readFile(candidate);
+      const bytes = canonicalRepositoryBytes(await readFile(candidate));
       files.push({
         relativePath,
         sha256: sha256Bytes(bytes),
@@ -130,7 +139,7 @@ export async function summarizeVendorTree(vendorRoot: string, contentRoot = "plu
   const portableContentRoot = normalizePortablePath(contentRoot);
   const contentPath = resolveInsideRoot(vendorRoot, portableContentRoot);
   const files = await inventoryTree(contentPath);
-  const licenseBytes = await readFile(resolveInsideRoot(vendorRoot, "LICENSE"));
+  const licenseBytes = canonicalRepositoryBytes(await readFile(resolveInsideRoot(vendorRoot, "LICENSE")));
   return {
     ok: true,
     fileCount: files.length,
