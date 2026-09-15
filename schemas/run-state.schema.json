@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeyard.dev/schemas/run-state.schema.json",
+  "title": "Forgeyard resumable run state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "graphSha256", "createdAt", "updatedAt", "stopped", "tasks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "graphSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "stopped": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason", "taskId", "at"],
+          "properties": {
+            "reason": {
+              "enum": ["retry-budget-exhausted", "repeated-failure", "time-budget-exhausted", "canceled"]
+            },
+            "taskId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" },
+            "at": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    },
+    "tasks": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[A-Z][A-Z0-9_-]{1,31}$" },
+      "additionalProperties": { "$ref": "#/definitions/taskState" }
+    }
+  },
+  "definitions": {
+    "taskState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definitionSha256", "status", "attempts", "consecutiveFailures"],
+      "properties": {
+        "definitionSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "status": { "enum": ["pending", "active", "completed", "blocked", "canceled"] },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "consecutiveFailures": { "type": "integer", "minimum": 0 },
+        "workerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "claimedAt": { "type": "string", "format": "date-time" },
+        "deadlineAt": { "type": "string", "format": "date-time" },
+        "checkpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "note"],
+          "properties": {
+            "at": { "type": "string", "format": "date-time" },
+            "note": { "type": "string", "minLength": 1, "maxLength": 1000 }
+          }
+        },
+        "receiptId": { "type": "string", "minLength": 2, "maxLength": 128 },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "lastFailureSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

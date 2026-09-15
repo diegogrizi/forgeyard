@@ -42,3 +42,54 @@ export interface LoadTaskGraphInput {
   mutableRoots: readonly string[];
   protectedPaths: readonly string[];
 }
+
+export type TaskRuntimeStatus = "pending" | "active" | "completed" | "blocked" | "canceled";
+
+export interface TaskCheckpoint {
+  at: string;
+  note: string;
+}
+
+export interface TaskRuntimeState {
+  definitionSha256: string;
+  status: TaskRuntimeStatus;
+  attempts: number;
+  consecutiveFailures: number;
+  workerId?: string;
+  sessionId?: string;
+  claimedAt?: string;
+  deadlineAt?: string;
+  checkpoint?: TaskCheckpoint;
+  receiptId?: string;
+  completedAt?: string;
+  lastFailureSha256?: string;
+}
+
+export interface RunStop {
+  reason: "retry-budget-exhausted" | "repeated-failure" | "time-budget-exhausted" | "canceled";
+  taskId: string;
+  at: string;
+}
+
+export interface RunState {
+  schemaVersion: 1;
+  graphSha256: string;
+  createdAt: string;
+  updatedAt: string;
+  stopped: RunStop | null;
+  tasks: Record<string, TaskRuntimeState>;
+}
+
+export interface SchedulerTaskSnapshot extends TaskRuntimeState {
+  id: string;
+  ready: boolean;
+}
+
+export interface SchedulerSnapshot {
+  graphSha256: string;
+  activeCount: number;
+  maxConcurrency: number;
+  readyTaskIds: readonly string[];
+  stopped: RunStop | null;
+  tasks: readonly SchedulerTaskSnapshot[];
+}

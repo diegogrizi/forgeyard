@@ -16,12 +16,12 @@
 
 ## Task 2: Persist resumable scheduling state
 
-- [ ] Add an atomic state store and cross-process lock below `.forgeyard/state/`.
-- [ ] Implement status, next, claim, checkpoint, resume, complete, fail, and cancel transitions.
-- [ ] Enforce dependency readiness, maximum concurrency, worker ownership, retry and repeated-failure stops, definition hashes, and active write-scope conflicts.
-- [ ] Require current successful verification evidence before completing a task whose evidence policy is required.
-- [ ] Prove interruption/resume and concurrent-claim behavior with integration tests.
-- [ ] Commit as `feat: add resumable bounded task scheduling`.
+- [x] Add an atomic state store and cross-process lock below `.forgeyard/state/`.
+- [x] Implement status, next, claim, checkpoint, resume, complete, fail, and cancel transitions.
+- [x] Enforce dependency readiness, maximum concurrency, worker ownership, retry and repeated-failure stops, definition hashes, and active write-scope conflicts.
+- [x] Require current successful verification evidence before completing a task whose evidence policy is required.
+- [x] Prove interruption/resume and concurrent-claim behavior with integration tests.
+- [x] Commit as `feat: add resumable bounded task scheduling`.
 
 ## Task 3: Expose task and ledger commands
 
