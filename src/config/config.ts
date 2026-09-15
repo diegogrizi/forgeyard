@@ -160,7 +160,10 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
     }
   }
 
-  if (!mutableRoots.some((root) => overlaps(root, presentation) && !presentation.startsWith(`${root}/../`))) {
+  if (
+    config.presentation.enabled &&
+    !mutableRoots.some((root) => overlaps(root, presentation) && !presentation.startsWith(`${root}/../`))
+  ) {
     throw configError("The presentation path must be inside a mutable root.", [presentation]);
   }
 

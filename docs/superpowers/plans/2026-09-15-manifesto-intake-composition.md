@@ -354,7 +354,7 @@ git commit -m "feat: resolve stored tailored packs"
 - Preserves: existing adapter-native paths and catalog transforms.
 - Preserves: unknown existing root host instructions by targeting `.forgeyard/HOST.md` during automatic preparation.
 
-- [ ] **Step 1: Write failing adapter assertions**
+- [x] **Step 1: Write failing adapter assertions**
 
 For a tailored frontend configuration, assert that the rendered files contain:
 
@@ -368,27 +368,27 @@ expect(byPath.get("AGENTS.md")).toContain("Do not ask the user to choose catalog
 
 Add a second case where intake evidence names an existing `AGENTS.md`: the rendered plan must contain `.forgeyard/HOST.md`, must not contain `AGENTS.md`, and installation must preserve the original root file byte-for-byte. Cover the equivalent `CLAUDE.md` behavior in the Claude adapter.
 
-- [ ] **Step 2: Run and confirm the report is absent**
+- [x] **Step 2: Run and confirm the report is absent**
 
 Run: `npx vitest run tests/unit/adapters/delivery-output.test.ts tests/golden/codex-hackathon.test.ts`
 
 Expected: FAIL because `.forgeyard/COMPOSITION.md` is not rendered.
 
-- [ ] **Step 3: Add shared stable rendering helpers**
+- [x] **Step 3: Add shared stable rendering helpers**
 
 Render sorted Markdown lists for facts, evidence, choices, exclusions, questions, and limits. Escape all user-derived inline Markdown and HTML where appropriate. Manual legacy configurations must render explicit “manual/not inferred” wording rather than fake evidence.
 
-- [ ] **Step 4: Add the report component to all adapters**
+- [x] **Step 4: Add the report component to all adapters**
 
 Map `composition.report` to `.forgeyard/COMPOSITION.md`, include it in core slot ordering, and supply identical semantic content across adapters.
 
-- [ ] **Step 5: Run adapter tests until green**
+- [x] **Step 5: Run adapter tests until green**
 
 Run: `npx vitest run tests/unit/adapters tests/golden/codex-hackathon.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```sh
 git add packs/foundation src/adapters tests/unit/adapters tests/golden/codex-hackathon.test.ts

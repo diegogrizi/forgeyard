@@ -11,6 +11,7 @@ import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderCodexCatalog } from "./codex-catalog.js";
+import { compositionVariables, instructionTarget, projectContextVariables } from "./factory-context.js";
 import { renderComponent } from "./render.js";
 import {
   escapeHtmlText,
@@ -25,13 +26,13 @@ const CORE_SLOT_ORDER = [
   "review.readonly",
   "task.initial",
   "guard.file-tools",
+  "composition.report",
 ] as const;
 
 const DELIVERY_SLOT_ORDER = [
   "project.brief",
   "task.implementation",
   "task.review",
-  "task.demo",
   "memory.knowledge",
   "memory.decision-template",
   "memory.handoff",
@@ -45,6 +46,7 @@ const PRESENTATION_SLOT_ORDER = [
   "presentation.styles",
   "presentation.script",
   "presentation.readme",
+  "task.demo",
 ] as const;
 
 const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
@@ -57,6 +59,7 @@ const FOUNDATION_TARGET_BY_SLOT: Readonly<Record<(typeof SLOT_ORDER)[number], st
   "review.readonly": ".codex/agents/reviewer.toml",
   "task.initial": ".forgeyard/tasks/T001.yaml",
   "guard.file-tools": ".forgeyard/bin/write-guard.mjs",
+  "composition.report": ".forgeyard/COMPOSITION.md",
   "project.brief": "PROJECT.md",
   "task.implementation": ".forgeyard/tasks/T002.yaml",
   "task.review": ".forgeyard/tasks/T003.yaml",
@@ -111,6 +114,7 @@ function presentationPath(root: string, fileName: string): string {
 }
 
 function targetForSlot(slot: CodexSlot, config: ForgeyardConfig): string {
+  if (slot === "project.instructions") return instructionTarget(config, "AGENTS.md");
   const foundation = FOUNDATION_TARGET_BY_SLOT[slot];
   if (foundation !== undefined) return foundation;
   switch (slot) {
@@ -205,14 +209,15 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
         "project.name": escapeMarkdownInline(config.project.name),
         "project.purpose": escapeMarkdownInline(config.project.purpose),
         "project.mode": escapeMarkdownInline(config.project.mode),
-        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
+        ...projectContextVariables(config),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
         "paths.mutable": config.paths.mutableRoots.map(escapeMarkdownInline).join(", "),
         "paths.protected": config.paths.protectedPaths.map(escapeMarkdownInline).join(", "),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "quality.commands": qualityMarkdown(config),
       };
+    case "composition.report":
+      return compositionVariables(config);
     case "task.implementation":
       return {
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
@@ -326,7 +331,7 @@ export function createCodexAdapter(): HarnessAdapter {
     },
     validateConfig(config) {
       if (
-        !["minimal", "hackathon", "full"].includes(config.profile) ||
+        !["minimal", "hackathon", "full", "tailored"].includes(config.profile) ||
         config.harnesses.length !== 1 ||
         config.harnesses[0] !== "codex"
       ) {
@@ -378,12 +383,15 @@ export function createCodexAdapter(): HarnessAdapter {
     async validateOutput(files: readonly PlannedFile[]): Promise<void> {
       assertUniquePaths(files);
       const byPath = new Map(files.map((file) => [file.path, file.content]));
+      const projectInstructions = files.find((file) => file.componentId === "foundation.project-instructions");
+      if (projectInstructions === undefined) throw adapterError("Required Codex project instructions are missing.");
       const required = [
-        "AGENTS.md",
+        projectInstructions.path,
         ".agents/skills/forgeyard-workflow/SKILL.md",
         ".codex/agents/reviewer.toml",
         ".forgeyard/tasks/T001.yaml",
         ".forgeyard/bin/write-guard.mjs",
+        ".forgeyard/COMPOSITION.md",
       ];
       const presentationRoot = files
         .find((file) => file.componentId === "presentation.index")
@@ -402,13 +410,13 @@ export function createCodexAdapter(): HarnessAdapter {
           "PROJECT.md",
           ".forgeyard/tasks/T002.yaml",
           ".forgeyard/tasks/T003.yaml",
-          ".forgeyard/tasks/T004.yaml",
           ".forgeyard/knowledge/README.md",
           ".forgeyard/decisions/0000-template.md",
           ".forgeyard/handoffs/CURRENT.md",
           ".forgeyard/reports/RUN_REPORT.md",
           ".forgeyard/usage/README.md",
         );
+        if (presentationRoot !== undefined) required.push(".forgeyard/tasks/T004.yaml");
       }
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Codex output '${filePath}' is missing.`, [filePath]);
@@ -470,7 +478,9 @@ export function createCodexAdapter(): HarnessAdapter {
           );
         }
       }
-      if (byPath.get("AGENTS.md")!.trim().length === 0) throw adapterError("Generated AGENTS.md is empty.", ["AGENTS.md"]);
+      if (projectInstructions.content.trim().length === 0) {
+        throw adapterError("Generated Codex project instructions are empty.", [projectInstructions.path]);
+      }
     },
   };
 }

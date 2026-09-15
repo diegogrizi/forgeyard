@@ -7,11 +7,13 @@ This is a {{project.mode}} project initialized with a {{workflow.timeboxMinutes}
 ## Read first
 
 - Treat `forgeyard.yaml` as the human-owned project intent.
+- Read `.forgeyard/COMPOSITION.md` to understand the factory's selected capabilities, exclusions, evidence, and operating limits.
 - Run `forgeyard task status --root .` before selecting work.
 - Read the selected file in `.forgeyard/tasks/` before changing code.
 - Load `.agents/skills/forgeyard-workflow/SKILL.md` when planning or executing work.
 - Read `PROJECT.md` for the visible journey and `.forgeyard/handoffs/CURRENT.md` when resuming another session.
 - Keep detailed workflow guidance in skills; keep this file navigational.
+- Do not ask the user to choose catalog skills or internal workflow components during normal use; translate the product request into the prepared workflow.
 
 ## Scope
 

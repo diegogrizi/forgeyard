@@ -23,16 +23,16 @@ describe("Codex adapter", () => {
   test("maps the canonical foundation and presentation slots to project paths", async () => {
     const { files } = await renderedFoundation();
 
-    expect(files.map((file) => file.path).slice(0, 19)).toEqual([
+    expect(files.map((file) => file.path).slice(0, 20)).toEqual([
       "AGENTS.md",
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/bin/write-guard.mjs",
+      ".forgeyard/COMPOSITION.md",
       "PROJECT.md",
       ".forgeyard/tasks/T002.yaml",
       ".forgeyard/tasks/T003.yaml",
-      ".forgeyard/tasks/T004.yaml",
       ".forgeyard/knowledge/README.md",
       ".forgeyard/decisions/0000-template.md",
       ".forgeyard/handoffs/CURRENT.md",
@@ -43,6 +43,7 @@ describe("Codex adapter", () => {
       "presentation/styles.css",
       "presentation/app.js",
       "presentation/README.md",
+      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);

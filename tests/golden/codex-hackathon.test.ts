@@ -14,6 +14,7 @@ const expectedPaths = [
   ".codex/agents/reviewer.toml",
   ".forgeyard/tasks/T001.yaml",
   ".forgeyard/bin/write-guard.mjs",
+  ".forgeyard/COMPOSITION.md",
   ".agents/skills/forgeyard-showcase/SKILL.md",
   "presentation/index.html",
   "presentation/styles.css",

@@ -29,16 +29,16 @@ describe("Cursor adapter", () => {
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 19)).toEqual([
+    expect(paths.slice(0, 20)).toEqual([
       "AGENTS.md",
       ".cursor/rules/forgeyard-workflow.mdc",
       ".cursor/rules/forgeyard-reviewer.mdc",
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/bin/write-guard.mjs",
+      ".forgeyard/COMPOSITION.md",
       "PROJECT.md",
       ".forgeyard/tasks/T002.yaml",
       ".forgeyard/tasks/T003.yaml",
-      ".forgeyard/tasks/T004.yaml",
       ".forgeyard/knowledge/README.md",
       ".forgeyard/decisions/0000-template.md",
       ".forgeyard/handoffs/CURRENT.md",
@@ -49,6 +49,7 @@ describe("Cursor adapter", () => {
       "presentation/styles.css",
       "presentation/app.js",
       "presentation/README.md",
+      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(byPath.get("AGENTS.md")).toContain(".cursor/rules/forgeyard-workflow.mdc");
     expect(byPath.get("AGENTS.md")).not.toContain(".agents/skills/");

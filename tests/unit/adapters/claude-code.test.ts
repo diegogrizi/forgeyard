@@ -29,17 +29,17 @@ describe("Claude Code adapter", () => {
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 20)).toEqual([
+    expect(paths.slice(0, 21)).toEqual([
       "CLAUDE.md",
       ".claude/settings.json",
       ".claude/skills/forgeyard-workflow/SKILL.md",
       ".claude/agents/forgeyard-reviewer.md",
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/bin/write-guard.mjs",
+      ".forgeyard/COMPOSITION.md",
       "PROJECT.md",
       ".forgeyard/tasks/T002.yaml",
       ".forgeyard/tasks/T003.yaml",
-      ".forgeyard/tasks/T004.yaml",
       ".forgeyard/knowledge/README.md",
       ".forgeyard/decisions/0000-template.md",
       ".forgeyard/handoffs/CURRENT.md",
@@ -50,6 +50,7 @@ describe("Claude Code adapter", () => {
       "presentation/styles.css",
       "presentation/app.js",
       "presentation/README.md",
+      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(JSON.parse(byPath.get(".claude/settings.json")!)).toEqual(expect.objectContaining({
       disableSkillShellExecution: true,

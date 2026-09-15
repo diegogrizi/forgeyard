@@ -8,6 +8,22 @@ Mode: {{project.mode}}
 
 Audience: {{presentation.audience}}
 
+Requested outcome: {{intake.request}}
+
+Detected project class: {{intake.kind}}
+
+Languages: {{intake.languages}}
+
+Frameworks: {{intake.frameworks}}
+
+Specification sources:
+
+{{intake.sources}}
+
+Unresolved product questions:
+
+{{intake.questions}}
+
 Delivery horizon: {{workflow.timeboxMinutes}} minutes
 
 ## First visible journey
@@ -19,13 +35,13 @@ Describe one journey a real user can complete from entry to observable result. K
 - The journey has a concrete starting state, user action, and visible outcome.
 - The outcome works locally at the revision named by the evidence receipt.
 - Failure and empty states used by the journey are understandable.
-- The offline presentation shows the same behavior and cites only captured evidence.
+- {{delivery.proofRequirement}}
 
 ## Working boundaries
 
 - Mutable roots: {{paths.mutable}}
 - Protected paths: {{paths.protected}}
-- Presentation bundle: {{presentation.path}}
+- Presentation bundle: {{presentation.scope}}
 - Maximum concurrent claims: {{workflow.maxConcurrency}}
 
 ## Required verification

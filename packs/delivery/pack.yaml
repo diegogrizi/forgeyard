@@ -33,16 +33,6 @@ components:
     requires:
       - delivery.implementation-task
     conflicts: []
-  - id: delivery.demo-task
-    kind: template
-    entry: templates/T004.yaml.tpl
-    slot: task.demo
-    template: true
-    ownership: managed
-    requires:
-      - delivery.review-task
-      - presentation.index
-    conflicts: []
   - id: delivery.knowledge-guide
     kind: reference
     entry: templates/knowledge-README.md

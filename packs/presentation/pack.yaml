@@ -50,3 +50,13 @@ components:
     requires:
       - presentation.showcase-skill
     conflicts: []
+  - id: presentation.demo-task
+    kind: template
+    entry: templates/T004.yaml.tpl
+    slot: task.demo
+    template: true
+    ownership: managed
+    requires:
+      - delivery.review-task
+      - presentation.index
+    conflicts: []

@@ -12,6 +12,7 @@ import { sha256Text } from "../core/hash.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderCursorCatalog } from "./cursor-catalog.js";
+import { compositionVariables, instructionTarget, projectContextVariables } from "./factory-context.js";
 import { renderComponent } from "./render.js";
 import {
   escapeHtmlText,
@@ -26,13 +27,13 @@ const CORE_SLOT_ORDER = [
   "review.readonly",
   "task.initial",
   "guard.file-tools",
+  "composition.report",
 ] as const;
 
 const DELIVERY_SLOT_ORDER = [
   "project.brief",
   "task.implementation",
   "task.review",
-  "task.demo",
   "memory.knowledge",
   "memory.decision-template",
   "memory.handoff",
@@ -46,6 +47,7 @@ const PRESENTATION_SLOT_ORDER = [
   "presentation.styles",
   "presentation.script",
   "presentation.readme",
+  "task.demo",
 ] as const;
 
 const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
@@ -91,7 +93,7 @@ function presentationPath(root: string, fileName: string): string {
 function targetForSlot(slot: CursorSlot, config: ForgeyardConfig): string {
   switch (slot) {
     case "project.instructions":
-      return "AGENTS.md";
+      return instructionTarget(config, "AGENTS.md");
     case "workflow.primary":
       return ".cursor/rules/forgeyard-workflow.mdc";
     case "review.readonly":
@@ -100,6 +102,8 @@ function targetForSlot(slot: CursorSlot, config: ForgeyardConfig): string {
       return ".forgeyard/tasks/T001.yaml";
     case "guard.file-tools":
       return ".forgeyard/bin/write-guard.mjs";
+    case "composition.report":
+      return ".forgeyard/COMPOSITION.md";
     case "project.brief":
       return "PROJECT.md";
     case "task.implementation":
@@ -207,14 +211,15 @@ function variablesFor(slot: CursorSlot, config: ForgeyardConfig): Readonly<Recor
         "project.name": escapeMarkdownInline(config.project.name),
         "project.purpose": escapeMarkdownInline(config.project.purpose),
         "project.mode": escapeMarkdownInline(config.project.mode),
-        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
+        ...projectContextVariables(config),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
         "paths.mutable": config.paths.mutableRoots.map(escapeMarkdownInline).join(", "),
         "paths.protected": config.paths.protectedPaths.map(escapeMarkdownInline).join(", "),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "quality.commands": qualityMarkdown(config),
       };
+    case "composition.report":
+      return compositionVariables(config);
     case "task.implementation":
       return {
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
@@ -343,7 +348,7 @@ export function createCursorAdapter(): HarnessAdapter {
     },
     validateConfig(config) {
       if (
-        !["minimal", "hackathon", "full"].includes(config.profile) ||
+        !["minimal", "hackathon", "full", "tailored"].includes(config.profile) ||
         config.harnesses.length !== 1 ||
         config.harnesses[0] !== "cursor"
       ) throw adapterError("Cursor adapter received an unsupported configuration.");
@@ -396,12 +401,15 @@ export function createCursorAdapter(): HarnessAdapter {
     async validateOutput(files: readonly PlannedFile[]): Promise<void> {
       assertUniquePaths(files);
       const byPath = new Map(files.map((file) => [file.path, file.content]));
+      const projectInstructions = files.find((file) => file.componentId === "foundation.project-instructions");
+      if (projectInstructions === undefined) throw adapterError("Required Cursor project instructions are missing.");
       const required = [
-        "AGENTS.md",
+        projectInstructions.path,
         ".cursor/rules/forgeyard-workflow.mdc",
         ".cursor/rules/forgeyard-reviewer.mdc",
         ".forgeyard/tasks/T001.yaml",
         ".forgeyard/bin/write-guard.mjs",
+        ".forgeyard/COMPOSITION.md",
       ];
       const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
       if (presentationRoot !== undefined) required.push(
@@ -415,13 +423,13 @@ export function createCursorAdapter(): HarnessAdapter {
         "PROJECT.md",
         ".forgeyard/tasks/T002.yaml",
         ".forgeyard/tasks/T003.yaml",
-        ".forgeyard/tasks/T004.yaml",
         ".forgeyard/knowledge/README.md",
         ".forgeyard/decisions/0000-template.md",
         ".forgeyard/handoffs/CURRENT.md",
         ".forgeyard/reports/RUN_REPORT.md",
         ".forgeyard/usage/README.md",
       );
+      if (byPath.has("PROJECT.md") && presentationRoot !== undefined) required.push(".forgeyard/tasks/T004.yaml");
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Cursor output '${filePath}' is missing.`, [filePath]);
       }
@@ -455,7 +463,9 @@ export function createCursorAdapter(): HarnessAdapter {
           throw adapterError("Generated presentation violates its offline or accessibility contract.", [...new Set(findings.map((finding) => finding.path))].sort());
         }
       }
-      if (byPath.get("AGENTS.md")!.trim().length === 0) throw adapterError("Generated AGENTS.md is empty.", ["AGENTS.md"]);
+      if (projectInstructions.content.trim().length === 0) {
+        throw adapterError("Generated Cursor project instructions are empty.", [projectInstructions.path]);
+      }
     },
   };
 }

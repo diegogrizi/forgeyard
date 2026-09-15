@@ -49,3 +49,12 @@ components:
     requires:
       - foundation.initial-task
     conflicts: []
+  - id: foundation.composition-report
+    kind: template
+    entry: templates/COMPOSITION.md.tpl
+    slot: composition.report
+    template: true
+    ownership: managed
+    requires:
+      - foundation.project-instructions
+    conflicts: []
