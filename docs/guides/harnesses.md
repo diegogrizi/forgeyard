@@ -4,6 +4,8 @@ Forgeyard authors project intent and pack selection once, then renders a native 
 
 The source snapshot exposes **202 agents, 183 skills, and 105 commands**. Every adapter preserves those instructions and their local supporting files, but the discovery and enforcement surfaces differ.
 
+The `hackathon` and `full` profiles also share the same four-stage task DAG, 300-minute default allocation, evidence receipts, state ledger, worktree coordinator, project brief, decision and handoff records, run report, and offline presentation. See the [delivery workflow](delivery-workflow.md) for the executable loop.
+
 ## Capability matrix
 
 | Capability | Codex | Claude Code | Cursor |

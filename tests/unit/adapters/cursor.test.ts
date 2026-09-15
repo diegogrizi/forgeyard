@@ -29,12 +29,21 @@ describe("Cursor adapter", () => {
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 10)).toEqual([
+    expect(paths.slice(0, 19)).toEqual([
       "AGENTS.md",
       ".cursor/rules/forgeyard-workflow.mdc",
       ".cursor/rules/forgeyard-reviewer.mdc",
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/bin/write-guard.mjs",
+      "PROJECT.md",
+      ".forgeyard/tasks/T002.yaml",
+      ".forgeyard/tasks/T003.yaml",
+      ".forgeyard/tasks/T004.yaml",
+      ".forgeyard/knowledge/README.md",
+      ".forgeyard/decisions/0000-template.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+      ".forgeyard/usage/README.md",
       ".cursor/rules/forgeyard-showcase.mdc",
       "presentation/index.html",
       "presentation/styles.css",

@@ -1,0 +1,90 @@
+schemaVersion: 1
+id: delivery
+version: 1.0.0
+license: Apache-2.0
+provenance:
+  mode: original
+components:
+  - id: delivery.project-brief
+    kind: template
+    entry: templates/PROJECT.md.tpl
+    slot: project.brief
+    template: true
+    ownership: seed
+    requires:
+      - foundation.project-instructions
+    conflicts: []
+  - id: delivery.implementation-task
+    kind: template
+    entry: templates/T002.yaml.tpl
+    slot: task.implementation
+    template: true
+    ownership: managed
+    requires:
+      - foundation.initial-task
+      - delivery.project-brief
+    conflicts: []
+  - id: delivery.review-task
+    kind: template
+    entry: templates/T003.yaml.tpl
+    slot: task.review
+    template: true
+    ownership: managed
+    requires:
+      - delivery.implementation-task
+    conflicts: []
+  - id: delivery.demo-task
+    kind: template
+    entry: templates/T004.yaml.tpl
+    slot: task.demo
+    template: true
+    ownership: managed
+    requires:
+      - delivery.review-task
+      - presentation.index
+    conflicts: []
+  - id: delivery.knowledge-guide
+    kind: reference
+    entry: templates/knowledge-README.md
+    slot: memory.knowledge
+    template: false
+    ownership: managed
+    requires:
+      - delivery.project-brief
+    conflicts: []
+  - id: delivery.decision-template
+    kind: template
+    entry: templates/decision-template.md
+    slot: memory.decision-template
+    template: false
+    ownership: managed
+    requires:
+      - delivery.knowledge-guide
+    conflicts: []
+  - id: delivery.current-handoff
+    kind: template
+    entry: templates/CURRENT.md.tpl
+    slot: memory.handoff
+    template: true
+    ownership: seed
+    requires:
+      - delivery.knowledge-guide
+    conflicts: []
+  - id: delivery.run-report
+    kind: template
+    entry: templates/RUN_REPORT.md.tpl
+    slot: report.run
+    template: true
+    ownership: seed
+    requires:
+      - delivery.current-handoff
+    conflicts: []
+  - id: delivery.usage-guide
+    kind: reference
+    entry: templates/usage-README.md
+    slot: observability.usage
+    template: false
+    ownership: managed
+    requires:
+      - delivery.run-report
+    conflicts: []

@@ -16,7 +16,7 @@ capabilities:
   - "implementation"
   - "testing"
 limits:
-  minutes: 300
+  minutes: 90
   maxRetries: 2
 evidence:
   required: true

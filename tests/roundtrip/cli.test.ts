@@ -89,7 +89,7 @@ describe("built Forgeyard CLI round trip", () => {
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output).toEqual(expect.objectContaining({ command: "init", applied: false, status: "preview" }));
-    expect(output.changes.created).toHaveLength(334);
+    expect(output.changes.created).toHaveLength(343);
     expect(await exists(targetRoot)).toBe(false);
   });
 
@@ -125,7 +125,16 @@ describe("built Forgeyard CLI round trip", () => {
       ".forgeyard/manifest.json",
       `.forgeyard/state/operations/${initialOperationId}.json`,
       ".forgeyard/tasks/T001.yaml",
+      ".forgeyard/tasks/T002.yaml",
+      ".forgeyard/tasks/T003.yaml",
+      ".forgeyard/tasks/T004.yaml",
+      ".forgeyard/knowledge/README.md",
+      ".forgeyard/decisions/0000-template.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+      ".forgeyard/usage/README.md",
       "AGENTS.md",
+      "PROJECT.md",
       "forgeyard.lock",
       "forgeyard.yaml",
       "presentation/app.js",
@@ -135,9 +144,9 @@ describe("built Forgeyard CLI round trip", () => {
       ".forgeyard/catalog/ecosystem.json",
       ".forgeyard/licenses/wshobson-agents.LICENSE",
     ]));
-    expect(installedTree).toHaveLength(336);
+    expect(installedTree).toHaveLength(345);
     const manifest = await loadInstallManifest(targetRoot);
-    expect(manifest.files).toHaveLength(334);
+    expect(manifest.files).toHaveLength(343);
     expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
     expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(119);
 
@@ -366,7 +375,12 @@ describe("built Forgeyard CLI round trip", () => {
       await readFile(answersPath, "utf8"),
     );
     expect(await readFile(path.join(targetRoot, "sentinel.txt"), "utf8")).toBe("unrelated\n");
-    expect(manifest.files.map((file) => file.path)).toEqual(["forgeyard.yaml"]);
+    expect(manifest.files.map((file) => file.path)).toEqual([
+      "forgeyard.yaml",
+      "PROJECT.md",
+      ".forgeyard/handoffs/CURRENT.md",
+      ".forgeyard/reports/RUN_REPORT.md",
+    ]);
     for (const relativePath of output.changes.removed) {
       expect(await exists(path.join(targetRoot, ...relativePath.split("/"))), relativePath).toBe(false);
     }

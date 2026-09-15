@@ -51,11 +51,11 @@
 
 ## Task 6: Install memory, decision, report, and demo workflow assets
 
-- [ ] Add project-local knowledge, decision, handoff, usage, and run-report templates without credentials or private transcripts.
-- [ ] Upgrade the initial task and workflow instructions into a visible-slice DAG workflow shared by all three adapters.
-- [ ] Add a five-hour simulation fixture that resumes after interruption, invalidates stale evidence after a code change, and produces the offline presentation bundle.
-- [ ] Document exact guarantees, limitations, and operator commands.
-- [ ] Commit as `feat: complete the resumable delivery workflow`.
+- [x] Add project-local knowledge, decision, handoff, usage, and run-report templates without credentials or private transcripts.
+- [x] Upgrade the initial task and workflow instructions into a visible-slice DAG workflow shared by all three adapters.
+- [x] Add a five-hour simulation fixture that resumes after interruption, invalidates stale evidence after a code change, and produces the offline presentation bundle.
+- [x] Document exact guarantees, limitations, and operator commands.
+- [x] Commit as `feat: complete the resumable delivery workflow`.
 
 ## Task 7: Close the factory acceptance gate
 

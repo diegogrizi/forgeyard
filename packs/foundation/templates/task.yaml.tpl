@@ -15,7 +15,7 @@ capabilities:
   - "implementation"
   - "testing"
 limits:
-  minutes: {{workflow.timeboxMinutes}}
+  minutes: {{task.initialMinutes}}
   maxRetries: 2
 evidence:
   required: true

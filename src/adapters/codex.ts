@@ -27,6 +27,18 @@ const CORE_SLOT_ORDER = [
   "guard.file-tools",
 ] as const;
 
+const DELIVERY_SLOT_ORDER = [
+  "project.brief",
+  "task.implementation",
+  "task.review",
+  "task.demo",
+  "memory.knowledge",
+  "memory.decision-template",
+  "memory.handoff",
+  "report.run",
+  "observability.usage",
+] as const;
+
 const PRESENTATION_SLOT_ORDER = [
   "presentation.skill",
   "presentation.index",
@@ -35,7 +47,7 @@ const PRESENTATION_SLOT_ORDER = [
   "presentation.readme",
 ] as const;
 
-const SLOT_ORDER = [...CORE_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
+const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
 
 type CodexSlot = (typeof SLOT_ORDER)[number];
 
@@ -45,6 +57,15 @@ const FOUNDATION_TARGET_BY_SLOT: Readonly<Record<(typeof SLOT_ORDER)[number], st
   "review.readonly": ".codex/agents/reviewer.toml",
   "task.initial": ".forgeyard/tasks/T001.yaml",
   "guard.file-tools": ".forgeyard/bin/write-guard.mjs",
+  "project.brief": "PROJECT.md",
+  "task.implementation": ".forgeyard/tasks/T002.yaml",
+  "task.review": ".forgeyard/tasks/T003.yaml",
+  "task.demo": ".forgeyard/tasks/T004.yaml",
+  "memory.knowledge": ".forgeyard/knowledge/README.md",
+  "memory.decision-template": ".forgeyard/decisions/0000-template.md",
+  "memory.handoff": ".forgeyard/handoffs/CURRENT.md",
+  "report.run": ".forgeyard/reports/RUN_REPORT.md",
+  "observability.usage": ".forgeyard/usage/README.md",
   "presentation.skill": ".agents/skills/forgeyard-showcase/SKILL.md",
   "presentation.index": undefined,
   "presentation.styles": undefined,
@@ -70,6 +91,18 @@ function qualityMarkdown(config: ForgeyardConfig): string {
 
 function yamlSequence(values: readonly string[]): string {
   return values.map((value) => `  - ${quoteYamlString(value)}`).join("\n");
+}
+
+function allocatedMinutes(config: ForgeyardConfig, fraction: number): string {
+  return String(Math.max(1, Math.floor(config.timeboxMinutes * fraction)));
+}
+
+function deliverySlots(bySlot: ReadonlyMap<string, ResolvedComponent>): readonly CodexSlot[] {
+  const selected = DELIVERY_SLOT_ORDER.filter((slot) => bySlot.has(slot));
+  if (selected.length !== 0 && selected.length !== DELIVERY_SLOT_ORDER.length) {
+    throw adapterError("Codex delivery components must be installed as one complete workflow.");
+  }
+  return selected;
 }
 
 function presentationPath(root: string, fileName: string): string {
@@ -165,7 +198,45 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
       return {
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "task.initialMinutes": config.profile === "minimal" ? String(config.timeboxMinutes) : allocatedMinutes(config, 0.3),
+      };
+    case "project.brief":
+      return {
+        "project.name": escapeMarkdownInline(config.project.name),
+        "project.purpose": escapeMarkdownInline(config.project.purpose),
+        "project.mode": escapeMarkdownInline(config.project.mode),
+        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
+        "paths.mutable": config.paths.mutableRoots.map(escapeMarkdownInline).join(", "),
+        "paths.protected": config.paths.protectedPaths.map(escapeMarkdownInline).join(", "),
+        "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
+        "quality.commands": qualityMarkdown(config),
+      };
+    case "task.implementation":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "task.implementationMinutes": allocatedMinutes(config, 0.45),
+      };
+    case "task.review":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.reviewMinutes": allocatedMinutes(config, 0.1),
+      };
+    case "task.demo":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.presentationScope": yamlSequence([config.paths.presentation]),
+        "task.demoMinutes": allocatedMinutes(config, 0.15),
+      };
+    case "memory.handoff":
+      return { "project.name": escapeMarkdownInline(config.project.name) };
+    case "report.run":
+      return {
+        "project.name": escapeMarkdownInline(config.project.name),
+        "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        "quality.commands": qualityMarkdown(config),
       };
     case "presentation.index":
       return {
@@ -189,6 +260,9 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
     case "presentation.styles":
     case "presentation.script":
     case "guard.file-tools":
+    case "memory.knowledge":
+    case "memory.decision-template":
+    case "observability.usage":
       return {};
     default:
       throw adapterError(`Codex has no mapping for logical slot '${slot}'.`);
@@ -221,10 +295,10 @@ function validateReviewer(content: string, filePath: string): void {
   }
 }
 
-function validateTask(content: string, filePath: string): void {
+function validateTask(content: string, filePath: string, expectedId: string): void {
   const parsed = parseYaml(content) as Record<string, unknown>;
-  if (parsed.schemaVersion !== 1 || parsed.id !== "T001" || parsed.required !== true || !Array.isArray(parsed.command)) {
-    throw adapterError("Generated initial task has invalid YAML fields.", [filePath]);
+  if (parsed.schemaVersion !== 1 || parsed.id !== expectedId || parsed.required !== true || !Array.isArray(parsed.command)) {
+    throw adapterError("Generated task has invalid YAML fields.", [filePath]);
   }
 }
 
@@ -267,7 +341,11 @@ export function createCodexAdapter(): HarnessAdapter {
       }
       const foundationComponents = components.filter((component) => component.kind !== "catalog");
       const bySlot = new Map(foundationComponents.map((component) => [component.slot, component]));
-      const requiredSlots = config.presentation.enabled ? SLOT_ORDER : CORE_SLOT_ORDER;
+      const requiredSlots: readonly CodexSlot[] = [
+        ...CORE_SLOT_ORDER,
+        ...deliverySlots(bySlot),
+        ...(config.presentation.enabled ? PRESENTATION_SLOT_ORDER : []),
+      ];
       for (const component of components) {
         if (component.kind === "catalog") {
           if (
@@ -319,6 +397,19 @@ export function createCodexAdapter(): HarnessAdapter {
           `${presentationRoot}/README.md`,
         );
       }
+      if (byPath.has("PROJECT.md")) {
+        required.push(
+          "PROJECT.md",
+          ".forgeyard/tasks/T002.yaml",
+          ".forgeyard/tasks/T003.yaml",
+          ".forgeyard/tasks/T004.yaml",
+          ".forgeyard/knowledge/README.md",
+          ".forgeyard/decisions/0000-template.md",
+          ".forgeyard/handoffs/CURRENT.md",
+          ".forgeyard/reports/RUN_REPORT.md",
+          ".forgeyard/usage/README.md",
+        );
+      }
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Codex output '${filePath}' is missing.`, [filePath]);
       }
@@ -331,7 +422,10 @@ export function createCodexAdapter(): HarnessAdapter {
         validateSkill(byPath.get(".agents/skills/forgeyard-showcase/SKILL.md")!, ".agents/skills/forgeyard-showcase/SKILL.md", "forgeyard-showcase");
       }
       validateReviewer(byPath.get(".codex/agents/reviewer.toml")!, ".codex/agents/reviewer.toml");
-      validateTask(byPath.get(".forgeyard/tasks/T001.yaml")!, ".forgeyard/tasks/T001.yaml");
+      for (const id of ["T001", "T002", "T003", "T004"]) {
+        const filePath = `.forgeyard/tasks/${id}.yaml`;
+        if (byPath.has(filePath)) validateTask(byPath.get(filePath)!, filePath, id);
+      }
       for (const file of files.filter(
         (candidate) =>
           candidate.componentId.startsWith("ecosystem.") &&

@@ -28,6 +28,18 @@ const CORE_SLOT_ORDER = [
   "guard.file-tools",
 ] as const;
 
+const DELIVERY_SLOT_ORDER = [
+  "project.brief",
+  "task.implementation",
+  "task.review",
+  "task.demo",
+  "memory.knowledge",
+  "memory.decision-template",
+  "memory.handoff",
+  "report.run",
+  "observability.usage",
+] as const;
+
 const PRESENTATION_SLOT_ORDER = [
   "presentation.skill",
   "presentation.index",
@@ -36,7 +48,7 @@ const PRESENTATION_SLOT_ORDER = [
   "presentation.readme",
 ] as const;
 
-const SLOT_ORDER = [...CORE_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
+const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
 type CursorSlot = (typeof SLOT_ORDER)[number];
 
 function adapterError(message: string, paths?: readonly string[]): ForgeyardError {
@@ -59,6 +71,18 @@ function yamlSequence(values: readonly string[]): string {
   return values.map((value) => `  - ${quoteYamlString(value)}`).join("\n");
 }
 
+function allocatedMinutes(config: ForgeyardConfig, fraction: number): string {
+  return String(Math.max(1, Math.floor(config.timeboxMinutes * fraction)));
+}
+
+function deliverySlots(bySlot: ReadonlyMap<string, ResolvedComponent>): readonly CursorSlot[] {
+  const selected = DELIVERY_SLOT_ORDER.filter((slot) => bySlot.has(slot));
+  if (selected.length !== 0 && selected.length !== DELIVERY_SLOT_ORDER.length) {
+    throw adapterError("Cursor delivery components must be installed as one complete workflow.");
+  }
+  return selected;
+}
+
 function presentationPath(root: string, fileName: string): string {
   const normalized = normalizePortablePath(root);
   return normalizePortablePath(normalized === "." ? fileName : `${normalized}/${fileName}`);
@@ -76,6 +100,24 @@ function targetForSlot(slot: CursorSlot, config: ForgeyardConfig): string {
       return ".forgeyard/tasks/T001.yaml";
     case "guard.file-tools":
       return ".forgeyard/bin/write-guard.mjs";
+    case "project.brief":
+      return "PROJECT.md";
+    case "task.implementation":
+      return ".forgeyard/tasks/T002.yaml";
+    case "task.review":
+      return ".forgeyard/tasks/T003.yaml";
+    case "task.demo":
+      return ".forgeyard/tasks/T004.yaml";
+    case "memory.knowledge":
+      return ".forgeyard/knowledge/README.md";
+    case "memory.decision-template":
+      return ".forgeyard/decisions/0000-template.md";
+    case "memory.handoff":
+      return ".forgeyard/handoffs/CURRENT.md";
+    case "report.run":
+      return ".forgeyard/reports/RUN_REPORT.md";
+    case "observability.usage":
+      return ".forgeyard/usage/README.md";
     case "presentation.skill":
       return ".cursor/rules/forgeyard-showcase.mdc";
     case "presentation.index":
@@ -158,7 +200,45 @@ function variablesFor(slot: CursorSlot, config: ForgeyardConfig): Readonly<Recor
       return {
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "task.initialMinutes": config.profile === "minimal" ? String(config.timeboxMinutes) : allocatedMinutes(config, 0.3),
+      };
+    case "project.brief":
+      return {
+        "project.name": escapeMarkdownInline(config.project.name),
+        "project.purpose": escapeMarkdownInline(config.project.purpose),
+        "project.mode": escapeMarkdownInline(config.project.mode),
+        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
+        "paths.mutable": config.paths.mutableRoots.map(escapeMarkdownInline).join(", "),
+        "paths.protected": config.paths.protectedPaths.map(escapeMarkdownInline).join(", "),
+        "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
+        "quality.commands": qualityMarkdown(config),
+      };
+    case "task.implementation":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.writeScopes": yamlSequence(config.paths.mutableRoots),
+        "task.implementationMinutes": allocatedMinutes(config, 0.45),
+      };
+    case "task.review":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.reviewMinutes": allocatedMinutes(config, 0.1),
+      };
+    case "task.demo":
+      return {
+        "task.command": yamlSequence(config.quality.commands[0]!.argv),
+        "task.presentationScope": yamlSequence([config.paths.presentation]),
+        "task.demoMinutes": allocatedMinutes(config, 0.15),
+      };
+    case "memory.handoff":
+      return { "project.name": escapeMarkdownInline(config.project.name) };
+    case "report.run":
+      return {
+        "project.name": escapeMarkdownInline(config.project.name),
+        "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        "quality.commands": qualityMarkdown(config),
       };
     case "presentation.index":
       return {
@@ -182,6 +262,9 @@ function variablesFor(slot: CursorSlot, config: ForgeyardConfig): Readonly<Recor
     case "presentation.styles":
     case "presentation.script":
     case "guard.file-tools":
+    case "memory.knowledge":
+    case "memory.decision-template":
+    case "observability.usage":
       return {};
   }
 }
@@ -235,10 +318,10 @@ function assertUniquePaths(files: readonly PlannedFile[]): void {
   }
 }
 
-function validateTask(content: string, filePath: string): void {
+function validateTask(content: string, filePath: string, expectedId: string): void {
   const parsed = parseYaml(content) as Record<string, unknown>;
-  if (parsed.schemaVersion !== 1 || parsed.id !== "T001" || parsed.required !== true || !Array.isArray(parsed.command)) {
-    throw adapterError("Generated initial task has invalid YAML fields.", [filePath]);
+  if (parsed.schemaVersion !== 1 || parsed.id !== expectedId || parsed.required !== true || !Array.isArray(parsed.command)) {
+    throw adapterError("Generated task has invalid YAML fields.", [filePath]);
   }
 }
 
@@ -270,7 +353,11 @@ export function createCursorAdapter(): HarnessAdapter {
       const catalogComponents = components.filter((component) => component.kind === "catalog");
       if (catalogComponents.length > 1) throw adapterError("Cursor supports one portable catalog per profile.");
       const bySlot = new Map(components.filter((component) => component.kind !== "catalog").map((component) => [component.slot, component]));
-      const requiredSlots = config.presentation.enabled ? SLOT_ORDER : CORE_SLOT_ORDER;
+      const requiredSlots: readonly CursorSlot[] = [
+        ...CORE_SLOT_ORDER,
+        ...deliverySlots(bySlot),
+        ...(config.presentation.enabled ? PRESENTATION_SLOT_ORDER : []),
+      ];
       for (const component of components) {
         if (component.kind === "catalog") {
           if (
@@ -324,6 +411,17 @@ export function createCursorAdapter(): HarnessAdapter {
         `${presentationRoot}/app.js`,
         `${presentationRoot}/README.md`,
       );
+      if (byPath.has("PROJECT.md")) required.push(
+        "PROJECT.md",
+        ".forgeyard/tasks/T002.yaml",
+        ".forgeyard/tasks/T003.yaml",
+        ".forgeyard/tasks/T004.yaml",
+        ".forgeyard/knowledge/README.md",
+        ".forgeyard/decisions/0000-template.md",
+        ".forgeyard/handoffs/CURRENT.md",
+        ".forgeyard/reports/RUN_REPORT.md",
+        ".forgeyard/usage/README.md",
+      );
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Cursor output '${filePath}' is missing.`, [filePath]);
       }
@@ -342,7 +440,10 @@ export function createCursorAdapter(): HarnessAdapter {
           if (!byPath.has(match[1]!)) throw adapterError("Cursor rule references a missing local instruction file.", [file.path, match[1]!]);
         }
       }
-      validateTask(byPath.get(".forgeyard/tasks/T001.yaml")!, ".forgeyard/tasks/T001.yaml");
+      for (const id of ["T001", "T002", "T003", "T004"]) {
+        const filePath = `.forgeyard/tasks/${id}.yaml`;
+        if (byPath.has(filePath)) validateTask(byPath.get(filePath)!, filePath, id);
+      }
       if (presentationRoot !== undefined) {
         const findings = auditPresentationSources({
           directory: presentationRoot,

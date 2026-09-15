@@ -13,7 +13,7 @@ The distributed catalog is real, pinned content—not a line-count placeholder. 
 | Profile | Intended use | Codex output |
 |---|---|---|
 | `minimal` | Small trusted lifecycle kernel | 1 reviewer, 1 workflow skill, task/evidence state |
-| `hackathon` | Curated idea-to-demo team plus offline presentation | 52 agent files, 119 skill entrypoints, 334 managed files |
+| `hackathon` | Curated idea-to-demo team, four-stage delivery DAG, continuity records, and offline presentation | 52 agent files, 119 skill entrypoints, 343 managed files |
 | `full` | Entire local capability library | 203 agent files, 290 skill entrypoints |
 
 The totals include Forgeyard-native components. In `full`, 202 agent files and 288 skill entrypoints come from the catalog; Forgeyard adds its reviewer and two workflow/presentation skills.
@@ -21,6 +21,8 @@ The totals include Forgeyard-native components. In `full`, 202 agent files and 2
 Catalog size is not prompt size. Root instructions remain navigational, the host discovers compact names and descriptions, and complete instructions load only when a capability is selected. The **maximum concurrency remains 4** by default in every profile: 203 installed agent files do not launch 203 workers.
 
 See [Catalog and context](docs/guides/catalog-and-context.md) for the loading model and [Catalog sources](docs/provenance/catalog-sources.md) for exact provenance.
+
+See [Resumable delivery workflow](docs/guides/delivery-workflow.md) for the five-hour DAG, operator commands, worktree path, continuity records, and exact limitations.
 
 ## Supported project adapters
 
@@ -134,6 +136,8 @@ forgeyard rollback 20260915T120000000Z-init-a1b2c3 --root ./my-project --yes
 
 Rolling back the initial installation is the supported uninstall path. It removes unchanged managed files, preserves `forgeyard.yaml`, and leaves unrelated project files alone. Recovery journals remain under `.forgeyard/state/operations/`.
 
+Human-owned seed files (`PROJECT.md`, the current handoff, and the run report) are also preserved so uninstalling the managed factory does not erase project intent or delivery history.
+
 ## Installed shape
 
 The exact tree depends on the profile and adapter. A full or curated Codex project contains:
@@ -146,7 +150,16 @@ AGENTS.md
 .forgeyard/catalog/ecosystem.json
 .forgeyard/licenses/wshobson-agents.LICENSE
 .forgeyard/tasks/T001.yaml
+.forgeyard/tasks/T002.yaml
+.forgeyard/tasks/T003.yaml
+.forgeyard/tasks/T004.yaml
 .forgeyard/bin/write-guard.mjs
+.forgeyard/knowledge/README.md
+.forgeyard/decisions/0000-template.md
+.forgeyard/handoffs/CURRENT.md
+.forgeyard/reports/RUN_REPORT.md
+.forgeyard/usage/README.md
+PROJECT.md
 presentation/index.html
 presentation/styles.css
 presentation/app.js

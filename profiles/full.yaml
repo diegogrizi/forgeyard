@@ -3,6 +3,7 @@ id: full
 version: 1.0.0
 packs:
   - foundation
+  - delivery
   - presentation
   - ecosystem
 catalog:
