@@ -1,0 +1,46 @@
+name: Regressione e rigenerazione SBOM
+
+on:
+  push:
+    branches: [refactor/forgia-personale-workspace]
+    paths:
+      - src/provenance/generate-sbom.ts
+      - tests/unit/provenance/sbom-reproducibility.test.ts
+      - .github/workflows/rigenera-sbom-temporaneo.yml
+
+# Solo per produrre un blob verificato: non aggiorna branch, PR o main.
+permissions:
+  contents: write
+
+jobs:
+  sbom:
+    if: github.repository == 'diegogrizi/forgeyard' && github.ref == 'refs/heads/refactor/forgia-personale-workspace'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - run: npm ci
+      - name: Regressione indipendenza dalla piattaforma
+        run: npx --no-install vitest run tests/unit/provenance/sbom-reproducibility.test.ts
+      - name: Rigenerazione esplicita degli artefatti
+        run: npm run provenance:generate
+      - name: Verifica degli artefatti prodotti
+        run: npx --no-install vitest run tests/integration/provenance/generated-files.test.ts && npm run provenance:check && git diff --check
+      - name: Deposita soltanto il blob SBOM, senza aggiornare riferimenti Git
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const bytes = fs.readFileSync('SBOM.spdx.json');
+            const content = JSON.parse(bytes.toString('utf8'));
+            if (content.spdxVersion !== 'SPDX-2.3' || !Array.isArray(content.packages)) throw new Error('Artefatto non valido');
+            const response = await github.rest.git.createBlob({ ...context.repo, content: bytes.toString('base64'), encoding: 'base64' });
+            core.info('SBOM_BLOB_SHA=' + response.data.sha);
+            core.info('SBOM_SHA256=' + crypto.createHash('sha256').update(bytes).digest('hex'));
+            core.info('SOURCE_COMMIT=' + context.sha);
