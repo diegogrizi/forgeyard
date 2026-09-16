@@ -19,13 +19,14 @@ interface PackResult {
 const repositoryRoot = path.resolve(".");
 let packed: PackResult;
 const publicGuides = new Set(["docs/guides/catalog-and-context.md", "docs/guides/delivery-workflow.md",
-  "docs/guides/harnesses.md", "docs/guides/native-factory.md"]);
+  "docs/guides/harnesses.md", "docs/guides/native-factory.md", "docs/guides/forgia-personale.md"]);
 
 function allowed(filePath: string): boolean {
   if (publicGuides.has(filePath)) return true;
   if ([
     "package.json",
     "README.md",
+    "README-LEGACY.md",
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.md",
@@ -49,6 +50,8 @@ describe("public npm package contents", () => {
     expect(paths).toEqual(expect.arrayContaining([
       "package.json",
       "README.md",
+      "README-LEGACY.md",
+      "docs/guides/forgia-personale.md",
       "LICENSE",
       "NOTICE",
       "THIRD_PARTY_NOTICES.md",
@@ -77,6 +80,8 @@ describe("public npm package contents", () => {
       "dist/native/service.d.ts",
       "dist/native/protocol.d.ts",
       "dist/capsule/capsule.d.ts",
+      "dist/workspace/entry.d.ts",
+      "dist/workspace/personal.d.ts",
     ]));
     expect(paths.filter((filePath) => filePath.startsWith("packs/ecosystem/vendor/"))).toHaveLength(1_009);
   });

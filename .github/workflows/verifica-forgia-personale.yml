@@ -25,7 +25,7 @@ jobs:
       - name: Dipendenze dal lockfile
         run: npm ci
       - name: Test mirati del workspace personale
-        run: npx --no-install vitest run tests/unit/workspace tests/roundtrip/workspace-inspection.test.ts
+        run: npx --no-install vitest run tests/unit/workspace tests/roundtrip/workspace-inspection.test.ts tests/roundtrip/personal-entry.test.ts
       - name: Verifica completa senza account AI
         run: npm run verify
       - name: Controlla diff e artefatti versionati
@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: '24.19.0'
       - run: npm ci
-      - name: Regressione SBOM e workspace su Windows
-        run: npx --no-install vitest run tests/unit/provenance/sbom-reproducibility.test.ts tests/integration/provenance/generated-files.test.ts tests/unit/workspace
+      - name: Regressione SBOM, workspace e binario su Windows
+        run: npx --no-install vitest run tests/unit/provenance/sbom-reproducibility.test.ts tests/integration/provenance/generated-files.test.ts tests/unit/workspace tests/roundtrip/personal-entry.test.ts
       - name: Verifica provenienza senza rigenerare i risultati attesi
         run: npm run provenance:check
