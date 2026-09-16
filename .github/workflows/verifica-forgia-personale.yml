@@ -1,0 +1,33 @@
+name: Verifica forgia personale
+
+on:
+  push:
+    branches: [refactor/forgia-personale-workspace]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forgia-personale-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout senza credenziali persistenti
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Node richiesto dal progetto
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - name: Dipendenze dal lockfile
+        run: npm ci
+      - name: Verifica completa senza account AI
+        run: npm run verify
