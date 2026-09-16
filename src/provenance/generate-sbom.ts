@@ -101,9 +101,11 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
     .sort(([left], [right]) => left.localeCompare(right, "en"));
   const ids = new Map(entries.map(([lockPath, locked]) => [lockPath, packageSpdxId(locked.name!, lockPath)]));
   const packages: SpdxPackage[] = entries.map(([lockPath, locked]) => {
-    const installed = workspace.installedByPath.get(lockPath);
-    const name = locked.name ?? installed?.name ?? lockPath;
-    const license = locked.license ?? installed?.license ?? "NOASSERTION";
+    // Lo SBOM descrive l'intero lock, non node_modules della macchina corrente.
+    // I pacchetti opzionali installati cambiano tra Windows e Linux: anche homepage
+    // e licenze aggiunte da metadati locali renderebbero diversi gli stessi input.
+    const name = locked.name ?? lockPath;
+    const license = locked.license ?? "NOASSERTION";
     const checksums = checksum(locked.integrity);
     return {
       SPDXID: ids.get(lockPath)!,
@@ -115,7 +117,6 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
       licenseDeclared: license,
       copyrightText: "NOASSERTION",
       ...(checksums === undefined ? {} : { checksums }),
-      ...(installed?.homepage === undefined ? {} : { homepage: installed.homepage }),
       externalRefs: [{
         referenceCategory: "PACKAGE-MANAGER",
         referenceType: "purl",
