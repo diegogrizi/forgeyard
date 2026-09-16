@@ -53,6 +53,31 @@ afterEach(async () => {
 });
 
 describe("verification command boundary", () => {
+  test("requires every configured task gate, not just the first command", async () => {
+    const root = await projectRoot();
+    await writeFile(path.join(root, ".forgeyard/tasks/T001.yaml"),
+      'schemaVersion: 1\nid: T001\ntitle: Verify slice\ncommand: ["node","unit"]\ncommands:\n  - name: unit\n    argv: ["node","unit"]\n  - name: lint\n    argv: ["node","lint"]\nrequired: true\n');
+    const observed: string[] = [];
+    const runner: CommandRunner = async (input) => {
+      observed.push(input.args[0]!);
+      return { exitCode: input.args[0] === "lint" ? 2 : 0, stdout: "", stderr: "" };
+    };
+    await expect(runVerification({ root, taskId: "T001" }, ports(runner)))
+      .rejects.toMatchObject({ code: "FY_COMMAND_FAILED" });
+    expect(observed).toEqual(["unit", "lint"]);
+  });
+
+  test("rejects a successful command that changes the verified inputs", async () => {
+    const root = await projectRoot();
+    let ran = false;
+    const runner: CommandRunner = async () => {
+      ran = true;
+      return { exitCode: 0, stdout: "", stderr: "" };
+    };
+    await expect(runVerification({ root, taskId: "T001" },
+      ports(runner, cleanGit({ status: async () => ran ? " M src/code.ts" : "" }))))
+      .rejects.toMatchObject({ code: "FY_EVIDENCE_INVALID" });
+  });
   test("requires a real clean Git HEAD before executing", async () => {
     const root = await projectRoot();
     const runner: CommandRunner = async () => ({ exitCode: 0, stdout: "", stderr: "" });

@@ -6,6 +6,7 @@ import { sha256Text } from "../core/hash.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import type { ResolvedProfile } from "../registry/resolve.js";
 import { serializeConfig } from "../config/config.js";
+import { capsuleFile, compileCapsule } from "../capsule/capsule.js";
 
 export interface BuildInstallPlanInput {
   targetRoot: string;
@@ -96,12 +97,13 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
     plannedFile("forgeyard.lock", lockContent(input), "forgeyard.lock", "managed"),
     plannedFile(
       ".forgeyard/.gitignore",
-      "evidence/\nledger/\nstate/run.json\nstate/run.lock\nstate/integration.lock\nstate/run.json.tmp-*\nstate/staging/\nstate/backups/\nstate/worktrees/\n",
+      "evidence/\nledger/\nreports/\nbindings.json\nstate/run.json\nstate/run.lock\nstate/integration.lock\nstate/run.json.tmp-*\nstate/staging/\nstate/backups/\nstate/worktrees/\n",
       "forgeyard.runtime-ignore",
       "managed",
     ),
     ...input.renderedFiles,
   ];
+  files.push(capsuleFile(compileCapsule(input.config, files, input.forgeyardVersion)));
   assertNoCaseCollisions(files.map((file) => file.path));
   if (new Set(files.map((file) => file.componentId)).size !== files.length) {
     throw new ForgeyardError({

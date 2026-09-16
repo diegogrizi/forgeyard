@@ -6,6 +6,7 @@ export type HarnessId = (typeof HARNESS_IDS)[number];
 export interface QualityCommand {
   name: string;
   argv: NonEmptyArgv;
+  cwd?: string;
 }
 
 export type ProfileId = "minimal" | "hackathon" | "full" | "tailored";
@@ -25,6 +26,9 @@ export type ProjectKind =
 export interface IntakeEvidence {
   path: string;
   signal: string;
+  sha256?: string;
+  locator?: string;
+  inference?: "manifest" | "presence" | "text-pattern" | "explicit-input";
 }
 
 export interface IntakeConfig {
@@ -37,6 +41,7 @@ export interface IntakeConfig {
   evidence: readonly IntakeEvidence[];
   confidence: "high" | "medium" | "low";
   questions: readonly string[];
+  scan?: import("../intake/contracts.js").InspectionScan;
 }
 
 export interface CompositionChoice {
@@ -50,6 +55,7 @@ export interface CompositionConfig {
   selected: readonly CompositionChoice[];
   excluded: readonly CompositionChoice[];
   analysisSha256: string;
+  normalizedNeeds?: import("../intake/semantic.js").ProjectNeedsProfile;
 }
 
 export interface AutonomyConfig {
@@ -238,6 +244,7 @@ export interface VerificationTask {
   id: string;
   title: string;
   command: NonEmptyArgv;
+  commands?: readonly QualityCommand[];
   required: true;
   objective?: string;
   acceptanceCriteria?: readonly string[];
@@ -273,4 +280,6 @@ export interface VerificationReceipt {
   stdoutSha256: string;
   stderrSha256: string;
   status: "passed" | "failed";
+  commandsSha256?: string;
+  gates?: readonly { name: string; argvSha256: string; exitCode: number }[];
 }

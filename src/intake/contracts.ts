@@ -11,6 +11,31 @@ export interface InspectProjectInput {
   root: string;
   brief?: string;
   specificationPaths?: readonly string[];
+  limits?: Partial<InspectionLimits>;
+}
+
+export interface InspectionLimits {
+  maxEntries: number;
+  maxDepth: number;
+  maxFiles: number;
+  maxTotalBytes: number;
+}
+
+export interface InspectionEvidence {
+  path: string;
+  signal: string;
+  sha256: string;
+  locator: string;
+  inference: "manifest" | "presence" | "text-pattern" | "explicit-input";
+}
+
+export interface InspectionScan {
+  /** Complete means every eligible entry within the declared bounds was inspected, not exhaustive semantic understanding. */
+  status: "complete" | "limited";
+  visitedEntries: number;
+  hashedFiles: number;
+  limits: InspectionLimits;
+  limitations: readonly string[];
 }
 
 export interface ProjectInspection {
@@ -28,6 +53,8 @@ export interface ProjectInspection {
   instructionSurfaces: readonly string[];
   sources: readonly string[];
   evidence: readonly { path: string; signal: string }[];
+  evidenceRecords?: readonly InspectionEvidence[];
+  scan?: InspectionScan;
   questions: readonly string[];
   warnings: readonly string[];
   confidence: "high" | "medium" | "low";
@@ -35,6 +62,9 @@ export interface ProjectInspection {
 }
 
 export interface ComposeProjectOptions {
+  qualityCommands?: readonly QualityCommand[];
+  mutableRoots?: readonly string[];
+  needsProposal?: unknown;
   adapter?: HarnessId;
   timeboxMinutes?: number;
   maxConcurrency?: number;
@@ -84,4 +114,5 @@ export interface PreparationDecision {
   };
   autonomy: AutonomyConfig;
   analysisSha256: string;
+  normalizedNeeds?: import("./semantic.js").ProjectNeedsProfile;
 }

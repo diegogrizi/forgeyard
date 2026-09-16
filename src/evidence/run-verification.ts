@@ -5,6 +5,9 @@ import { execa } from "execa";
 
 import type { VerificationReceipt } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
+import { canonicalJson, sha256Text } from "../core/hash.js";
+import { resolveInsideRoot } from "../core/paths.js";
+import { assertDirectoryChain } from "../native/files.js";
 import {
   buildReceipt,
   loadTask,
@@ -164,17 +167,24 @@ export async function runVerification(
   if (!COMMIT_PATTERN.test(gitCommit) || gitStatus.trim().length > 0) throw gitRequired();
 
   const started = ports.clock.now();
-  const [executable, ...args] = task.task.command;
-  const commandResult = await ports.runner({
-    executable,
-    args,
-    cwd: root,
-    shell: false,
-    timeoutMs: TIMEOUT_MS,
-    maxBufferBytes: MAX_BUFFER_BYTES,
-  });
+  const commands = task.task.commands ?? [{ name: "verification", argv: task.task.command }];
+  const gates: { name: string; argvSha256: string; exitCode: number }[] = [];
+  const output: string[] = [];
+  const errors: string[] = [];
+  for (const command of commands) {
+    const [executable, ...args] = command.argv;
+    const cwd = command.cwd === undefined ? root : resolveInsideRoot(root, command.cwd);
+    await assertDirectoryChain(cwd);
+    const result = await ports.runner({ executable, args, cwd, shell: false,
+      timeoutMs: TIMEOUT_MS, maxBufferBytes: MAX_BUFFER_BYTES });
+    gates.push({ name: command.name, argvSha256: sha256Text(canonicalJson(command.argv)),
+      exitCode: stableExitCode(result) });
+    output.push(result.stdout);
+    errors.push(result.stderr);
+  }
+  const commandResult = { stdout: output.join(""), stderr: errors.join("") };
   const finished = ports.clock.now();
-  const exitCode = stableExitCode(commandResult);
+  const exitCode = gates.find((gate) => gate.exitCode !== 0)?.exitCode ?? 0;
   const receipt = buildReceipt({
     receiptId: ports.ids.next(),
     taskId: task.task.id,
@@ -187,9 +197,18 @@ export async function runVerification(
     exitCode,
     stdout: commandResult.stdout,
     stderr: commandResult.stderr,
+    ...(task.task.commands === undefined ? {} : { commands: task.task.commands, gates }),
   });
   const receiptPath = await writeReceipt(root, receipt);
   if (exitCode !== 0) throw commandFailed(receiptPath);
+  const [postHead, postStatus, postTask] = await Promise.all([
+    ports.git.head(root), ports.git.status(root), loadTask(root, input.taskId),
+  ]);
+  if (postHead.trim().toLowerCase() !== gitCommit || postStatus.trim().length > 0 || postTask.sha256 !== task.sha256) {
+    throw new ForgeyardError({ code: "FY_EVIDENCE_INVALID", exitCode: 8,
+      message: "Verification changed its inputs; the receipt cannot certify the resulting working tree.",
+      remediation: "Commit the intended state and rerun every required gate.", paths: [receiptPath] });
+  }
 
   return {
     status: "passed",

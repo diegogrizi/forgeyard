@@ -75,6 +75,7 @@
             "required": ["name", "argv"],
             "properties": {
               "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "cwd": { "type": "string", "minLength": 1, "maxLength": 260 },
               "argv": {
                 "type": "array",
                 "minItems": 1,
@@ -163,8 +164,23 @@
             "required": ["path", "signal"],
             "properties": {
               "path": { "type": "string", "minLength": 1, "maxLength": 260 },
-              "signal": { "type": "string", "minLength": 1, "maxLength": 300 }
+              "signal": { "type": "string", "minLength": 1, "maxLength": 300 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "locator": { "type": "string", "maxLength": 256 },
+              "inference": { "enum": ["manifest", "presence", "text-pattern", "explicit-input"] }
             }
+          }
+        },
+        "scan": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "visitedEntries", "hashedFiles", "limits", "limitations"],
+          "properties": {
+            "status": { "enum": ["complete", "limited"] },
+            "visitedEntries": { "type": "integer", "minimum": 0 }, "hashedFiles": { "type": "integer", "minimum": 0 },
+            "limits": { "type": "object", "additionalProperties": false, "required": ["maxEntries", "maxDepth", "maxFiles", "maxTotalBytes"],
+              "properties": { "maxEntries": { "type": "integer", "minimum": 1 }, "maxDepth": { "type": "integer", "minimum": 1 },
+                "maxFiles": { "type": "integer", "minimum": 1 }, "maxTotalBytes": { "type": "integer", "minimum": 1 } } },
+            "limitations": { "type": "array", "maxItems": 256, "items": { "type": "string", "maxLength": 4096 } }
           }
         },
         "confidence": { "enum": ["high", "medium", "low"] },
@@ -190,7 +206,19 @@
         },
         "selected": { "$ref": "#/definitions/compositionChoices" },
         "excluded": { "$ref": "#/definitions/compositionChoices" },
-        "analysisSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        "analysisSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "normalizedNeeds": {
+          "type": "object", "additionalProperties": false,
+          "required": ["schemaVersion", "intent", "risk", "needs", "evidence", "analysisSha256"],
+          "properties": {
+            "schemaVersion": { "const": 1 }, "intent": { "enum": ["new-project", "change", "maintenance"] },
+            "risk": { "enum": ["low", "medium", "high"] },
+            "needs": { "type": "array", "uniqueItems": true, "maxItems": 128, "items": { "type": "string", "maxLength": 128, "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$" } },
+            "evidence": { "type": "array", "maxItems": 128, "items": { "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+              "properties": { "path": { "type": "string", "maxLength": 1024 }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "locator": { "type": "string", "maxLength": 256 } } } },
+            "analysisSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
       }
     },
     "autonomy": {

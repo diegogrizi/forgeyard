@@ -16,6 +16,22 @@ sources:
     provenance: dependency
     retrievedAt: 2026-09-15
     notes: Direct runtime dependency used by the interactive wizard.
+  - id: npm.modelcontextprotocol-sdk
+    name: "@modelcontextprotocol/sdk"
+    url: https://github.com/modelcontextprotocol/typescript-sdk
+    revision: 1.30.0
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-16
+    notes: Official protocol SDK for the local stdio bridge; not an LLM SDK. No sampling, provider authentication or model requests are used.
+  - id: npm.zod
+    name: zod
+    url: https://github.com/colinhacks/zod
+    revision: 4.6.5
+    license: MIT
+    provenance: dependency
+    retrievedAt: 2026-09-16
+    notes: Required pinned peer of the official MCP SDK; Forgeyard's shared tool schemas are validated with Ajv.
   - id: npm.ajv
     name: ajv
     url: https://github.com/ajv-validator/ajv

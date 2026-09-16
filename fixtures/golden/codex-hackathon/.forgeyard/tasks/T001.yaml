@@ -26,4 +26,10 @@ command:
   - "node"
   - "-e"
   - "process.exit(0)"
+commands:
+- name: test
+  argv:
+    - node
+    - -e
+    - process.exit(0)
 required: true

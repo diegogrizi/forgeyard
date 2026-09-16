@@ -263,6 +263,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.2.tgz
 
+## @hono/node-server 2.1.1 (node_modules/@hono/node-server)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.1.tgz
+
 ## @inquirer/ansi 2.0.8 (node_modules/@inquirer/ansi)
 
 - License: MIT
@@ -364,6 +369,13 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz
+
+## @modelcontextprotocol/sdk 1.30.0 (node_modules/@modelcontextprotocol/sdk)
+
+- License: MIT
+- Project source: https://github.com/modelcontextprotocol/typescript-sdk
+- Locked package: https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz
+- Forgeyard use: Official protocol SDK for the local stdio bridge; not an LLM SDK. No sampling, provider authentication or model requests are used.
 
 ## @napi-rs/lzma-linux-x64-gnu 1.5.1 (node_modules/@napi-rs/lzma-linux-x64-gnu)
 
@@ -722,6 +734,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/@vitest/spy/-/spy-5.0.1.tgz
 
+## accepts 2.0.0 (node_modules/accepts)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz
+
 ## acorn 8.18.0 (node_modules/acorn)
 
 - License: MIT
@@ -761,15 +778,35 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/assertion-error/-/assertion-error-2.0.1.tgz
 
+## body-parser 2.3.0 (node_modules/body-parser)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz
+
 ## bundle-require 5.1.0 (node_modules/bundle-require)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/bundle-require/-/bundle-require-5.1.0.tgz
 
+## bytes 3.1.2 (node_modules/bytes)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz
+
 ## cac 6.7.14 (node_modules/cac)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/cac/-/cac-6.7.14.tgz
+
+## call-bind-apply-helpers 1.0.2 (node_modules/call-bind-apply-helpers)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz
+
+## call-bound 1.0.4 (node_modules/call-bound)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz
 
 ## chai 6.2.2 (node_modules/chai)
 
@@ -813,20 +850,100 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/consola/-/consola-3.4.2.tgz
 
+## content-disposition 1.1.0 (node_modules/content-disposition)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/content-disposition/-/content-disposition-1.1.0.tgz
+
+## content-type 1.0.5 (node_modules/content-type)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz
+
+## content-type 2.1.0 (node_modules/body-parser/node_modules/content-type)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz
+
+## content-type 2.1.0 (node_modules/negotiator/node_modules/content-type)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz
+
+## content-type 2.1.0 (node_modules/type-is/node_modules/content-type)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz
+
+## cookie 0.7.2 (node_modules/cookie)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz
+
+## cookie-signature 1.2.2 (node_modules/cookie-signature)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.2.tgz
+
+## cors 2.8.6 (node_modules/cors)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/cors/-/cors-2.8.6.tgz
+
+## cross-spawn 7.0.6 (node_modules/cross-spawn)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz
+
 ## debug 4.4.3 (node_modules/debug)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/debug/-/debug-4.4.3.tgz
+
+## depd 2.0.0 (node_modules/depd)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/depd/-/depd-2.0.0.tgz
 
 ## detect-libc 2.1.2 (node_modules/detect-libc)
 
 - License: Apache-2.0
 - Locked package: https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz
 
+## dunder-proto 1.0.1 (node_modules/dunder-proto)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz
+
+## ee-first 1.1.1 (node_modules/ee-first)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz
+
+## encodeurl 2.0.0 (node_modules/encodeurl)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz
+
+## es-define-property 1.0.1 (node_modules/es-define-property)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz
+
+## es-errors 1.3.0 (node_modules/es-errors)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz
+
 ## es-module-lexer 2.3.2 (node_modules/es-module-lexer)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-2.3.2.tgz
+
+## es-object-atoms 1.1.2 (node_modules/es-object-atoms)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.2.tgz
 
 ## esbuild 0.27.2 (node_modules/esbuild)
 
@@ -838,10 +955,30 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/esbuild/-/esbuild-0.28.2.tgz
 
+## escape-html 1.0.3 (node_modules/escape-html)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz
+
 ## estree-walker 3.0.3 (node_modules/estree-walker)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/estree-walker/-/estree-walker-3.0.3.tgz
+
+## etag 1.8.1 (node_modules/etag)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/etag/-/etag-1.8.1.tgz
+
+## eventsource 3.0.7 (node_modules/eventsource)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/eventsource/-/eventsource-3.0.7.tgz
+
+## eventsource-parser 3.1.1 (node_modules/eventsource-parser)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/eventsource-parser/-/eventsource-parser-3.1.1.tgz
 
 ## execa 10.0.1 (node_modules/execa)
 
@@ -854,6 +991,16 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: Apache-2.0
 - Locked package: https://registry.npmjs.org/expect-type/-/expect-type-1.4.0.tgz
+
+## express 5.2.1 (node_modules/express)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/express/-/express-5.2.1.tgz
+
+## express-rate-limit 8.7.0 (node_modules/express-rate-limit)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.7.0.tgz
 
 ## fast-deep-equal 3.1.3 (node_modules/fast-deep-equal)
 
@@ -890,20 +1037,75 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/figures/-/figures-6.1.0.tgz
 
+## finalhandler 2.1.1 (node_modules/finalhandler)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz
+
 ## fix-dts-default-cjs-exports 1.0.1 (node_modules/fix-dts-default-cjs-exports)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/fix-dts-default-cjs-exports/-/fix-dts-default-cjs-exports-1.0.1.tgz
+
+## forwarded 0.2.0 (node_modules/forwarded)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz
+
+## fresh 2.0.0 (node_modules/fresh)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz
 
 ## fsevents 2.3.3 (node_modules/fsevents)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz
 
+## function-bind 1.1.2 (node_modules/function-bind)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz
+
+## get-intrinsic 1.3.0 (node_modules/get-intrinsic)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz
+
+## get-proto 1.0.1 (node_modules/get-proto)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz
+
 ## get-stream 9.0.1 (node_modules/get-stream)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/get-stream/-/get-stream-9.0.1.tgz
+
+## gopd 1.2.0 (node_modules/gopd)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz
+
+## has-symbols 1.1.0 (node_modules/has-symbols)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz
+
+## hasown 2.0.4 (node_modules/hasown)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz
+
+## hono 4.13.8 (node_modules/hono)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/hono/-/hono-4.13.8.tgz
+
+## http-errors 2.0.1 (node_modules/http-errors)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz
 
 ## human-signals 8.0.1 (node_modules/human-signals)
 
@@ -915,10 +1117,30 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.3.tgz
 
+## inherits 2.0.4 (node_modules/inherits)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz
+
+## ip-address 10.7.2 (node_modules/ip-address)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/ip-address/-/ip-address-10.7.2.tgz
+
+## ipaddr.js 1.9.1 (node_modules/ipaddr.js)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz
+
 ## is-plain-obj 4.1.0 (node_modules/is-plain-obj)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/is-plain-obj/-/is-plain-obj-4.1.0.tgz
+
+## is-promise 4.0.0 (node_modules/is-promise)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/is-promise/-/is-promise-4.0.0.tgz
 
 ## is-stream 4.0.1 (node_modules/is-stream)
 
@@ -930,6 +1152,16 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/is-unicode-supported/-/is-unicode-supported-2.1.0.tgz
 
+## isexe 2.0.0 (node_modules/isexe)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz
+
+## jose 6.2.12 (node_modules/jose)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/jose/-/jose-6.2.12.tgz
+
 ## joycon 3.1.1 (node_modules/joycon)
 
 - License: MIT
@@ -939,6 +1171,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz
+
+## json-schema-typed 8.0.2 (node_modules/json-schema-typed)
+
+- License: BSD-2-Clause
+- Locked package: https://registry.npmjs.org/json-schema-typed/-/json-schema-typed-8.0.2.tgz
 
 ## lightningcss 1.33.0 (node_modules/lightningcss)
 
@@ -1030,6 +1267,31 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/magic-string/-/magic-string-1.4.1.tgz
 
+## math-intrinsics 1.1.0 (node_modules/math-intrinsics)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz
+
+## media-typer 1.1.1 (node_modules/media-typer)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/media-typer/-/media-typer-1.1.1.tgz
+
+## merge-descriptors 2.0.0 (node_modules/merge-descriptors)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz
+
+## mime-db 1.54.0 (node_modules/mime-db)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz
+
+## mime-types 3.0.2 (node_modules/mime-types)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz
+
 ## mlly 1.8.2 (node_modules/mlly)
 
 - License: MIT
@@ -1055,6 +1317,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/nanoid/-/nanoid-3.3.19.tgz
 
+## negotiator 1.1.0 (node_modules/negotiator)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/negotiator/-/negotiator-1.1.0.tgz
+
 ## npm-run-path 6.0.0 (node_modules/npm-run-path)
 
 - License: MIT
@@ -1065,20 +1332,50 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz
 
+## object-inspect 1.13.4 (node_modules/object-inspect)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz
+
 ## obug 2.2.1 (node_modules/obug)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/obug/-/obug-2.2.1.tgz
+
+## on-finished 2.4.1 (node_modules/on-finished)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz
+
+## once 1.4.0 (node_modules/once)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/once/-/once-1.4.0.tgz
 
 ## parse-ms 4.0.0 (node_modules/parse-ms)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/parse-ms/-/parse-ms-4.0.0.tgz
 
+## parseurl 1.3.3 (node_modules/parseurl)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz
+
+## path-key 3.1.1 (node_modules/cross-spawn/node_modules/path-key)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz
+
 ## path-key 4.0.0 (node_modules/path-key)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/path-key/-/path-key-4.0.0.tgz
+
+## path-to-regexp 8.4.2 (node_modules/path-to-regexp)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-8.4.2.tgz
 
 ## pathe 2.0.3 (node_modules/pathe)
 
@@ -1100,6 +1397,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/pirates/-/pirates-4.0.7.tgz
 
+## pkce-challenge 5.0.1 (node_modules/pkce-challenge)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/pkce-challenge/-/pkce-challenge-5.0.1.tgz
+
 ## pkg-types 1.3.1 (node_modules/pkg-types)
 
 - License: MIT
@@ -1119,6 +1421,26 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/pretty-ms/-/pretty-ms-9.3.1.tgz
+
+## proxy-addr 2.0.8 (node_modules/proxy-addr)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz
+
+## qs 6.16.0 (node_modules/qs)
+
+- License: BSD-3-Clause
+- Locked package: https://registry.npmjs.org/qs/-/qs-6.16.0.tgz
+
+## range-parser 1.3.0 (node_modules/range-parser)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/range-parser/-/range-parser-1.3.0.tgz
+
+## raw-body 3.0.2 (node_modules/raw-body)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/raw-body/-/raw-body-3.0.2.tgz
 
 ## readdirp 4.1.2 (node_modules/readdirp)
 
@@ -1145,10 +1467,60 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/rollup/-/rollup-4.63.3.tgz
 
+## router 2.2.0 (node_modules/router)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/router/-/router-2.2.0.tgz
+
 ## safer-buffer 2.1.2 (node_modules/safer-buffer)
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz
+
+## send 1.2.1 (node_modules/send)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/send/-/send-1.2.1.tgz
+
+## serve-static 2.2.1 (node_modules/serve-static)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/serve-static/-/serve-static-2.2.1.tgz
+
+## setprototypeof 1.2.0 (node_modules/setprototypeof)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz
+
+## shebang-command 2.0.0 (node_modules/shebang-command)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz
+
+## shebang-regex 3.0.0 (node_modules/shebang-regex)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz
+
+## side-channel 1.1.1 (node_modules/side-channel)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/side-channel/-/side-channel-1.1.1.tgz
+
+## side-channel-list 1.0.1 (node_modules/side-channel-list)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz
+
+## side-channel-map 1.0.1 (node_modules/side-channel-map)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz
+
+## side-channel-weakmap 1.0.2 (node_modules/side-channel-weakmap)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz
 
 ## siginfo 2.0.0 (node_modules/siginfo)
 
@@ -1181,6 +1553,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/stackback/-/stackback-0.0.2.tgz
+
+## statuses 2.0.2 (node_modules/statuses)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz
 
 ## std-env 4.2.0 (node_modules/std-env)
 
@@ -1227,6 +1604,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz
 
+## toidentifier 1.0.1 (node_modules/toidentifier)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz
+
 ## tree-kill 1.2.2 (node_modules/tree-kill)
 
 - License: MIT
@@ -1251,6 +1633,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - Locked package: https://registry.npmjs.org/tsx/-/tsx-4.23.13.tgz
 - Forgeyard use: Direct development dependency used to run TypeScript scripts.
 
+## type-is 2.1.0 (node_modules/type-is)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/type-is/-/type-is-2.1.0.tgz
+
 ## typescript 7.0.2 (node_modules/typescript)
 
 - License: Apache-2.0
@@ -1273,6 +1660,16 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/unicorn-magic/-/unicorn-magic-0.3.0.tgz
 
+## unpipe 1.0.0 (node_modules/unpipe)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz
+
+## vary 1.1.2 (node_modules/vary)
+
+- License: MIT
+- Locked package: https://registry.npmjs.org/vary/-/vary-1.1.2.tgz
+
 ## vite 8.3.0 (node_modules/vite)
 
 - License: MIT
@@ -1285,6 +1682,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - Locked package: https://registry.npmjs.org/vitest/-/vitest-5.0.1.tgz
 - Forgeyard use: Direct development dependency used for deterministic tests.
 
+## which 2.0.2 (node_modules/which)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/which/-/which-2.0.2.tgz
+
 ## which-command 0.1.0 (node_modules/which-command)
 
 - License: MIT
@@ -1294,6 +1696,11 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/why-is-node-running/-/why-is-node-running-2.3.0.tgz
+
+## wrappy 1.0.2 (node_modules/wrappy)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz
 
 ## yaml 2.9.1 (node_modules/yaml)
 
@@ -1306,3 +1713,15 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 
 - License: MIT
 - Locked package: https://registry.npmjs.org/yoctocolors/-/yoctocolors-2.2.0.tgz
+
+## zod 4.6.5 (node_modules/zod)
+
+- License: MIT
+- Project source: https://github.com/colinhacks/zod
+- Locked package: https://registry.npmjs.org/zod/-/zod-4.6.5.tgz
+- Forgeyard use: Required pinned peer of the official MCP SDK; Forgeyard's shared tool schemas are validated with Ajv.
+
+## zod-to-json-schema 3.25.2 (node_modules/zod-to-json-schema)
+
+- License: ISC
+- Locked package: https://registry.npmjs.org/zod-to-json-schema/-/zod-to-json-schema-3.25.2.tgz

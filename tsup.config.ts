@@ -5,6 +5,8 @@ export default defineConfig({
   format: ["esm"],
   target: "node24",
   platform: "node",
+  removeNodeProtocol: false,
+  splitting: false,
   dts: false,
   sourcemap: true,
   clean: true,

@@ -1,10 +1,16 @@
 # Forgeyard
 
 ```sh
-npx forgeyard prepare ./my-project --brief "Add accessible checkout recovery"
+node /absolute/path/to/forgeyard/dist/cli/main.js connect --root ./my-project --client codex
 ```
 
-Describe the software outcome; Forgeyard prepares the agentic environment needed to deliver it. It inspects the repository and supplied specifications, detects the stack and existing host conventions, selects one coherent workflow plus the relevant capabilities, records why each choice was made, and installs a stable project-scoped suite.
+Describe the software outcome in your native coding assistant; Forgeyard prepares its project-specific harness and checks delivery. The assistant interprets your requirements. Deterministic local tools inspect bounded inputs, select admitted capabilities, preview/install one coherent harness, preserve state and derive a report from current evidence.
+
+This checkout is not a published npm release. Build it locally first. The command above connects Codex; select claude-code for Claude Code. Trust/enable the project MCP server through your native client's own controls if required, then reopen the project. No global/account settings, AI clients or native permissions are changed.
+
+The ordinary interface is a conversation: "Prepare this repository", "Implement this without changing the public API", or "Resume the current work". Local MCP tools have a strict JSON CLI fallback. Installation and implementation have separate exact human confirmations, not a model approval endpoint.
+
+See [Native factory](docs/guides/native-factory.md) for operation and dossier alignment. Codex app/CLI and Claude Code app/CLI live behavior remains **unverified**; an official SDK transport test is not a live-client test. The production human-click adapter is implemented for Windows only.
 
 You do not need to choose a profile, compare skill repositories, name an orchestration framework, or remember a sequence of internal lifecycle commands before starting. The result remains inspectable in `forgeyard.yaml`, `forgeyard.lock`, and `.forgeyard/COMPOSITION.md`.
 
@@ -12,7 +18,9 @@ Forgeyard is an auditable factory and lifecycle manager, not an LLM runtime. It 
 
 After preparation, use ordinary product language in the selected host: “implement the checkout recovery,” “fix this without changing the public API,” or “resume the current work.” The installed `forgeyard-workflow` controller reads the project state and obtains bounded work orders; the user does not have to choose skills or sequence lifecycle commands.
 
-## Problem-first preparation
+## Legacy deterministic preparation
+
+The retained scaffold/task/worktree CLI below is not the native delivery certificate. The native path uses structured intent, risk and hash-bound evidence; each new feature creates a new product plan without replacing the frozen harness.
 
 Preview the evidence and proposed composition without writing:
 

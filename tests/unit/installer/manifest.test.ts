@@ -28,6 +28,21 @@ async function makePlan(operationId: string) {
 }
 
 describe("install metadata", () => {
+  test("freezes operational policy and every quality gate in a stable capsule", async () => {
+    const first = await makePlan("20260916T120000000Z-capsule1");
+    const second = await makePlan("20260916T120001000Z-capsule2");
+    const frozen = first.plan.files.find((file) => file.path === ".forgeyard/capsule.json");
+    expect(frozen).toBeDefined();
+    expect(frozen?.ownership).toBe("managed");
+    const capsule = JSON.parse(frozen!.content);
+    expect(capsule.id).toMatch(/^[a-f0-9]{64}$/);
+    expect(capsule.payload.gates.map((gate: { argv: string[] }) => gate.argv))
+      .toEqual(first.config.quality.commands.map((command) => command.argv));
+    expect(capsule.payload.policy.mutableRoots).toEqual(first.config.paths.mutableRoots);
+    expect(frozen?.content).toBe(second.plan.files.find((file) => file.path === ".forgeyard/capsule.json")?.content);
+    expect(capsule.payload.files.some((file: { path: string }) => file.path.startsWith(".forgeyard/tasks/")))
+      .toBe(false);
+  });
   test("builds a deterministic plan with seed, lock, runtime ignore, and adapter payload", async () => {
     const first = await makePlan("20260915T120000000Z-a1b2c3");
     const second = await makePlan("20260915T120001000Z-d4e5f6");

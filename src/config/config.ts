@@ -174,6 +174,8 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
 
   return {
     ...config,
+    quality: { commands: config.quality.commands.map((command) => ({ ...command,
+      ...(command.cwd === undefined ? {} : { cwd: normalizedPath(command.cwd) }) })) },
     catalog: {
       ...config.catalog,
       plugins: [...config.catalog.plugins].sort((left, right) => left.localeCompare(right, "en")),

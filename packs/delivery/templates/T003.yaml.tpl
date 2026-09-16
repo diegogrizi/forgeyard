@@ -23,4 +23,6 @@ integration:
   target: "current"
 command:
 {{task.command}}
+commands:
+{{task.commands}}
 required: true

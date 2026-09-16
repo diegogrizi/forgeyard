@@ -67,15 +67,17 @@ describe("prepared host controller", () => {
       path.join(target, ".agents", "skills", "forgeyard-workflow", "SKILL.md"),
       "utf8",
     );
-    expect(controller).toContain("Start from the user's product-language request");
-    expect(controller).toContain("forgeyard task next --root . --json");
-    expect(controller).toContain("returned `hostPrompt`");
-    expect(controller).toContain("Do not ask the user to select skills");
-    expect(controller).toContain("unresolved product ambiguity");
-    expect(controller).toContain("host-native worker or subagent facility");
-    expect(controller).toContain("does not launch model clients");
-    expect(controller).toContain("workspace integrate");
+    expect(controller).toContain("The user describes software, not skills or commands");
+    expect(controller).toContain("Start with `fy_context`");
+    expect(controller).toContain("new `fy_plan`");
+    expect(controller).toContain("Never make the user pick authors");
+    expect(controller).toContain("material product/constraint ambiguity");
+    expect(controller).toContain("Native read-only subagents are optional");
+    expect(controller).toContain("does not launch AI clients");
+    expect(controller).toContain("Never merge automatically");
     expect(controller).toContain("workspace cleanup");
     expect(controller).toContain("external effect");
+    expect(controller).toContain("`fy_finalize`");
+    expect(controller).toContain("zero executed tests");
   }, 120_000);
 });

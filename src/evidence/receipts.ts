@@ -7,7 +7,7 @@ import * as formatsModule from "ajv-formats";
 import { execa } from "execa";
 import { parse } from "yaml";
 
-import type { NonEmptyArgv, VerificationReceipt, VerificationTask } from "../core/contracts.js";
+import type { NonEmptyArgv, QualityCommand, VerificationReceipt, VerificationTask } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { canonicalJson, sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
@@ -40,6 +40,8 @@ export interface ReceiptInput {
   exitCode: number;
   stdout: string;
   stderr: string;
+  commands?: readonly QualityCommand[];
+  gates?: VerificationReceipt["gates"];
 }
 
 let taskValidator: ValidateFunction | undefined;
@@ -161,7 +163,8 @@ export async function loadTask(root: string, taskId: string): Promise<LoadedTask
   }
 
   const task = value as VerificationTask;
-  if (task.id !== taskId || !isNonEmptyArgv(task.command)) {
+  if (task.id !== taskId || !isNonEmptyArgv(task.command) ||
+    task.commands?.some((command) => !isNonEmptyArgv(command.argv)) === true) {
     throw configError("Verification task ID or executable is invalid.", [taskPath]);
   }
   return { task, source, sha256: sha256Text(source), path: taskPath };
@@ -182,6 +185,8 @@ export function buildReceipt(input: ReceiptInput): VerificationReceipt {
     stdoutSha256: sha256Text(input.stdout),
     stderrSha256: sha256Text(input.stderr),
     status: input.exitCode === 0 ? "passed" : "failed",
+    ...(input.commands === undefined ? {} : { commandsSha256: sha256Text(canonicalJson(input.commands)) }),
+    ...(input.gates === undefined ? {} : { gates: input.gates }),
   };
   serializeReceipt(receipt);
   return receipt;
@@ -244,6 +249,13 @@ export async function getReceiptStatus(
     if (head.toLowerCase() !== receipt.gitCommit) return "stale";
     if (task.sha256 !== receipt.taskSha256) return "stale";
     if (sha256Text(canonicalJson(task.task.command)) !== receipt.argvSha256) return "stale";
+    if (task.task.commands !== undefined) {
+      if (sha256Text(canonicalJson(task.task.commands)) !== receipt.commandsSha256) return "stale";
+      if (receipt.gates?.length !== task.task.commands.length) return "stale";
+      if (receipt.gates.some((gate, index) => gate.exitCode !== 0 ||
+        gate.name !== task.task.commands![index]!.name ||
+        gate.argvSha256 !== sha256Text(canonicalJson(task.task.commands![index]!.argv)))) return "stale";
+    } else if (receipt.commandsSha256 !== undefined) return "stale";
     return "current";
   } catch {
     return "stale";

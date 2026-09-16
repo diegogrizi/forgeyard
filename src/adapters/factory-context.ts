@@ -1,4 +1,5 @@
 import type { ForgeyardConfig } from "../core/contracts.js";
+import { stringify } from "yaml";
 import { escapeMarkdownInline, quoteYamlString } from "./strict-template.js";
 
 export type ProjectTaskSlot = "task.initial" | "task.implementation" | "task.review" | "task.demo";
@@ -186,6 +187,7 @@ export function taskContractVariables(
   const budget = taskBudget(config, slot);
   return {
     "task.title": quoteYamlString(wording.title),
+    "task.commands": stringify(config.quality.commands).trimEnd(),
     "task.objective": quoteYamlString(wording.objective),
     "task.requestCriterion": quoteYamlString(wording.criterion),
     "task.role": quoteYamlString(taskRole(config, slot)),

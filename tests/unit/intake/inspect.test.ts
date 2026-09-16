@@ -33,6 +33,96 @@ afterEach(async () => {
 });
 
 describe("project inspection", () => {
+  test("recursively recognizes Spring Gradle and suggests a wrapper without executing it", async () => {
+    const project = await fixture();
+    await project.file("services/api/build.gradle.kts", 'plugins { id("org.springframework.boot") version "3.5.0" }');
+    await project.file("services/api/gradlew", "throw new Error('never execute');");
+    await project.file("node_modules/hidden/pom.xml", "<project>org.springframework</project>");
+    const result = await inspectProject({ root: project.root, brief: "Maintain service." });
+    expect(result.languages).toEqual(["java"]);
+    expect(result.frameworks).toEqual(["spring"]);
+    expect(result.qualityCommands).toContainEqual({ name: "test", argv: ["./gradlew", "test"], cwd: "services/api" });
+    expect(result.evidenceRecords).toContainEqual(expect.objectContaining({ path: "services/api/build.gradle.kts", sha256: expect.stringMatching(/^[a-f0-9]{64}$/), locator: "file", inference: "manifest" }));
+    expect(result.evidenceRecords?.some((item) => item.path.startsWith("node_modules/"))).toBe(false);
+    expect(result.scan?.status).toBe("complete");
+  });
+
+  test("hashes observed source files and records inference separately from manifest facts", async () => {
+    const project = await fixture();
+    await project.file("src/main/java/Service.java", "class Service {}\n");
+    const result = await inspectProject({ root: project.root });
+    expect(result.evidenceRecords).toContainEqual(expect.objectContaining({ path: "src/main/java/Service.java", signal: "file:observed", locator: "file", inference: "presence", sha256: expect.stringMatching(/^[a-f0-9]{64}$/) }));
+  });
+
+  test("recognizes Maven Spring with a Windows wrapper as a suggestion only", async () => {
+    const project = await fixture();
+    await project.file("pom.xml", "<project><groupId>org.springframework.boot</groupId></project>");
+    await project.file("mvnw.cmd", "never execute");
+    const result = await inspectProject({ root: project.root });
+    expect(result.frameworks).toEqual(["spring"]);
+    expect(result.qualityCommands).toContainEqual({ name: "test", argv: ["./mvnw.cmd", "test"] });
+    expect(result.evidenceRecords).toContainEqual(expect.objectContaining({ path: "pom.xml", signal: "dependency:spring", inference: "text-pattern" }));
+  });
+
+  test("reports bounded incomplete scanning instead of claiming complete evidence", async () => {
+    const project = await fixture();
+    await project.file("a/pom.xml", "<project/>");
+    await project.file("b/pom.xml", "<project/>");
+    const result = await inspectProject({ root: project.root, limits: { maxEntries: 1 } });
+    expect(result.scan?.status).toBe("limited");
+    expect(result.scan?.limitations).toContain("entry-limit");
+    expect(result.scan?.visitedEntries).toBe(1);
+  });
+
+  test("excludes credential stores from evidence", async () => {
+    const project = await fixture();
+    await project.file(".npmrc", "//registry.example/:_authToken=private");
+    await project.file(".ssh/config", "private");
+    const result = await inspectProject({ root: project.root });
+    expect(result.scan?.hashedFiles).toBe(0);
+  });
+
+  test("bounds explicit input counts and brief length", async () => {
+    const project = await fixture();
+    await project.file("spec.md", "Specification");
+    await expect(inspectProject({ root: project.root, specificationPaths: Array(129).fill("spec.md") })).rejects.toMatchObject({ code: "FY_INTAKE_UNSAFE" });
+    await expect(inspectProject({ root: project.root, brief: "x".repeat(20_001) })).rejects.toMatchObject({ code: "FY_INTAKE_UNSAFE" });
+  });
+
+  test("rejects secret and symlink-parent specifications", async () => {
+    const project = await fixture();
+    const outside = await fixture();
+    await project.file(".env", "TOKEN=private");
+    await expect(inspectProject({ root: project.root, specificationPaths: [".env"] })).rejects.toMatchObject({ code: "FY_INTAKE_UNSAFE" });
+    await outside.file("spec.md", "Outside");
+    try {
+      await symlink(outside.root, path.join(project.root, "linked"), "junction");
+      await expect(inspectProject({ root: project.root, specificationPaths: ["linked/spec.md"] })).rejects.toMatchObject({ code: "FY_INTAKE_UNSAFE" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    }
+  });
+
+  test("does not infer a language from a symbolic-link manifest", async () => {
+    const project = await fixture();
+    const outside = await fixture();
+    await outside.file("go.mod", "module example\n");
+    try {
+      await symlink(path.join(outside.root, "go.mod"), path.join(project.root, "go.mod"), "file");
+      const result = await inspectProject({ root: project.root });
+      expect(result.languages).toEqual([]);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    }
+  });
+
+  test("does not infer language or checks from a directory named like a manifest", async () => {
+    const project = await fixture();
+    await project.dir("go.mod");
+    const result = await inspectProject({ root: project.root });
+    expect(result.languages).toEqual([]);
+    expect(result.qualityCommands).toEqual([{ name: "diff-check", argv: ["git", "diff", "--check"] }]);
+  });
   test("recognizes an existing Next.js project and its native checks", async () => {
     const project = await fixture();
     await project.file("package.json", JSON.stringify({

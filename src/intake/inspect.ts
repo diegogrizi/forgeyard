@@ -1,13 +1,20 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { lstat, open, opendir, realpath } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 import type { NonEmptyArgv, ProjectKind, QualityCommand } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
-import type { InspectProjectInput, ProjectInspection } from "./contracts.js";
+import type { InspectProjectInput, ProjectInspection, InspectionLimits, InspectionEvidence } from "./contracts.js";
 
 const MAX_TEXT_BYTES = 256 * 1024;
+const DEFAULT_LIMITS: InspectionLimits = { maxEntries: 4096, maxDepth: 6, maxFiles: 512, maxTotalBytes: 4 * 1024 * 1024 };
+const EXCLUDED_DIRECTORIES = new Set([".git", ".forgeyard", "node_modules", "vendor", "dist", "build", "target", "coverage", ".next", ".venv", "venv", "__pycache__", ".gradle", ".idea", ".ssh", ".aws", ".azure", ".gcloud", ".npmrc", ".netrc", ".pypirc"]);
+function excludedPath(candidate: string): boolean {
+  return candidate.split("/").some((part) => EXCLUDED_DIRECTORIES.has(part) || /^\.env(?:\.|$)/i.test(part) || /(?:^|[._-])(?:secrets?|credentials?)(?:[._-]|$)/i.test(part) || /\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(part));
+}
 const PRIMARY_MUTABLE_ROOTS = ["api", "app", "apps", "backend", "client", "frontend", "lib", "packages", "server", "src"];
 const HOST_INSTRUCTIONS = new Map([
   ["AGENTS.md", "host-instructions:codex"],
@@ -53,8 +60,36 @@ function portableInputPath(candidate: string): string {
   }
 }
 
-async function readBoundedText(root: string, relativePath: string, required: boolean): Promise<ReadTextResult | undefined> {
+async function boundedBytes(absolute: string): Promise<Buffer> {
+  const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) throw intakeError("Inspection input changed from a regular file.");
+    const buffer = Buffer.alloc(MAX_TEXT_BYTES + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    return Buffer.from(buffer.subarray(0, offset));
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readBoundedText(root: string, relativePath: string, required: boolean, snapshot?: ReadonlyMap<string, Buffer>): Promise<ReadTextResult | undefined> {
   const portable = portableInputPath(relativePath);
+  if (excludedPath(portable)) {
+    if (required) throw intakeError("Excluded sensitive or generated inputs cannot be specifications.");
+    return undefined;
+  }
+  for (const parent of portable.split("/").slice(0, -1).map((_, index, parts) => parts.slice(0, index + 1).join("/"))) {
+    if ((await optionalStat(resolveInsideRoot(root, parent)))?.isSymbolicLink()) {
+      if (required) throw intakeError("Specification parents must not be symbolic links.");
+      return undefined;
+    }
+  }
   const absolute = resolveInsideRoot(root, portable);
   const stats = await optionalStat(absolute);
   if (stats === undefined) {
@@ -71,9 +106,17 @@ async function readBoundedText(root: string, relativePath: string, required: boo
   }
   let bytes: Buffer;
   try {
-    bytes = await readFile(absolute);
+    if (snapshot !== undefined && !snapshot.has(portable)) {
+      if (required) throw intakeError("Required specification was not available within inspection bounds.");
+      return undefined;
+    }
+    bytes = snapshot?.get(portable) ?? await boundedBytes(absolute);
   } catch (error) {
     throw intakeError("Unable to read a project input file.", [portable], error);
+  }
+  if (bytes.length > MAX_TEXT_BYTES) {
+    if (required) throw intakeError("Specification changed beyond the bounded inspection limit.");
+    return undefined;
   }
   if (bytes.includes(0)) {
     if (required) throw intakeError("Specification must be UTF-8 text, not binary data.", [portable]);
@@ -166,18 +209,64 @@ function canonicalFingerprint(inspection: Omit<ProjectInspection, "root" | "anal
 }
 
 export async function inspectProject(input: InspectProjectInput): Promise<ProjectInspection> {
-  const root = path.resolve(input.root);
+  if ((input.brief !== undefined && (typeof input.brief !== "string" || input.brief.length > 20_000)) || (input.specificationPaths !== undefined && (!Array.isArray(input.specificationPaths) || input.specificationPaths.length > 128 || input.specificationPaths.some((file) => typeof file !== "string" || file.length > 1024)))) throw intakeError("Project input exceeds bounded text or specification counts.");
+  let root = path.resolve(input.root);
   const rootStats = await optionalStat(root);
   if (rootStats !== undefined && (rootStats.isSymbolicLink() || !rootStats.isDirectory())) {
     throw intakeError("The selected project root must be a regular directory.", [root]);
   }
+  if (rootStats !== undefined) root = await realpath(root);
+  const limits = { ...DEFAULT_LIMITS, ...input.limits };
+  for (const key of Object.keys(DEFAULT_LIMITS) as Array<keyof InspectionLimits>) {
+    if (!Number.isInteger(limits[key]) || limits[key] < 1 || limits[key] > DEFAULT_LIMITS[key]) throw intakeError("Inspection limits must be positive and not exceed built-in bounds.");
+  }
+  const limitations = new Set<string>();
+  const hashes = new Map<string, string>();
+  const snapshot = new Map<string, Buffer>();
+  const scannedFiles: string[] = [];
+  let children: Dirent[] = [];
+  let visitedEntries = 0;
+  let totalBytes = 0;
+  async function walk(directory: string, depth: number): Promise<void> {
+    const entries: Dirent[] = [];
+    const remaining = limits.maxEntries - visitedEntries;
+    try {
+      const handle = await opendir(directory);
+      for await (const entry of handle) {
+        if (entries.length >= remaining) { limitations.add("entry-limit"); break; }
+        entries.push(entry);
+      }
+    } catch { throw intakeError("Unable to enumerate a bounded project directory."); }
+    entries.sort((a, b) => a.name.localeCompare(b.name, "en"));
+    if (depth === 0) children = entries;
+    for (const entry of entries) {
+      if (visitedEntries >= limits.maxEntries) { limitations.add("entry-limit"); return; }
+      visitedEntries++;
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (entry.isSymbolicLink() || excludedPath(relative)) continue;
+      if (entry.isDirectory()) {
+        if (depth >= limits.maxDepth) { limitations.add("depth-limit"); continue; }
+        await walk(absolute, depth + 1);
+      } else if (entry.isFile()) {
+        if (hashes.size >= limits.maxFiles) { limitations.add("file-limit"); continue; }
+        const stat = await optionalStat(absolute);
+        if (stat === undefined || stat.isSymbolicLink() || !stat.isFile()) { limitations.add("changed-input"); continue; }
+        if (stat.size > MAX_TEXT_BYTES) { limitations.add("file-size-limit"); continue; }
+        if (totalBytes + stat.size > limits.maxTotalBytes) { limitations.add("byte-limit"); continue; }
+        let bytes: Buffer;
+        try { bytes = await boundedBytes(absolute); } catch { limitations.add("changed-input"); continue; }
+        if (bytes.length > MAX_TEXT_BYTES || totalBytes + bytes.length > limits.maxTotalBytes) { limitations.add("byte-limit"); continue; }
+        totalBytes += bytes.length;
+        hashes.set(relative, createHash("sha256").update(bytes).digest("hex"));
+        snapshot.set(relative, bytes);
+        scannedFiles.push(relative);
+      }
+    }
+  }
+  if (rootStats !== undefined) await walk(root, 0);
 
-  const children = rootStats === undefined
-    ? []
-    : await readdir(root, { withFileTypes: true }).catch((error: unknown) => {
-      throw intakeError("Unable to enumerate the selected project root.", [root], error);
-    });
-  const topLevel = new Set(children.map((entry) => entry.name));
+  const topLevel = new Set(children.filter((entry) => entry.isFile() && !entry.isSymbolicLink() && !excludedPath(entry.name) && hashes.has(entry.name)).map((entry) => entry.name));
   const mode: "new" | "existing" = children.length === 0 ? "new" : "existing";
   const evidence: Array<{ path: string; signal: string }> = [];
   const warnings: string[] = [];
@@ -191,11 +280,11 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
   const specificationPaths = sorted((input.specificationPaths ?? []).map(portableInputPath));
   const specifications: ReadTextResult[] = [];
   for (const specificationPath of specificationPaths) {
-    specifications.push((await readBoundedText(root, specificationPath, true))!);
+    specifications.push((await readBoundedText(root, specificationPath, true, snapshot))!);
     addEvidence(evidence, specificationPath, "input:specification");
   }
 
-  const packageFile = await readBoundedText(root, "package.json", false);
+  const packageFile = await readBoundedText(root, "package.json", false, snapshot);
   if (packageFile !== undefined) {
     let packageJson: Record<string, unknown> | undefined;
     try {
@@ -241,7 +330,7 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
     }
   }
 
-  const pyproject = await readBoundedText(root, "pyproject.toml", false);
+  const pyproject = await readBoundedText(root, "pyproject.toml", false, snapshot);
   if (pyproject !== undefined) {
     languages.add("python");
     packageManagers.add("python");
@@ -264,7 +353,6 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
   const manifestChecks: Array<[string, string, string, NonEmptyArgv]> = [
     ["go.mod", "go", "go", ["go", "test", "./..."]],
     ["Cargo.toml", "rust", "cargo", ["cargo", "test"]],
-    ["pom.xml", "java", "maven", ["mvn", "test"]],
   ];
   for (const [manifest, language, manager, argv] of manifestChecks) {
     if (!topLevel.has(manifest)) continue;
@@ -272,6 +360,27 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
     packageManagers.add(manager);
     qualityCommands.push({ name: "test", argv });
     addEvidence(evidence, manifest, `language:${language}`);
+  }
+  for (const manifest of scannedFiles.filter((file) => ["pom.xml", "build.gradle", "build.gradle.kts"].includes(path.posix.basename(file))).sort()) {
+    const content = await readBoundedText(root, manifest, false, snapshot);
+    if (content === undefined) continue;
+    const maven = path.posix.basename(manifest) === "pom.xml";
+    const manager = maven ? "maven" : "gradle";
+    const cwd = path.posix.dirname(manifest);
+    const wrapper = maven ? "mvnw" : "gradlew";
+    const wrapperPath = cwd === "." ? wrapper : `${cwd}/${wrapper}`;
+    const windowsWrapper = maven ? `${wrapper}.cmd` : `${wrapper}.bat`;
+    const windowsPath = cwd === "." ? windowsWrapper : `${cwd}/${windowsWrapper}`;
+    const command = hashes.has(wrapperPath) ? `./${wrapper}` : hashes.has(windowsPath) ? `./${windowsWrapper}` : maven ? "mvn" : "gradle";
+    languages.add("java");
+    packageManagers.add(manager);
+    qualityCommands.push({ name: "test", argv: [command, "test"], ...(cwd === "." ? {} : { cwd }) });
+    addEvidence(evidence, manifest, "language:java");
+    if (/org\.springframework|spring-boot|org\.springframework\.boot/.test(content.text)) {
+      frameworks.add("spring");
+      addEvidence(evidence, manifest, "dependency:spring");
+    }
+    if (command.startsWith("./")) addEvidence(evidence, hashes.has(wrapperPath) ? wrapperPath : windowsPath, `wrapper:${manager}`);
   }
   if ([...topLevel].some((entry) => entry.endsWith(".sln") || entry.endsWith(".csproj"))) {
     languages.add("csharp");
@@ -292,7 +401,7 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
 
   const explicitBrief = input.brief?.trim() ?? "";
   const specificationPurpose = specifications.map((item) => firstProseParagraph(item.text)).find((value) => value.length > 0) ?? "";
-  const readme = await readBoundedText(root, "README.md", false);
+  const readme = await readBoundedText(root, "README.md", false, snapshot);
   const readmePurpose = readme === undefined ? "" : firstProseParagraph(readme.text);
   const request = explicitBrief || specificationPurpose || readmePurpose;
   if (explicitBrief.length > 0) addEvidence(evidence, ".", "input:brief");
@@ -308,6 +417,14 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
   const kind = classify(frameworks, request, topLevel);
   const questions = request.length === 0 ? ["What outcome should this software deliver?"] : [];
   const confidence = request.length === 0 ? "low" : packageFile !== undefined || pyproject !== undefined ? "high" : "medium";
+  const evidenceRecords: InspectionEvidence[] = evidence.flatMap((item) => {
+    const hash = item.path === "." ? sha256Text(explicitBrief) : hashes.get(item.path);
+    if (hash === undefined) return [];
+    const inference: InspectionEvidence["inference"] = item.signal.startsWith("input:") ? "explicit-input" : item.signal.startsWith("host-instructions:") || item.signal.startsWith("wrapper:") || item.signal.startsWith("package-manager:") ? "presence" : item.signal === "dependency:spring" || item.path.endsWith("pyproject.toml") || item.path.endsWith("README.md") ? "text-pattern" : "manifest";
+    return [{ ...item, sha256: hash, locator: item.path === "." ? "brief" : "file", inference }];
+  });
+  for (const [file, sha256] of hashes) evidenceRecords.push({ path: file, signal: "file:observed", sha256, locator: "file", inference: "presence" });
+  if (kind === "cli" || kind === "library") warnings.push("Project-kind keyword classification is a labeled compatibility fallback, not semantic interpretation.");
   const withoutHash: Omit<ProjectInspection, "root" | "analysisSha256"> = {
     schemaVersion: 1,
     name,
@@ -324,6 +441,8 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
     instructionSurfaces: sorted(instructionSurfaces),
     sources: specificationPaths,
     evidence: [...evidence].sort((left, right) => left.path.localeCompare(right.path, "en") || left.signal.localeCompare(right.signal, "en")),
+    evidenceRecords: evidenceRecords.sort((left, right) => left.path.localeCompare(right.path, "en") || left.signal.localeCompare(right.signal, "en")),
+    scan: { status: limitations.size === 0 ? "complete" : "limited", visitedEntries, hashedFiles: hashes.size, limits, limitations: [...limitations].sort() },
     questions,
     warnings,
     confidence,

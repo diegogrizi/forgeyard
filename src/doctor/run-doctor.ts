@@ -17,6 +17,7 @@ import { resolveInsideRoot } from "../core/paths.js";
 import { loadInstallManifest, type InstallManifest } from "../installer/manifest.js";
 import { scanGeneratedContent } from "./content-audit.js";
 import { auditPresentationBundle } from "./presentation-audit.js";
+import { readCapsule } from "../capsule/capsule.js";
 
 interface LockComponent {
   id: string;
@@ -95,6 +96,7 @@ async function checkManagedFiles(root: string, manifest: InstallManifest, lock: 
     "forgeyard.config",
     "forgeyard.lock",
     "forgeyard.runtime-ignore",
+    "forgeyard.capsule",
     ...lock.components.map((component) => component.id),
   ]);
   const failures: string[] = [];
@@ -208,6 +210,11 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   }
 
   if (manifest !== undefined && lock !== undefined) {
+    if (manifest.files.some((record) => record.componentId === "forgeyard.capsule")) {
+      try { await readCapsule(root); checks.push(passed("capsule", "Frozen native capsule, policy, provenance and gates agree.")); }
+      catch (error) { checks.push(failed("capsule", "Frozen native capsule integrity could not be established.", errorPaths(error))); }
+    } else checks.push({ id: "capsule", status: "skipped", required: false,
+      message: "Legacy installation has no native capsule; its task receipts are not native certificates." });
     checks.push(await checkManagedFiles(root, manifest, lock));
     checks.push(await checkHarnessOutput(root, manifest));
     checks.push(

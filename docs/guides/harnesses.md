@@ -1,5 +1,7 @@
 # Harness adapters
 
+This is the **layout/legacy adapter matrix**, not live-client certification. Codex and Claude Code also have owned project-local MCP bindings; Cursor remains descriptor/layout-only. See [Native factory](native-factory.md) for explicit support limits.
+
 Forgeyard authors project intent and pack selection once, then renders a native or explicitly adapted project layout for one selected harness. Initialization never installs global plugins, edits a home-directory configuration, or downloads catalog content.
 
 The source snapshot exposes **202 agents, 183 skills, and 105 commands**. Every adapter preserves those instructions and their local supporting files, but the discovery and enforcement surfaces differ.

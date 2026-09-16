@@ -187,6 +187,7 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .description("Prepare and verify a project-specific agentic development environment.")
     .version(dependencies.version)
     .option("--debug", "include local diagnostic details");
+  program.addHelpText("after", "\nNative-first project commands:\n  connect/disconnect --root <project> --client codex|claude-code\n  mcp --root <project> [--client codex|claude-code] (stdio)\n  tool --root <project> --json (strict protocol 0.2 JSON stdin)\n  consent/human-review/reconcile --root <project> --run <id> --session <id>\n  reconcile-install --root <project>\n  reconcile-writer --root <project> --session <id>\n  reconcile-operation --root <project> --operation <id>\nNative human confirmations have no --yes. Legacy task receipts are not native certificates.\n");
 
   program
     .command("inspect")

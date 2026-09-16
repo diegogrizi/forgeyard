@@ -32,6 +32,19 @@
     "exitCode": { "type": "integer", "minimum": 0 },
     "stdoutSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "stderrSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "status": { "enum": ["passed", "failed"] }
+    "status": { "enum": ["passed", "failed"] },
+    "commandsSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "gates": {
+      "type": "array", "minItems": 1, "maxItems": 32,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["name", "argvSha256", "exitCode"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "argvSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "exitCode": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
   }
 }

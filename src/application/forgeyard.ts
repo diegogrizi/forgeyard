@@ -284,6 +284,18 @@ async function chooseWriteStatus(
   return await prompts.confirm("apply", message, false) ? "applied" : "declined";
 }
 
+export async function renderFactoryPlan(root: string, config: ForgeyardConfig, nextOperationId: string,
+  forgeyardVersion = "0.1.0", registryRoot = packagedRegistryRoot()) {
+  const registry = await loadRegistry(registryRoot);
+  const adapterId = config.harnesses[0];
+  const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog, config.composition?.packs);
+  const adapter = createHarnessAdapter(adapterId);
+  const renderedFiles = await adapter.render(resolved.components, config);
+  await adapter.validateOutput(renderedFiles);
+  return buildInstallPlan({ targetRoot: root, config, resolved, renderedFiles,
+    operationId: nextOperationId, forgeyardVersion });
+}
+
 export function createForgeyardService(options: ForgeyardApplicationOptions): ForgeyardService {
   const registryRoot = path.resolve(options.registryRoot ?? packagedRegistryRoot());
   const forgeyardVersion = options.forgeyardVersion ?? "0.1.0";
@@ -315,20 +327,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
   }
 
   async function renderPlan(root: string, config: ForgeyardConfig, nextOperationId: string) {
-    const registry = await loadRegistry(registryRoot);
-    const adapterId = config.harnesses[0];
-    const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog, config.composition?.packs);
-    const adapter = createHarnessAdapter(adapterId);
-    const renderedFiles = await adapter.render(resolved.components, config);
-    await adapter.validateOutput(renderedFiles);
-    return buildInstallPlan({
-      targetRoot: root,
-      config,
-      resolved,
-      renderedFiles,
-      operationId: nextOperationId,
-      forgeyardVersion,
-    });
+    return renderFactoryPlan(root, config, nextOperationId, forgeyardVersion, registryRoot);
   }
 
   return {
@@ -341,6 +340,9 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
         ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
         ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+        ...(input.needsProposal === undefined ? {} : { needsProposal: input.needsProposal }),
+        ...(input.qualityCommands === undefined ? {} : { qualityCommands: input.qualityCommands }),
+        ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
         ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
         ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
         ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
@@ -364,6 +366,9 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
         ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
         ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+        ...(input.needsProposal === undefined ? {} : { needsProposal: input.needsProposal }),
+        ...(input.qualityCommands === undefined ? {} : { qualityCommands: input.qualityCommands }),
+        ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
         ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
         ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
         ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
@@ -383,6 +388,9 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
           ...(input.adapter === undefined ? {} : { adapter: input.adapter }),
           ...(input.timeboxMinutes === undefined ? {} : { timeboxMinutes: input.timeboxMinutes }),
           ...(input.maxConcurrency === undefined ? {} : { maxConcurrency: input.maxConcurrency }),
+          ...(input.needsProposal === undefined ? {} : { needsProposal: input.needsProposal }),
+          ...(input.qualityCommands === undefined ? {} : { qualityCommands: input.qualityCommands }),
+          ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
           ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
           ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
           ...(input.presentation === undefined ? {} : { presentation: input.presentation }),

@@ -1,5 +1,58 @@
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+
+const canonical = (value) => JSON.stringify(sortObject(value));
+function sortObject(value) {
+  if (Array.isArray(value)) return value.map(sortObject);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort((a, b) => a.localeCompare(b, "en")).map((name) => [name, sortObject(value[name])]));
+  return value;
+}
+const hash = (value) => createHash("sha256").update(value).digest("hex");
+
+async function nativeGuard(root) {
+  /* Read-only bridge to HF's private state. A lease is cooperative: a native
+     session name is not authenticated identity, and shell writes are not guarded. */
+  const realRoot = realpathSync(root);
+  const git = (args) => execFileSync("git", args, { cwd: realRoot, encoding: "utf8", timeout: 10000, maxBuffer: 1048576, stdio: ["ignore", "pipe", "pipe"] }).trim();
+  const stateRoot = path.join(process.env.LOCALAPPDATA || (process.platform === "win32" ? path.join(os.homedir(), "AppData/Local") : path.join(os.homedir(), ".local/state")), "Forgeyard");
+  const databasePath = path.join(stateRoot, "state.sqlite");
+  try { lstatSync(databasePath); } catch (error) { if (error?.code === "ENOENT") return null; throw error; }
+  for (let cursor = databasePath; ; cursor = path.dirname(cursor)) {
+    if (lstatSync(cursor).isSymbolicLink()) throw new Error("Linked private state");
+    if (path.dirname(cursor) === cursor) break;
+  }
+  const { DatabaseSync } = await import("node:sqlite");
+  let commonDirectory;
+  try { commonDirectory = realpathSync(git(["rev-parse", "--path-format=absolute", "--git-common-dir"])); }
+  catch { return null; }
+  const workspaceId = hash(canonical({ root: realRoot, commonDirectory }));
+  const database = new DatabaseSync(databasePath, { readOnly: true, allowExtension: false, timeout: 1000 });
+  let state;
+  try { const row = database.prepare("SELECT state FROM workspaces WHERE id=?").get(workspaceId); state = JSON.parse(row?.state || "null"); }
+  finally { database.close(); }
+  if (!state) return null; /* A genuinely legacy claim can still use its old guard. */
+  if (state.capsuleId === null && !state.writer && state.runs.length === 0 && !state.installation) return null;
+  if (state.installation || !state.writer || Date.parse(state.writer.expiresAt) < Date.now()) throw new Error("No current writer");
+  const capsule = JSON.parse(readFileSync(path.join(root, ".forgeyard/capsule.json"), "utf8"));
+  if (capsule.id !== state.capsuleId || hash(canonical(capsule.payload)) !== capsule.id) throw new Error("Capsule mismatch");
+  const active = state.runs.filter((run) => run.activeTaskId && ["implementing", "repairing", "reviewing"].includes(run.status));
+  if (active.length !== 1) throw new Error("Ambiguous native work order");
+  const run = active[0]; const task = run.plan.tasks.find((task) => task.id === run.activeTaskId);
+  const grant = state.grants.findLast((grant) => grant.runId === run.plan.id && grant.sessionId === state.writer.sessionId &&
+    grant.capsuleId === capsule.id && grant.planSha256 === hash(canonical(run.plan)) && grant.policySha256 === hash(canonical(capsule.payload.policy)));
+  if (!grant || !task || Date.parse(run.deadlineAt) < Date.now() || run.repairs > capsule.payload.policy.maxRepairs ||
+    (capsule.payload.policy.maxRecordedCostUsd !== null && run.recordedCostUsd !== null && run.recordedCostUsd > capsule.payload.policy.maxRecordedCostUsd)) throw new Error("Missing consent/budget");
+  for (const file of capsule.payload.files) {
+    const target = path.resolve(root, file.path);
+    if (relativeInside(root, target) === undefined || lstatSync(target).isSymbolicLink() || hash(readFileSync(target)) !== file.sha256 ||
+      relativeInside(realRoot, nearestRealTarget(target)) === undefined) throw new Error("Frozen harness drift");
+  }
+  return { guard: { writeScopes: task.writeScopes, protectedPaths: [...capsule.payload.policy.protectedPaths,
+    ".git", ".forgeyard", ".codex", ".claude", ".agents", ".cursor", "AGENTS.md", "CLAUDE.md", "forgeyard.yaml", "forgeyard.lock", ".mcp.json"] } };
+}
 
 function deny(reason) {
   process.stdout.write(`${JSON.stringify({
@@ -47,13 +100,18 @@ function nearestRealTarget(candidate) {
 async function readInput() {
   let source = "";
   process.stdin.setEncoding("utf8");
-  for await (const chunk of process.stdin) source += chunk;
+  for await (const chunk of process.stdin) { source += chunk; if (Buffer.byteLength(source) > 1048576) throw new Error("Input limit"); }
   return JSON.parse(source);
 }
 
 try {
   const input = await readInput();
   const root = path.resolve(process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd());
+  let runtime;
+  if (process.env.LOCALAPPDATA || process.platform !== "win32") {
+    runtime = await nativeGuard(root);
+  }
+  if (!runtime) {
   const state = JSON.parse(readFileSync(path.join(root, ".forgeyard", "state", "run.json"), "utf8"));
   const active = Object.entries(state.tasks || {}).filter(([, value]) => value?.status === "active");
   const requestedId = process.env.FORGEYARD_TASK_ID;
@@ -73,7 +131,8 @@ try {
     deny("the active task identity is ambiguous");
     process.exit(0);
   }
-  const runtime = selected[1];
+  runtime = selected[1];
+  }
   if (!runtime?.guard || !Array.isArray(runtime.guard.writeScopes) || !Array.isArray(runtime.guard.protectedPaths)) {
     deny("the claimed task has no validated guard snapshot");
     process.exit(0);
@@ -93,15 +152,17 @@ try {
   }
   const realRoot = realpathSync(lexicalRoot);
   const realCandidate = nearestRealTarget(lexicalCandidate);
-  if (relativeInside(realRoot, realCandidate) === undefined) {
+  const canonicalRelative = relativeInside(realRoot, realCandidate);
+  if (canonicalRelative === undefined) {
     deny("the requested file resolves through a link outside the selected project");
     process.exit(0);
   }
-  if (runtime.guard.protectedPaths.some((protectedPath) => containsPath(protectedPath, relative))) {
+  if (runtime.guard.protectedPaths.some((protectedPath) => containsPath(protectedPath, relative) || containsPath(protectedPath, canonicalRelative))) {
     deny("the requested file is a protected project path");
     process.exit(0);
   }
-  if (!runtime.guard.writeScopes.some((scope) => containsPath(scope, relative))) {
+  if (!runtime.guard.writeScopes.some((scope) => containsPath(scope, relative)) ||
+      !runtime.guard.writeScopes.some((scope) => containsPath(scope, canonicalRelative))) {
     deny("the requested file is outside the claimed task write scopes");
     process.exit(0);
   }

@@ -18,8 +18,11 @@ interface PackResult {
 
 const repositoryRoot = path.resolve(".");
 let packed: PackResult;
+const publicGuides = new Set(["docs/guides/catalog-and-context.md", "docs/guides/delivery-workflow.md",
+  "docs/guides/harnesses.md", "docs/guides/native-factory.md"]);
 
 function allowed(filePath: string): boolean {
+  if (publicGuides.has(filePath)) return true;
   if ([
     "package.json",
     "README.md",
@@ -70,6 +73,10 @@ describe("public npm package contents", () => {
       "packs/presentation/pack.yaml",
       "sources/catalog.yaml",
       "sources/capabilities.yaml",
+      "docs/guides/native-factory.md",
+      "dist/native/service.d.ts",
+      "dist/native/protocol.d.ts",
+      "dist/capsule/capsule.d.ts",
     ]));
     expect(paths.filter((filePath) => filePath.startsWith("packs/ecosystem/vendor/"))).toHaveLength(1_009);
   });
@@ -83,7 +90,7 @@ describe("public npm package contents", () => {
   test("excludes source-only, forensic, generated-state, and media inputs", () => {
     const paths = packed.files.map((file) => file.path);
     const forbidden = paths.filter((filePath) =>
-      /^(?:src|tests|fixtures|docs|scripts|coverage|\.forgeyard)\//.test(filePath)
+      (/^(?:src|tests|fixtures|docs|scripts|coverage|\.forgeyard)\//.test(filePath) && !publicGuides.has(filePath))
       || /^(?:evidence|state|screenshots?)(?:\/|$)/i.test(filePath)
       || /\.(?:log|png|jpe?g|webp|gif|mp4|mov)$/i.test(filePath));
 

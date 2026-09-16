@@ -1,5 +1,7 @@
 # Resumable delivery workflow
 
+This guide describes the retained **legacy task/worktree lifecycle**. Ordinary native conversation, new feature plans, human consent and current-evidence certification use [Native factory](native-factory.md). Legacy receipts/completion are not native delivery certificates.
+
 Forgeyard installs a delivery graph sized to the selected project composition, plus project memory, decision and handoff records, explicit usage accounting, and a run report. Presentation assets and the fourth task are installed only when the requested outcome includes a demo/pitch/showcase or `--presentation` is explicit. The graph coordinates work; it does not start model clients or pretend that every installed role is active.
 
 ## Full five-hour presentation graph

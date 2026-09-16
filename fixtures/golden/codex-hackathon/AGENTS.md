@@ -8,8 +8,8 @@ This is a new project initialized with a 300-minute delivery horizon.
 
 - Treat `forgeyard.yaml` as the human-owned project intent.
 - Read `.forgeyard/COMPOSITION.md` to understand the factory's selected capabilities, exclusions, evidence, and operating limits.
-- Run `forgeyard task status --root . --json`, then `forgeyard task next --root . --json`; execute the returned bounded `hostPrompt` rather than asking the user to sequence internal steps.
-- Read the selected file in `.forgeyard/tasks/` before changing code.
+- Start with native `fy_context`; read current requirements, plans, decisions and evidence gaps.
+- A new request needs a requirement-linked `fy_plan`, even after an earlier delivery. Reuse the stable capsule.
 - Load `.agents/skills/forgeyard-workflow/SKILL.md` when planning or executing work.
 - Read `PROJECT.md` for the visible journey and `.forgeyard/handoffs/CURRENT.md` when resuming another session.
 - Keep detailed workflow guidance in skills; keep this file navigational.
@@ -21,13 +21,15 @@ This is a new project initialized with a 300-minute delivery horizon.
 - Protected paths: .git, .env
 - Presentation output: presentation
 - Never write outside the selected project root or modify protected paths.
-- External effects such as push, publish, deploy, messaging, or spending require explicit project policy.
+- External effects such as push, publish, deploy, messaging, or spending require explicit authorization at the point of action.
 
 ## Delivery workflow
 
 Prioritize the smallest visible user outcome before generalized infrastructure. Claim only dependency-ready tasks and keep no more than 4 independent work items active. Use isolated Git worktrees for concurrent writes. Installed agents and skills are a catalog of capabilities; they are not running workers and should be loaded only when relevant.
 
-The generated workflow skill is the ordinary controller. It clarifies only material product ambiguity, maps the request to returned work orders, and uses host-native workers only when available. `task next` neither claims work nor launches model clients. Use `forgeyard task claim`, `checkpoint`, `resume`, `verify`, and `complete` as the inspectable lifecycle. Use `forgeyard guard` before uncertain writes. For isolated work, use `forgeyard workspace create`, `validate`, and `integrate`; successful integration removes the registered worktree and merged worker branch. If that cleanup is interrupted, retry `forgeyard workspace cleanup`; integration remains serialized and never pushes.
+The workflow skill is the ordinary controller: `fy_attach`, `fy_plan`, local human consent, `fy_next`, `fy_record`, all frozen `fy_verify` gates, review and `fy_finalize`. Only a current delivered verdict certifies delivery. Native clients own AI sessions, subagents, permissions and Stop; Forgeyard never launches them or handles accounts. One cooperative writer owns this tree. A claimed reviewer name is not independent provenance; medium/high risk needs verified independent review or the supported local human-review dialog.
+
+Use `fy_pause` and explicit local reconciliation for uncertain resumption. MCP arguments are `{requestId, payload}`; the shared strict JSON fallback is `forgeyard tool --root . --json` via stdin. Legacy task/worktree services remain available but are not native certificates. Never merge automatically: integrate registered work only with authorization, then exact registered cleanup. Unregistered/app-owned worktrees must not be deleted.
 
 Required quality commands:
 
