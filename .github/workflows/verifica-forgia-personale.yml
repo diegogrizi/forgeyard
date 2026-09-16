@@ -1,10 +1,9 @@
 name: Verifica forgia personale
 
 on:
-  push:
-    branches: [refactor/forgia-personale-workspace]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,3 +28,21 @@ jobs:
         run: npx --no-install vitest run tests/unit/workspace tests/roundtrip/workspace-inspection.test.ts
       - name: Verifica completa senza account AI
         run: npm run verify
+      - name: Controlla diff e artefatti versionati
+        run: git diff --check && git diff --exit-code -- SBOM.spdx.json THIRD_PARTY_NOTICES.md package-lock.json
+
+  riproducibilita-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - run: npm ci
+      - name: Regressione SBOM e workspace su Windows
+        run: npx --no-install vitest run tests/unit/provenance/sbom-reproducibility.test.ts tests/integration/provenance/generated-files.test.ts tests/unit/workspace
+      - name: Verifica provenienza senza rigenerare i risultati attesi
+        run: npm run provenance:check
