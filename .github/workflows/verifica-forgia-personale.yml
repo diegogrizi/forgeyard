@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: forgia-personale-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   verifica:
     runs-on: ubuntu-latest
@@ -29,5 +25,7 @@ jobs:
           cache: npm
       - name: Dipendenze dal lockfile
         run: npm ci
+      - name: Test mirati del workspace personale
+        run: npx --no-install vitest run tests/unit/workspace tests/roundtrip/workspace-inspection.test.ts
       - name: Verifica completa senza account AI
         run: npm run verify
