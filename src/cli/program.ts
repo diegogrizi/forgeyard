@@ -162,12 +162,12 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
 
   program
     .name("forgeyard")
-    .description("Prepare and verify a project-specific agentic development environment.")
+    .description("Prepara e verifica un ambiente di sviluppo agentico specifico del progetto.")
     .version(dependencies.version)
-    .option("--debug", "include local diagnostic details");
+    .option("--debug", "mostra dettagli diagnostici locali");
   program.addHelpText("after", `
-L'ingresso ordinario e 'forgeyard' senza argomenti: riconosce la cartella, chiede una
-sola conferma e prepara l'area personale. I comandi qui sotto sono operazioni avanzate,
+L'ingresso ordinario è 'forgeyard' senza argomenti: riconosce la cartella, chiede una
+sola conferma e prepara tutto. I comandi qui sopra sono operazioni avanzate,
 non passi del percorso normale.
 
 Comandi del runtime nativo:
@@ -184,7 +184,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("inspect")
-    .description("Inspect a software problem and propose a tailored factory without writing.")
+    .description("Ispeziona un problema software e propone una fabbrica su misura, senza scrivere.")
     .argument("[target]", "project directory", ".")
     .option("--brief <text>", "software outcome or requested change")
     .option("--spec <path>", "project-relative specification file", collect, [])
@@ -205,7 +205,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("prepare")
-    .description("Prepare a stable project-specific factory from the software problem.")
+    .description("Prepara una fabbrica stabile a partire dal problema software.")
     .argument("[target]", "project directory", ".")
     .option("--brief <text>", "software outcome or requested change")
     .option("--spec <path>", "project-relative specification file", collect, [])
@@ -247,6 +247,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("init")
+    .description("Installa un profilo di catalogo fisso. Non è il punto di partenza consigliato.")
     .argument("[target]", "project directory", ".")
     .option("--profile <profile>", "Forgeyard profile")
     .option("--adapter <adapter>", "target harness adapter")
@@ -273,6 +274,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("doctor")
+    .description("Controlla struttura, proprietà dei file e deriva dell'imbracatura installata.")
     .argument("[target]", "project directory", ".")
     .option("--deny-term <value>", "reject a private term without persisting it", collect, [])
     .option("--json", "emit machine-readable output")
@@ -287,6 +289,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("verify")
+    .description("Esegue il comando di un'attività e scrive una ricevuta legata alla revisione Git.")
     .argument("<task-id>", "installed task identifier")
     .option("--root <target>", "project directory", ".")
     .option("--json", "emit machine-readable output")
@@ -301,6 +304,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("update")
+    .description("Anteprima o applicazione di un aggiornamento dalla configurazione posseduta.")
     .argument("[target]", "project directory", ".")
     .option("--yes", "apply without an interactive confirmation")
     .option("--dry-run", "validate and show the plan without writing")
@@ -318,6 +322,7 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("rollback")
+    .description("Annulla un'operazione applicata; senza argomento, l'ultima reversibile.")
     .argument("[operation-id]", "operazione da annullare; senza argomento, l'ultima reversibile")
     .option("--root <target>", "project directory", ".")
     .option("--yes", "apply without an interactive confirmation")
