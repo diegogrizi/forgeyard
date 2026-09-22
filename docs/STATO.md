@@ -35,47 +35,41 @@ Le garanzie sono descritte una per una, con le loro modalità di fallimento, in
 | G1 identità congelata | `src/capsule/capsule.ts` | sì | sì: la capsula è letta e verificata dal runtime nativo |
 | G2 evidenza classificata | `src/evidence/epistemic.ts` | sì | sì: il verdetto di consegna `fy_finalize` |
 | G3 citazioni vive | `src/evidence/citations.ts` | sì | sì: validazione dei riferimenti di evidenza nel runtime nativo |
-| G4 deriva rilevata | `src/drift/scan.ts` | sì | **in corso**: il collegamento al doctor è in lavorazione |
+| G4 deriva rilevata | `src/drift/scan.ts` | sì | sì: controllo `harness-drift` del doctor |
 | G5 misura dichiarata | `src/measure/accounting.ts` | sì | sì: contabilità nel certificato di consegna, senza linea di base umana |
 | G6 coerenza dell'imbracatura | `src/doctor/harness-lint.ts` | sì | sì: gate su `buildInstallPlan`, quindi su ogni percorso di installazione |
 
-Quattro delle sei garanzie sono collegate, e lo sono davvero. Le altre due non vanno
-arrotondate per simmetria:
+**Tutte e sei attraversano un percorso ordinario.** Per G5 vale una precisazione che non
+va arrotondata: il certificato riporta la contabilità del lavoro agentico, ma il confronto
+con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di base in
+`forgeyard.yaml`. In sua assenza il confronto è **assente**, non stimato.
 
-- **G4 non è ancora collegata.** La scansione esiste, con i suoi test: confronta il
-  profilo congelato con un'ispezione fresca e marca inconclusive le conclusioni che una
-  scansione limitata non può confermare. Il collegamento a `forgeyard doctor` è in
-  lavorazione in parallelo e non è atterrato: non dichiararlo fatto.
-- **G5 non è su nessun percorso.** Il modulo calcola, formatta e rifiuta di inventare: una
-  misura non riportata torna `unmeasured` con la sua ragione. Ma nessun percorso del
-  prodotto lo chiama. Collegarlo richiede di estendere il protocollo nativo e lo stato del
-  run per registrare le osservazioni di consumo una per una — provider, modello, token,
-  durata, costo — e di leggere una linea di base umana dichiarata in un file posseduto da
-  una persona. È stato deciso di non farlo ora, perché la suite che lo verificherebbe non
-  è eseguibile in modo affidabile su questa macchina: una garanzia dichiarata mancante è
-  preferibile a una dichiarata pronta e non verificata. **Oggi il certificato di consegna
-  non riporta nessuna contabilità.**
+## Gli incrementi del piano
 
-## Il percorso della forgia personale
-
-L'ordine degli incrementi è quello del piano confluito in [la direzione](DIREZIONE.md).
-
-| Incremento | Contenuto | Stato |
+| ID | Obiettivo | Stato |
 |---|---|---|
 | P0 | verifiche riproducibili, SBOM indipendente dalla piattaforma | implementato |
 | P1 | ricognizione in sola lettura del workspace | implementato |
 | P2a | ingresso senza argomenti, riepilogo italiano, registrazione privata | implementato |
-| P2b | installazione della suite nell'area personale | **da fare** |
-| P3 | collegamento nativo ai client dall'area personale | **da fare** |
-| P4 | inventario e riuso dei componenti globali già presenti | **da fare** |
-| P5 | esecuzione su più repository membri | **da fare** |
-| P6 | selezione unificata e profili pertinenti | **da fare** |
+| P2b | installazione della suite nell'area personale | implementato |
+| P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
+| P4 | inventario e riuso dei componenti globali già presenti | da fare |
+| P5 | esecuzione su più repository membri | da fare |
+| P6 | selezione unificata e profili pertinenti | da fare |
 | P7 | percorso ordinario interamente italiano, rimozione dei percorsi legacy | in corso |
 
-L'area personale creata da P2a persiste lo stato **`not-connected`**, e lo dichiara
-anche a schermo. Il messaggio «Area personale creata» significa che la registrazione è
-riuscita: non significa che esista una suite installata, né che un client la veda.
-Vedere [Uso](guide/uso.md) per cosa si può provare oggi.
+Un solo comando, `forgeyard`, porta una cartella da vuota a preparata: ricognizione, una
+domanda di prodotto, una conferma, area personale, imbracatura installata, collegamento
+nativo invocato. Ogni passo è dichiarato e alla riesecuzione vengono ripresi soltanto
+quelli mancanti.
+
+**Il confine di P3 resta quello che conta.** Il collegamento scrive un namespace MCP
+posseduto nel progetto, e questo è stato verificato: l'osservazione dello stato riconosce
+ciò che lo scrittore reale produce, per entrambi i client. Ma **nessuno ha mai aperto una
+cartella così preparata in un Claude Code o in un Codex autenticato.** Che il client legga
+quel namespace, chieda la fiducia che deve chiedere e attraversi il workflow è, alla data
+di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichiara invece
+di dedurlo.
 
 ## In corso di rimozione
 

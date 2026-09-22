@@ -38,21 +38,27 @@ conferma** prima di creare l'area personale. Non devi scegliere un profilo, un a
 skill, un orchestratore, né ricordare comandi di analisi separati. Senza terminale
 interattivo viene mostrata soltanto un'anteprima: non viene scritto nessun file.
 
-Vengono creati due file, ed entrambi stanno dentro la propria directory:
+Il comando esegue tre passi, nell'ordine, e dichiara ciascuno:
 
-| File | Contenuto |
-|---|---|
-| `.forgeyard/workspace.json` | la mappa identificabile del workspace, con la sua impronta |
-| `.forgeyard/.gitignore` | l'esclusione dell'intera area privata, compresa la propria regola |
+1. **area personale** — `.forgeyard/workspace.json`, la mappa identificabile del workspace
+   con la sua impronta, e `.forgeyard/.gitignore`, che esclude dai commit l'intera area
+   privata, compresa la propria regola;
+2. **imbracatura** — le istruzioni, le capacità selezionate, i gate e la capsula congelata;
+3. **collegamento nativo** — un namespace MCP posseduto dentro il progetto.
 
-Se l'area è già presente non viene reinstallata, la mappa e la data non vengono riscritte
-e non serve una nuova conferma. L'impronta rileva alterazioni accidentali; non autentica i
-file contro un processo ostile che gira con i tuoi privilegi.
+Se un passo fallisce, i precedenti restano e l'esito è dichiarato: un'imbracatura non
+installata lascia l'area come è e non tenta il collegamento; un collegamento non riuscito
+lascia l'imbracatura installata e **non** emette il messaggio di successo, perché uscire
+con successo significherebbe «pronto». Alla riesecuzione vengono ripresi soltanto i passi
+mancanti, e l'adapter non viene ridecidito: l'imbracatura installata dichiara il proprio
+client.
 
-**Lo stato persistito è `not-connected`.** Il messaggio «Area personale creata» significa
-registrazione riuscita, non «forgia pronta» e non «agenti attivi». I vecchi installer non
-vanno puntati su quest'area per aggirare quello stato: hanno ancora assunzioni di singolo
-repository e proprie regole di proprietà.
+L'impronta dell'area rileva alterazioni accidentali; non autentica i file contro un
+processo ostile che gira con i tuoi privilegi.
+
+**Che il collegamento sia stato scritto non significa che un client lo abbia letto.** Il
+messaggio finale lo dice: se il client chiede di abilitare il server, va fatto con i suoi
+controlli. Nessuna prova con un account reale è mai stata eseguita.
 
 ### Dove puoi usarlo
 

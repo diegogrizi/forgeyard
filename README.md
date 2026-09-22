@@ -18,11 +18,13 @@ sono **meccanismi che possono fallire**, non promesse. Sappiamo quanto vale una 
 ne distribuiamo una, pinnata e attestata, con **202 agenti, 183 skill e 105 comandi**. È
 materiale della fabbrica. Non è il prodotto.
 
-> **Questo branch è in ristrutturazione.** Il collegamento nativo all'area personale non è
-> completato: l'area resta `not-connected`. **Nessuna prova live con account Claude Code o
-> Codex è mai stata eseguita**; tutto ciò che è verificato qui è verificato da test
-> strutturali. Lo [stato](docs/STATO.md) dichiara, alla data, cosa è implementato, cosa
-> attraversa un percorso ordinario e cosa non è mai stato provato.
+> **Questo branch è in ristrutturazione.** Un solo comando porta una cartella da vuota a
+> preparata, collegamento nativo compreso. Ma **nessuna prova live con account Claude Code
+> o Codex è mai stata eseguita**: che un client legga il namespace scritto, chieda la
+> fiducia che deve chiedere e attraversi il workflow è, alla data, non verificato. Tutto
+> ciò che è verificato qui lo è da test strutturali. Lo [stato](docs/STATO.md) dichiara
+> cosa è implementato, cosa attraversa un percorso ordinario e cosa non è mai stato
+> provato.
 
 ## La tesi
 
@@ -45,10 +47,12 @@ Il programma si installa una volta sul PC. Poi, dalla cartella su cui vuoi lavor
 forgeyard
 ```
 
-Il comando riconosce la cartella, mostra un riepilogo in italiano e chiede **una sola
-conferma** prima di creare l'area personale. Non devi scegliere profili, autori di skill o
-orchestratori, e non devi ricordare comandi di analisi separati. Senza terminale
-interattivo viene mostrata soltanto un'anteprima: non viene scritto nessun file.
+Il comando riconosce la cartella, fa **una sola domanda** — che risultato vuoi ottenere —
+e chiede **una sola conferma**. Poi crea l'area personale, installa l'imbracatura e
+collega il client nativo, dichiarando ogni passo. Non devi scegliere profili, autori di
+skill o orchestratori, e non devi ricordare comandi di lifecycle. Senza terminale
+interattivo viene mostrata soltanto un'anteprima: non viene scritto nessun file. Alla
+riesecuzione vengono ripresi soltanto i passi mancanti.
 
 La conversazione resta dove già lavori: nelle app o nelle CLI di **Claude Code** e
 **Codex**. Forgeyard non chiama modelli, non legge credenziali e non sostituisce
@@ -66,7 +70,7 @@ fallimento e ciò che **non** promette, è in [Garanzie](docs/guide/garanzie.md)
 | G1 | identità congelata | l'imbracatura approvata è, byte per byte, quella che gira | |
 | G2 | evidenza classificata | un verdetto sostenuto da prosa non può essere emesso | |
 | G3 | citazioni vive | se la fonte è cambiata, l'affermazione è stantia, non silenziosamente vera | |
-| G4 | deriva rilevata | la documentazione che invecchia è un difetto rilevabile | *collegamento in corso* |
+| G4 | deriva rilevata | la documentazione che invecchia è un difetto rilevabile | |
 | G5 | misura dichiarata | una misura assente resta non misurata, mai zero | *primitiva, non collegata* |
 | G6 | coerenza dell'imbracatura | un'imbracatura incoerente viene rifiutata prima di essere scritta | |
 
