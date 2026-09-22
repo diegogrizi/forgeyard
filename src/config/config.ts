@@ -26,7 +26,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', 'full', or 'tailored' with adapter 'codex' or 'claude-code'.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'tailored' with adapter 'codex' or 'claude-code'.",
     exitCode: 2,
   });
 }
@@ -42,9 +42,7 @@ function withDefaults(value: unknown): unknown {
   if (!isRecord(copy.catalog)) {
     copy.catalog = copy.profile === "minimal"
       ? { selection: "none", plugins: [] }
-      : copy.profile === "full"
-        ? { selection: "all", plugins: [] }
-        : { selection: "curated", plugins: [] };
+      : { selection: "curated", plugins: [] };
   } else if (copy.catalog.plugins === undefined) {
     copy.catalog.plugins = [];
   }
@@ -204,7 +202,7 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
   };
 }
 
-const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "full", "tailored"]);
+const SUPPORTED_PROFILES = new Set<ProfileId>(["minimal", "hackathon", "tailored"]);
 const SUPPORTED_HARNESSES = new Set<HarnessId>(HARNESS_IDS);
 
 export function validateConfig(value: unknown): ForgeyardConfig {

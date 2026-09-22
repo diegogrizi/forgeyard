@@ -8,7 +8,7 @@ import { loadConfig, validateConfig } from "../../../src/config/config.js";
 import { loadRegistry } from "../../../src/registry/load.js";
 import { resolveProfile } from "../../../src/registry/resolve.js";
 
-async function fixture(profile: "minimal" | "hackathon" | "full" = "hackathon") {
+async function fixture(profile: "minimal" | "hackathon" = "hackathon") {
   const base = await loadConfig(path.resolve(`fixtures/answers/${profile}.yaml`));
   const config = validateConfig({ ...base, harnesses: ["claude-code"] });
   const registry = await loadRegistry(path.resolve("."));
@@ -104,8 +104,16 @@ describe("Claude Code adapter", () => {
     });
   });
 
+  // No profile installs the whole catalog any more; the renderer must still handle it
+  // when a project deliberately overrides the selection in its own configuration.
   test("integrates the complete catalog with Forgeyard-native output", async () => {
-    const { files } = await fixture("full");
+    const base = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
+    const config = validateConfig({ ...base, harnesses: ["claude-code"], catalog: { selection: "all", plugins: [] } });
+    const registry = await loadRegistry(path.resolve("."));
+    const resolved = resolveProfile(registry, "hackathon", "claude-code", config.catalog);
+    const adapter = createClaudeCodeAdapter();
+    const files = await adapter.render(resolved.components, config);
+    await adapter.validateOutput(files);
 
     expect(files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(203);
     expect(files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(185);

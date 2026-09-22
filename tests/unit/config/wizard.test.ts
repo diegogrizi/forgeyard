@@ -76,36 +76,6 @@ describe("initialization wizard", () => {
     expect(request.config.project.name).toBe("Signal Garden");
   });
 
-  test("offers the full profile and selects its complete local catalog", async () => {
-    const request = await collectInitRequest(
-      { targetRoot: ".", nonInteractive: false },
-      promptDriver({
-        profile: "full",
-        adapter: "codex",
-        "project.name": "Complete Factory",
-        "project.purpose": "Install every local capability.",
-        "project.mode": "existing",
-        timeboxMinutes: 300,
-        qualityCommandName: "test",
-        qualityCommandArgv: '["npm","test"]',
-        mutableRoots: '["src","presentation"]',
-        protectedPaths: '[".git",".env"]',
-        presentationPath: "presentation",
-        orchestrationMode: "guided",
-        maxConcurrency: 4,
-        presentationAudience: "Product reviewers",
-        presentationDurationMinutes: 7,
-        presentationOffline: true,
-      }),
-    );
-
-    expect(request.config).toEqual(expect.objectContaining({
-      profile: "full",
-      catalog: { selection: "all", plugins: [] },
-      orchestration: { mode: "guided", maxConcurrency: 4 },
-    }));
-  });
-
   test.each(["claude-code"])("collects the %s adapter selected by the user", async (adapter) => {
     const request = await collectInitRequest(
       { targetRoot: ".", nonInteractive: false, profile: "minimal", adapter },
@@ -146,7 +116,7 @@ describe("initialization wizard", () => {
           targetRoot: ".",
           nonInteractive: true,
           answersPath: "fixtures/answers/hackathon.yaml",
-          profile: "full",
+          profile: "everything",
           adapter: "codex",
         },
         promptDriver({}),

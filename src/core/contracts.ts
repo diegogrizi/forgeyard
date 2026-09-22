@@ -9,7 +9,7 @@ export interface QualityCommand {
   cwd?: string;
 }
 
-export type ProfileId = "minimal" | "hackathon" | "full" | "tailored";
+export type ProfileId = "minimal" | "hackathon" | "tailored";
 export type CatalogSelectionMode = "none" | "curated" | "all";
 
 export type ProjectKind =

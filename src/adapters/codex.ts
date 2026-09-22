@@ -342,7 +342,7 @@ export function createCodexAdapter(): HarnessAdapter {
     },
     validateConfig(config) {
       if (
-        !["minimal", "hackathon", "full", "tailored"].includes(config.profile) ||
+        !["minimal", "hackathon", "tailored"].includes(config.profile) ||
         config.harnesses.length !== 1 ||
         config.harnesses[0] !== "codex"
       ) {

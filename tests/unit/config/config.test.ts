@@ -120,11 +120,6 @@ describe("Forgeyard configuration", () => {
     }).profile).toBe("minimal");
     expect(validateConfig({
       ...validConfig(),
-      profile: "full",
-      catalog: { selection: "all", plugins: [] },
-    }).profile).toBe("full");
-    expect(validateConfig({
-      ...validConfig(),
       profile: "tailored",
       catalog: { selection: "curated", plugins: ["developer-essentials"] },
       intake: {
@@ -173,7 +168,7 @@ describe("Forgeyard configuration", () => {
   test("rejects catalog modes that contradict the selected profile", () => {
     for (const candidate of [
       { ...validConfig(), profile: "minimal", catalog: { selection: "all", plugins: [] } },
-      { ...validConfig(), profile: "full", catalog: { selection: "curated", plugins: [] } },
+      { ...validConfig(), profile: "tailored", catalog: { selection: "all", plugins: [] } },
       { ...validConfig(), catalog: { selection: "all", plugins: ["ui-design"] } },
     ]) {
       expect(() => validateConfig(candidate)).toThrowError(

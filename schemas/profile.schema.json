@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "id", "version", "packs", "catalog", "defaults"],
   "properties": {
     "schemaVersion": { "const": 1 },
-    "id": { "enum": ["minimal", "hackathon", "full", "tailored"] },
+    "id": { "enum": ["minimal", "hackathon", "tailored"] },
     "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
     "packs": {
       "type": "array",
@@ -87,10 +87,6 @@
     {
       "if": { "properties": { "id": { "const": "hackathon" } }, "required": ["id"] },
       "then": { "properties": { "catalog": { "type": "object", "properties": { "selection": { "const": "curated" } } } } }
-    },
-    {
-      "if": { "properties": { "id": { "const": "full" } }, "required": ["id"] },
-      "then": { "properties": { "catalog": { "type": "object", "properties": { "selection": { "const": "all" } } } } }
     },
     {
       "if": { "properties": { "id": { "const": "tailored" } }, "required": ["id"] },

@@ -18,7 +18,6 @@ import { buildCli, runBuiltCli, runProcess } from "../helpers/cli.js";
 
 const repositoryRoot = path.resolve(".");
 const answersPath = path.join(repositoryRoot, "fixtures", "answers", "hackathon.yaml");
-const fullAnswersPath = path.join(repositoryRoot, "fixtures", "answers", "full.yaml");
 const minimalAnswersPath = path.join(repositoryRoot, "fixtures", "answers", "minimal.yaml");
 let sandboxRoot: string;
 let targetRoot: string;
@@ -165,37 +164,6 @@ describe("built Forgeyard CLI round trip", () => {
       );
     }
   });
-
-  test("full profile installs every catalog agent, skill, command conversion, reference, and license", async () => {
-    const fullTargetRoot = path.join(sandboxRoot, "full-project");
-    const result = await runBuiltCli(
-      repositoryRoot,
-      [
-        "init",
-        fullTargetRoot,
-        "--profile",
-        "full",
-        "--adapter",
-        "codex",
-        "--answers",
-        fullAnswersPath,
-        "--yes",
-        "--json",
-      ],
-      sandboxRoot,
-    );
-    const output = parseJson<InitCommandResult>(result.stdout);
-    const manifest = await loadInstallManifest(fullTargetRoot);
-
-    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    expect(output).toEqual(expect.objectContaining({ applied: true, status: "applied" }));
-    expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
-    expect(manifest.profile).toBe("full");
-    expect(manifest.files.filter((file) => /^\.codex\/agents\/.*\.toml$/.test(file.path))).toHaveLength(203);
-    expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(290);
-    expect(manifest.files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
-    expect(manifest.files.some((file) => file.path === ".forgeyard/licenses/wshobson-agents.LICENSE")).toBe(true);
-  }, 60_000);
 
   test("minimal profile preserves the small kernel without catalog or presentation payloads", async () => {
     const minimalTargetRoot = path.join(sandboxRoot, "minimal-project");

@@ -8,8 +8,8 @@
   "properties": {
     "schemaVersion": { "const": 1 },
     "forgeyardVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
-    "profile": { "enum": ["minimal", "hackathon", "full", "tailored"] },
-    "adapter": { "enum": ["codex", "claude-code", "cursor"] },
+    "profile": { "enum": ["minimal", "hackathon", "tailored"] },
+    "adapter": { "enum": ["codex", "claude-code"] },
     "latestOperationId": { "type": "string", "minLength": 6, "maxLength": 128 },
     "files": {
       "type": "array",

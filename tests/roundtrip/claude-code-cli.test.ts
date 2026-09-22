@@ -20,7 +20,7 @@ afterAll(async () => {
   if (sandboxRoot !== undefined) await rm(sandboxRoot, { recursive: true, force: true });
 });
 
-async function install(profile: "minimal" | "hackathon" | "full") {
+async function install(profile: "minimal" | "hackathon") {
   const target = path.join(sandboxRoot, profile);
   const result = await runBuiltCli(repositoryRoot, [
     "init",
@@ -66,15 +66,4 @@ describe("built Claude Code CLI adapter", () => {
     expect(manifest.files.some((file) => file.path === "presentation/index.html")).toBe(true);
   }, 60_000);
 
-  test("installs every catalog agent, skill, command, reference, and license", async () => {
-    const { result, output, manifest } = await install("full");
-
-    expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
-    expect(manifest.files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(203);
-    expect(manifest.files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(185);
-    expect(manifest.files.filter((file) => /^\.claude\/commands\/.*\.md$/.test(file.path))).toHaveLength(105);
-    expect(manifest.files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
-    expect(manifest.files.some((file) => file.path === ".forgeyard/licenses/wshobson-agents.LICENSE")).toBe(true);
-  }, 60_000);
 });

@@ -74,7 +74,7 @@ function unsupported(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex' or 'claude-code'.",
+    remediation: "Use profile 'minimal' or 'hackathon' with adapter 'codex' or 'claude-code'.",
     exitCode: 2,
   });
 }
@@ -92,7 +92,7 @@ function parseStringArray(value: string, field: string): string[] {
 }
 
 function assertSupportedSelection(profile: string | undefined, adapter: string | undefined): void {
-  if (profile !== undefined && !["minimal", "hackathon", "full"].includes(profile)) {
+  if (profile !== undefined && !["minimal", "hackathon"].includes(profile)) {
     throw unsupported(`Profile '${profile}' is not supported by Forgeyard.`);
   }
   if (adapter !== undefined && !HARNESS_IDS.includes(adapter as HarnessId)) {
@@ -125,7 +125,7 @@ export async function collectInitRequest(
   const profile = input.profile ?? (await prompts.select(
     "profile",
     "Profile",
-    ["minimal", "hackathon", "full"],
+    ["minimal", "hackathon"],
     "hackathon",
   ));
   const adapter = input.adapter ?? (await prompts.select("adapter", "Adapter", HARNESS_IDS, "codex"));
@@ -150,9 +150,7 @@ export async function collectInitRequest(
     profile: profileId,
     catalog: profileId === "minimal"
       ? { selection: "none", plugins: [] }
-      : profileId === "full"
-        ? { selection: "all", plugins: [] }
-        : { selection: "curated", plugins: [] },
+      : { selection: "curated", plugins: [] },
     timeboxMinutes: await prompts.number("timeboxMinutes", "Timebox in minutes", 300),
     quality: {
       commands: [

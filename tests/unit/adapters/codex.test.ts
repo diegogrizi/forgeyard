@@ -90,11 +90,11 @@ describe("Codex adapter", () => {
     const baseConfig = await loadConfig(path.resolve("fixtures/answers/hackathon.yaml"));
     const config = validateConfig({
       ...baseConfig,
-      profile: "full",
+      profile: "hackathon",
       catalog: { selection: "all", plugins: [] },
     });
     const registry = await loadRegistry(path.resolve("."));
-    const resolved = resolveProfile(registry, "full", "codex", config.catalog);
+    const resolved = resolveProfile(registry, "hackathon", "codex", config.catalog);
     const adapter = createCodexAdapter();
 
     const files = await adapter.render(resolved.components, config);

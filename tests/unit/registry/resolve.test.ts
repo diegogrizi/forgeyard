@@ -170,11 +170,10 @@ describe("profile resolver", () => {
     expect(resolved.packIds).toEqual(expect.arrayContaining(["foundation", "presentation", "ecosystem"]));
   });
 
-  test("resolves minimal, curated hackathon, and full catalog selections", async () => {
+  test("resolves the minimal kernel and the curated hackathon selection", async () => {
     const registry = await loadRegistry(path.resolve("."));
     const minimal = resolveProfile(registry, "minimal", "codex");
     const hackathon = resolveProfile(registry, "hackathon", "codex");
-    const full = resolveProfile(registry, "full", "codex");
     const catalog = hackathon.components.find((component) => component.kind === "catalog")!;
     const marketplace = await loadPortableMarketplace(catalog.treeFiles!, { defaultLicense: "MIT" });
     const selected = new Set(catalog.catalogSelection === "all" ? marketplace.plugins.map((plugin) => plugin.name) : catalog.catalogSelection);
@@ -187,8 +186,7 @@ describe("profile resolver", () => {
     expect(hackathon.packIds).toContain("ecosystem");
     expect(catalog.catalogSelection).not.toBe("all");
     expect(roleCount).toBeGreaterThanOrEqual(32);
-    expect(full.components.find((component) => component.kind === "catalog")?.catalogSelection).toBe("all");
-    expect(full.defaults.orchestration.maxConcurrency).toBe(4);
+    expect(hackathon.defaults.orchestration.maxConcurrency).toBe(4);
   });
 
   test("rejects an explicit catalog plugin that is not in the pinned snapshot", async () => {

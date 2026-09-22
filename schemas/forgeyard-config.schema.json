@@ -36,9 +36,9 @@
       "minItems": 1,
       "maxItems": 1,
       "uniqueItems": true,
-      "items": { "enum": ["codex", "claude-code", "cursor"] }
+      "items": { "enum": ["codex", "claude-code"] }
     },
-    "profile": { "enum": ["minimal", "hackathon", "full", "tailored"] },
+    "profile": { "enum": ["minimal", "hackathon", "tailored"] },
     "catalog": {
       "type": "object",
       "additionalProperties": false,
@@ -257,10 +257,6 @@
           "presentation": { "type": "object", "properties": { "enabled": { "const": false } } }
         }
       }
-    },
-    {
-      "if": { "properties": { "profile": { "const": "full" } }, "required": ["profile"] },
-      "then": { "properties": { "catalog": { "type": "object", "properties": { "selection": { "const": "all" } } } } }
     },
     {
       "if": { "properties": { "profile": { "const": "hackathon" } }, "required": ["profile"] },

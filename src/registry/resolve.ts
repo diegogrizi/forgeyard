@@ -76,7 +76,7 @@ export function resolveProfile(
   catalogOverride?: CatalogSelection,
   packOverride?: readonly string[],
 ): ResolvedProfile {
-  if (!["minimal", "hackathon", "full", "tailored"].includes(profileId)) {
+  if (!["minimal", "hackathon", "tailored"].includes(profileId)) {
     throw selectionError(`Profile '${profileId}' is not supported by Forgeyard.`);
   }
   if (!HARNESS_IDS.includes(adapterId as HarnessId)) {
