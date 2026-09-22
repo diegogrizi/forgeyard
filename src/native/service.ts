@@ -20,7 +20,7 @@ import { projectContext } from "./context.js";
 import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
-import { assertWriter, budgetGaps, contains, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
+import { assertWriter, budgetGaps, contains, deliveryAccounting, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
 import { NativeStore, nativeError } from "./store.js";
 import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
 import { atomicText, regularBytes, assertDirectoryChain } from "./files.js";
@@ -211,7 +211,7 @@ export class ProjectService {
           status: "awaiting-approval", createdAt: this.now().toISOString(),
           deadlineAt: new Date(this.now().getTime() + capsule.payload.policy.timeboxMinutes * 60000).toISOString(),
           repairs: 0, approvalBaseline: snapshot.sha256, baselineHead: snapshot.head!, artifactSha256: sha256Text(content),
-          checkpoints: [], criteria: [], reviews: [], completedTaskIds: [], decisions: [], recordedCostUsd: null };
+          checkpoints: [], criteria: [], reviews: [], completedTaskIds: [], decisions: [], recordedCostUsd: null, usage: [] };
         state.runs.push(run);
         return { runId: plan.id, action: "awaiting-approval", planSha256: run.planSha256,
           artifact: `.forgeyard/project/${plan.id}.json`, capsuleId: capsule.id };
@@ -264,7 +264,19 @@ export class ProjectService {
         if (record.kind === "checkpoint") run.checkpoints = [...run.checkpoints, {
           taskId: String(record.taskId), note: String(record.note), at: this.now().toISOString() }];
         if (record.kind === "decision") run.decisions = [...run.decisions, { description: String(record.description), at: this.now().toISOString() }];
-        if (record.kind === "usage") run.recordedCostUsd = (run.recordedCostUsd ?? 0) + Number(record.amountUsd);
+        if (record.kind === "usage") {
+          run.recordedCostUsd = (run.recordedCostUsd ?? 0) + Number(record.amountUsd);
+          // The service stamps the instant: a model-supplied timestamp is not an observation.
+          run.usage = [...(run.usage ?? []), {
+            at: this.now().toISOString(),
+            provider: typeof record.provider === "string" ? record.provider : "unreported",
+            model: typeof record.model === "string" ? record.model : "unreported",
+            inputTokens: typeof record.inputTokens === "number" ? record.inputTokens : 0,
+            outputTokens: typeof record.outputTokens === "number" ? record.outputTokens : 0,
+            costUsd: Number(record.amountUsd),
+            durationMs: typeof record.durationMs === "number" ? record.durationMs : 0,
+          }];
+        }
         if (record.kind === "criterion") {
           if (!task!.criteria.some((criterion) => criterion.id === record.criterionId)) throw nativeError("FY_PLAN_INVALID", "Unknown acceptance criterion.");
           run.criteria = [...run.criteria.filter((entry) => entry.taskId !== record.taskId || entry.criterionId !== record.criterionId),
@@ -301,6 +313,7 @@ export class ProjectService {
         // Restate the run on the epistemic ladder: the certificate must declare what it rests
         // on, and the model's prose must never be able to carry it.
         const evidence = deliveryEvidence(state, run, capsule, snapshot.sha256, invalid);
+        const accounting = deliveryAccounting(run);
         if (!evidence.certification.certifiable) finalGaps.push("evidence:unsupported-verdict");
         const verdict = finalGaps.length > 0 ? "blocked" : "delivered";
         const reportPath = `.forgeyard/reports/${run.plan.id}/${snapshot.sha256}.json`;
@@ -312,6 +325,8 @@ export class ProjectService {
             verdict, criteria: run.criteria, gates: state.operations.filter((operation) => operation.runId === run.plan.id &&
               operation.inputSha256 === snapshot.sha256).map(({ processOwner: _owner, ...operation }) => operation),
             reviews: run.reviews, limits: { recordedCostUsd: run.recordedCostUsd, hardProviderSpendLimit: false },
+            accounting: { agentic: accounting.agentic, human: accounting.human,
+              comparison: accounting.comparison, method: accounting.method, caveats: accounting.caveats },
             evidence: { levels: evidence.summary, supporting: evidence.supportingIds.length,
               weakestLevel: evidence.certification.weakestLevel,
               weakestGrounding: evidence.certification.weakestGrounding, claims: evidence.claims },

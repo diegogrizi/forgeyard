@@ -1,4 +1,5 @@
 import type { Capsule, GateDefinition } from "../capsule/capsule.js";
+import type { UsageObservation } from "../measure/accounting.js";
 
 export interface EvidenceReference { path: string; sha256: string; locator?: string }
 export interface ProductCriterion { id: string; description: string; gateIds: readonly string[] }
@@ -35,6 +36,8 @@ export interface NativeRun {
   criteria: readonly CriterionRecord[]; reviews: readonly ReviewRecord[];
   completedTaskIds: readonly string[];
   recordedCostUsd: number | null;
+  /** Explicitly reported observations, one per report. Absent on runs opened before this field. */
+  usage?: readonly UsageObservation[];
   decisions: readonly { description: string; at: string }[];
 }
 export interface ConsentGrant {

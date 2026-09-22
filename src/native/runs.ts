@@ -2,6 +2,7 @@ import type { Capsule } from "../capsule/capsule.js";
 import { canonicalJson, sha256Text } from "../core/hash.js";
 import { normalizePortablePath } from "../core/paths.js";
 import { certifyVerdict, summarizeEvidence, validateClaims, type Claim, type VerdictCertification } from "../evidence/epistemic.js";
+import { compare, summarizeAgentic, type AccountingReport } from "../measure/accounting.js";
 import type { NativeRun, NativeState, ProductPlan, ProductTask } from "./contracts.js";
 import { nativeError } from "./store.js";
 
@@ -190,4 +191,13 @@ export function deliveryEvidence(state: NativeState, run: NativeRun, capsule: Ca
   validateClaims(claims);
   return { claims, supportingIds, certification: certifyVerdict(claims, supportingIds),
     summary: summarizeEvidence(claims) };
+}
+
+/**
+ * Restate the run's reported consumption as declared accounting. Nothing is inferred: a run
+ * with no reported observation yields `unmeasured` for every quantity, never zero, and no
+ * human baseline is invented — a comparison the user never declared stays absent.
+ */
+export function deliveryAccounting(run: NativeRun): AccountingReport {
+  return compare(summarizeAgentic(run.usage ?? []), null);
 }
