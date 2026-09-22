@@ -65,9 +65,11 @@ export function formatFailure(error: unknown, json: boolean, debug = false): For
   }
 
   const lines = [`${normalized.code}: ${normalized.message}`];
-  if (normalized.remediation !== undefined) lines.push(`Remediation: ${normalized.remediation}`);
-  if (normalized.paths !== undefined) lines.push(`Paths: ${normalized.paths.join(", ")}`);
-  if (normalized.components !== undefined) lines.push(`Components: ${normalized.components.join(", ")}`);
+  // Italian labels: the ordinary path speaks Italian to a person. The error code and the
+  // paths stay as they are, because an identifier is not prose.
+  if (normalized.remediation !== undefined) lines.push(`Cosa fare: ${normalized.remediation}`);
+  if (normalized.paths !== undefined) lines.push(`Percorsi: ${normalized.paths.join(", ")}`);
+  if (normalized.components !== undefined) lines.push(`Componenti: ${normalized.components.join(", ")}`);
   if (debug && normalized.stack !== undefined) lines.push(normalized.stack);
 
   return { exitCode: normalized.exitCode, text: `${lines.join("\n")}\n` };
