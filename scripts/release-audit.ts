@@ -71,6 +71,10 @@ function intentionalTokenContext(relativePath: string): boolean {
   return relativePath.endsWith(".tpl")
     || relativePath.startsWith("tests/")
     || relativePath.startsWith("fixtures/")
+    // GitHub Actions expression syntax uses doubled braces: they are the platform's own
+    // interpolation, not a template marker we failed to resolve. Naming the sequence in
+    // this comment would make the rule flag its own implementation.
+    || relativePath.startsWith(".github/workflows/")
     || relativePath.startsWith("packs/ecosystem/vendor/");
 }
 

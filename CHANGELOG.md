@@ -20,6 +20,19 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   byte di terze parti sono dichiarati ma non respingono l'installazione.
 - Il certificato di consegna dichiara i livelli di evidenza del proprio supporto, il
   livello più debole e ciò su cui poggia in ultima istanza.
+- **Un solo comando prepara una cartella dall'inizio alla fine**: ricognizione, una domanda
+  di prodotto, una conferma, area personale, imbracatura, collegamento nativo. Ogni passo è
+  dichiarato e alla riesecuzione vengono ripresi soltanto quelli mancanti. La regola «una
+  sola domanda» è meccanica: il servizio di preparazione riceve un driver di prompt che
+  rifiuta ogni domanda.
+- Il certificato riporta una contabilità dichiarata. `forgeyard.yaml` accetta
+  `measurement.humanBaseline`, e il certificato registra i valori usati con la loro
+  impronta, così una modifica successiva non cambia un verdetto già emesso.
+- Il doctor confronta il progetto con l'imbracatura congelata (controllo `harness-drift`),
+  senza affondare il verdetto dell'installazione.
+- `npm run install:local`: una riga installa il programma.
+- `forgeyard rollback` senza argomenti annulla l'ultima operazione reversibile, che è
+  l'unica che il sistema permette di annullare.
 
 ### Corretto
 
@@ -33,6 +46,13 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   essere entrambe acconsentite con i byte di una sola. La pubblicazione di una creazione è
   ora esclusiva, con degradazione dove i link fisici non esistono.
 - La liveness dei riferimenti di evidenza era implementata due volte; ne resta una.
+- La scansione della deriva confrontava i percorsi protetti congelati con quelli osservati:
+  una protezione è una politica, non un'osservazione, e ogni progetto correttamente
+  preparato risultava in deriva. Confronto rimosso.
+- Una risposta vuota alla domanda di prodotto annullava la preparazione. Ora fa tentare la
+  sola evidenza del progetto, e soltanto se non basta dichiara che serve una descrizione.
+- Le istruzioni generate citavano `forgeyard task`, `forgeyard workspace` e i worktree:
+  in un'imbracatura installata sarebbero stati strumenti fantasma.
 
 ### Rimosso
 
@@ -40,6 +60,12 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 - Il profilo `full`, che installava l'intero catalogo senza scegliere niente.
 - `README-LEGACY.md` e la pianificazione storica; il contenuto di riferimento ancora vero
   è in [percorsi-legacy](docs/percorsi-legacy.md).
+- **Il secondo motore di esecuzione**, 4.715 righe: `orchestrator/`, `worktrees/`,
+  `observability/`, `guard/` e i comandi `task`, `workspace`, `ledger`, `guard`. Due
+  sistemi di attività significano zero autorità. Conservati il contratto di attività e le
+  ricevute di verifica.
+- Il ramo legacy del write-guard, che era il più permissivo dei due percorsi che
+  proteggono la stessa cosa. Ora l'assenza di un work order nativo nega, non degrada.
 
 ### Non ancora collegato
 
