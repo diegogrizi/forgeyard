@@ -379,7 +379,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         preview.created.length,
         input,
         options.prompts,
-        `Prepare ${preview.created.length} Forgeyard files in ${root}?`,
+        `Preparare ${preview.created.length} file Forgeyard in ${root}?`,
       );
 
       if (status !== "applied") {
@@ -446,7 +446,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         preview.created.length,
         input,
         options.prompts,
-        `Install ${preview.created.length} Forgeyard files in ${request.targetRoot}?`,
+        `Creare ${preview.created.length} file Forgeyard in ${request.targetRoot}?`,
       );
 
       if (status !== "applied") {
@@ -536,7 +536,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         changeCount,
         input,
         options.prompts,
-        `Apply ${changeCount} Forgeyard file changes in ${root}?`,
+        `Applicare ${changeCount} modifiche ai file Forgeyard in ${root}?`,
       );
 
       if (status !== "applied") {
@@ -593,7 +593,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
           ? "applied"
           : await options.prompts.confirm(
               "apply",
-              `Reverse Forgeyard operation ${input.sourceOperationId} in ${root}?`,
+              `Annullare l'operazione Forgeyard ${input.sourceOperationId} in ${root}?`,
               false,
             )
             ? "applied"
