@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -13,7 +13,10 @@ import { sha256Text } from "../../../src/core/hash.js";
 const temporaryRoots: string[] = [];
 
 async function registryFixture(options: { unknownPackKey?: boolean; provenanceMode?: string } = {}) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-registry-"));
+  // The loader resolves paths, so the fixture root has to be canonical too: on Windows
+  // os.tmpdir() can hand back the short 8.3 form of a user name and the two would differ
+  // for a reason that has nothing to do with the loader.
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "forgeyard-registry-")));
   temporaryRoots.push(root);
   await cp(path.resolve("schemas"), path.join(root, "schemas"), { recursive: true });
   await mkdir(path.join(root, "profiles"), { recursive: true });

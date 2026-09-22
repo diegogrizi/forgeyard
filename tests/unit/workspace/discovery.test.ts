@@ -13,7 +13,10 @@ async function temporary(run: (root: string) => Promise<void>): Promise<void> {
   try { await run(root); } finally { await rm(root, { recursive: true, force: true }); }
 }
 async function git(root: string, ...args: string[]): Promise<string> {
-  return (await execute("git", ["-C", root, ...args], { timeout: 10000 })).stdout.trim();
+  // `git submodule add` copies an object store and can take tens of seconds on a loaded
+  // machine or behind a file scanner. A fixture timeout tighter than the work it fixtures
+  // reports a defect in the code under test that is not there.
+  return (await execute("git", ["-C", root, ...args], { timeout: 120_000 })).stdout.trim();
 }
 async function repository(root: string): Promise<void> {
   await mkdir(root, { recursive: true });
