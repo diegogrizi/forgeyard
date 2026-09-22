@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Security fixes are prepared for the current `0.1.x` M1 line. Forgeyard M1 supports the Codex adapter only.
+Security fixes are prepared for the current `0.1.x` line. Forgeyard renders for the Codex and Claude Code adapters.
 
 ## Report a vulnerability
 

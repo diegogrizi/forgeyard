@@ -71,14 +71,12 @@ function intentionalTokenContext(relativePath: string): boolean {
   return relativePath.endsWith(".tpl")
     || relativePath.startsWith("tests/")
     || relativePath.startsWith("fixtures/")
-    || relativePath.startsWith("docs/superpowers/")
     || relativePath.startsWith("packs/ecosystem/vendor/");
 }
 
 function intentionalRuleFixture(relativePath: string): boolean {
   return relativePath === "scripts/release-audit.ts"
     || relativePath.startsWith("tests/")
-    || relativePath.startsWith("docs/superpowers/")
     || relativePath.startsWith("packs/ecosystem/vendor/");
 }
 

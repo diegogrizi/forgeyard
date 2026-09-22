@@ -110,44 +110,43 @@ describe("non-leaking release audit", () => {
     expect(result.stdout).toContain("105 commands");
   }, 30_000);
 
-  test("keeps public documentation aligned with generated catalog and profile counts", async () => {
-    const [readme, contextGuide, sourceGuide] = await Promise.all([
+  test("keeps public documentation aligned with the attested catalog counts", async () => {
+    const [readme, architectureGuide, sourceGuide] = await Promise.all([
       readFile(path.join(repositoryRoot, "README.md"), "utf8"),
-      readFile(path.join(repositoryRoot, "docs", "guides", "catalog-and-context.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "guide", "architettura.md"), "utf8"),
       readFile(path.join(repositoryRoot, "docs", "provenance", "catalog-sources.md"), "utf8"),
     ]);
-    const publicDocs = `${readme}\n${contextGuide}\n${sourceGuide}`;
+    const publicDocs = `${readme}\n${architectureGuide}\n${sourceGuide}`;
 
     for (const requiredClaim of [
-      "1,007 source files",
-      "211,594 physical lines",
-      "202 catalog agents",
-      "183 native skills",
-      "105 commands",
-      "203 agent files",
-      "290 skill entrypoints",
-      "52 agent files",
-      "119 skill entrypoints",
-      "maximum concurrency remains 4",
+      "1.007 file sorgente",
+      "211.594 righe fisiche",
+      "202 agenti",
+      "183 skill",
+      "105 comandi",
     ]) expect(publicDocs).toContain(requiredClaim);
-    expect(readme).not.toMatch(/M1 supports .*hackathon.*Codex adapter/i);
-    expect(readme).not.toContain("Forgeyard M1 launches no worker fleet");
+    // The entry document must not resurrect harnesses or profiles the product dropped.
+    expect(readme).not.toMatch(/\bCursor\b/);
+    expect(readme).not.toMatch(/\bhackathon\b/i);
   });
 
-  test("documents all executable harness mappings without stale single-adapter claims", async () => {
-    const [readme, harnessGuide] = await Promise.all([
+  test("documents the executable harness mappings and the honesty boundary", async () => {
+    const [readme, architectureGuide, stateDocument] = await Promise.all([
       readFile(path.join(repositoryRoot, "README.md"), "utf8"),
-      readFile(path.join(repositoryRoot, "docs", "guides", "harnesses.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "guide", "architettura.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "docs", "STATO.md"), "utf8"),
     ]);
-    const publicDocs = `${readme}\n${harnessGuide}`;
+    const publicDocs = `${readme}\n${architectureGuide}\n${stateDocument}`;
 
     for (const requiredClaim of [
       "Codex",
       "Claude Code",
-      "202 agents, 183 skills, and 105 commands",
+      "202 agenti, 183 skill e 105 comandi",
       "disableSkillShellExecution",
+      "Nessuna prova live con account Claude Code o Codex",
     ]) expect(publicDocs).toContain(requiredClaim);
-    expect(publicDocs).not.toContain("The current executable adapter is Codex");
+    // A structural check is never reported as a successful real-client run.
+    expect(publicDocs).not.toMatch(/\bprova live (?:superata|riuscita)\b/i);
   });
 
   test("reports generic rules for unfinished, unresolved, logged, remote, and identity-bearing content", async () => {

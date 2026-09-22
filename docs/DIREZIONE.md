@@ -1,8 +1,8 @@
 # Direzione: Forgeyard è un registro, non una libreria
 
-Documento di indirizzo del refactoring. Sostituisce la pianificazione sparsa in
-`docs/superpowers/` e unifica il piano della forgia personale. Chi modifica i confini
-del prodotto legge prima questo file.
+Documento di indirizzo del refactoring. Sostituisce la pianificazione storica sparsa —
+ora rimossa dal repository — e unifica il piano della forgia personale. Chi modifica i
+confini del prodotto legge prima questo file.
 
 ## 1. Il problema con lo stato dell'arte
 
@@ -37,7 +37,7 @@ alla propria fonte. La deriva è rilevata da un meccanismo, non dalla buona volo
 Questo è realizzabile perché Forgeyard è un programma, non un prompt. È l'unico
 vantaggio strutturale che abbiamo sulle raccolte, e va speso tutto qui.
 
-## 3. Le cinque garanzie meccaniche
+## 3. Le sei garanzie meccaniche
 
 Ognuna è codice che può fallire, non una promessa in un README.
 
@@ -49,7 +49,8 @@ inventario dei file con i loro digest. Se un file dell'imbracatura cambia, la ca
 non si apre e il lavoro si ferma, invece di procedere su basi diverse da quelle
 approvate.
 
-*Stato: implementato in `src/capsule/capsule.ts`. Va portato al centro del prodotto.*
+*Stato: `src/capsule/capsule.ts`. Sul percorso ordinario: la capsula viene letta e
+verificata dal runtime nativo.*
 
 ### G2 — Evidenza classificata
 
@@ -66,7 +67,9 @@ La regola che dà valore all'intera scala è una: **un verdetto di consegna che 
 appoggia a una affermazione `asserted` non può essere emesso.** Il livello non è
 un'etichetta descrittiva, è un gate.
 
-*Stato: esiste il seme in `InspectionEvidence.inference`. Va promosso a primitiva.*
+*Stato: `src/evidence/epistemic.ts`. Sul percorso ordinario: `fy_finalize` riformula il
+run sulla scala, e il certificato dichiara il livello più debole del proprio supporto e su
+cosa poggia in ultima istanza.*
 
 ### G3 — Citazioni vive
 
@@ -74,7 +77,8 @@ Una affermazione non punta a un file: punta a `percorso#locatore@digest`. Se la 
 è cambiata o è scomparsa, l'affermazione diventa **stantia**, non silenziosamente
 vera. La staleness è calcolabile in qualunque momento senza rieseguire nulla.
 
-*Stato: da costruire.*
+*Stato: `src/evidence/citations.ts`, unica implementazione della liveness. Sul percorso
+ordinario: il runtime nativo la usa per validare i riferimenti di evidenza.*
 
 ### G4 — Deriva rilevata
 
@@ -83,7 +87,8 @@ scansione confronta ciò che le istruzioni affermano con ciò che il codice most
 riporta i punti divergenti. La documentazione che invecchia è un difetto rilevabile,
 non un fatto della vita.
 
-*Stato: da costruire.*
+*Stato: `src/drift/scan.ts`. Il collegamento al doctor è **in corso**: non dichiararlo
+fatto.*
 
 ### G5 — Misura dichiarata
 
@@ -91,7 +96,9 @@ Costo e tempo del lavoro agentico, confrontati con una linea di base umana
 **esplicita e ispezionabile**. «L'AI è stata più veloce» diventa un numero con un
 metodo dichiarato e un margine di incertezza, oppure resta non misurato — mai zero.
 
-*Stato: esiste il ledger delle usage. Va esteso a contabilità con metodo.*
+*Stato: `src/measure/accounting.ts`, primitiva verificata. **Su nessun percorso**: va
+collegata registrando le osservazioni di consumo una per una e dichiarando la linea di
+base in un file posseduto da una persona.*
 
 ### G6 — Coerenza dell'imbracatura generata
 
@@ -107,7 +114,8 @@ rotti** e i file generati contenevano i percorsi assoluti della macchina
 dell'autore. Nessuno se ne era accorto, perché un file Markdown non verifica sé
 stesso.
 
-*Stato: da costruire come gate sul piano di installazione.*
+*Stato: `src/doctor/harness-lint.ts`. Sul percorso ordinario: `buildInstallPlan` la
+attraversa, quindi la attraversa ogni percorso di installazione.*
 
 ## 3-bis. Perché un programma e non una raccolta
 
@@ -143,7 +151,7 @@ Due corollari, imparati dagli errori di quella suite reale:
 ## 4. Il vincolo UX non cambia
 
 Un ingresso ordinario: `forgeyard` nella cartella di lavoro. La conversazione resta
-nelle app native di Claude Code e Codex. Le cinque garanzie sono meccanismi interni:
+nelle app native di Claude Code e Codex. Le sei garanzie sono meccanismi interni:
 l'utente ne vede gli esiti, non deve conoscerne i comandi.
 
 Forgeyard non chiama modelli, non legge credenziali, non sostituisce abbonamenti o

@@ -1,29 +1,65 @@
-# Catalog sources and integrity
+# Provenienza e integrità del catalogo
 
-Forgeyard's broad portable catalog comes from one distributable, pinned source:
+Il catalogo portabile di Forgeyard viene da una sola fonte distribuibile e pinnata.
 
-- Project: [`wshobson/agents`](https://github.com/wshobson/agents)
-- Revision: `4236bb91f8395b0435f1d8b8baf9e8e4c69a8620`
-- License: MIT
-- Vendored scope: upstream `plugins/` tree only
-- Inventory: **1,007 source files**, **211,594 physical lines**, 6,737,904 canonical LF bytes
-- Components: **202 catalog agents**, **183 native skills**, **105 commands**
-- Tree SHA-256: `cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97`
+- Progetto: [`wshobson/agents`](https://github.com/wshobson/agents)
+- Revisione: `4236bb91f8395b0435f1d8b8baf9e8e4c69a8620`
+- Licenza: MIT
+- Ambito vendored: soltanto l'albero `plugins/` upstream
+- Inventario: **1.007 file sorgente**, **211.594 righe fisiche**, 6.737.904 byte canonici LF
+- Componenti: **202 agenti**, **183 skill**, **105 comandi**
+- Impronta dell'albero, sha256: `cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97`
 
-The upstream license is preserved at `packs/ecosystem/vendor/LICENSE`. Machine-readable source metadata lives in `sources/catalog.yaml`, while `packs/ecosystem/vendor/UPSTREAM.json` binds the repository, commit, license, counts, byte length, license hash, and tree hash.
+La licenza upstream è conservata in `packs/ecosystem/vendor/LICENSE`. I metadati della
+fonte, leggibili da un programma, stanno in `sources/catalog.yaml`, mentre
+`packs/ecosystem/vendor/UPSTREAM.json` lega insieme repository, commit, licenza,
+conteggi, lunghezza in byte, impronta della licenza e impronta dell'albero.
 
-## Verification boundary
+I conteggi di questa pagina non sono un obiettivo di crescita: sono un'attestazione. Sono
+verificati a ogni release dal comando della sezione seguente, ed è quel comando — non
+questa prosa — a stabilire se sono ancora veri.
 
-`npm run catalog:check` recursively reads the vendored tree, rejects symbolic links and unsafe paths, normalizes text line endings for the canonical hash, and compares every attested value. A changed byte, removed file, extra file, or missing license fails the release.
+## Il confine di verifica
 
-`npm run provenance:check` then binds that attestation to the pack manifest and source catalog. Generated `THIRD_PARTY_NOTICES.md` and `SBOM.spdx.json` list the vendor snapshot separately from npm dependencies. The public package test confirms that the license, attestation, catalog content, and profiles are present.
+```sh
+npm run catalog:check
+npm run provenance:check
+```
 
-## npm transport exception
+Il primo comando legge ricorsivamente l'albero vendored, rifiuta i collegamenti simbolici
+e i percorsi non sicuri, normalizza i fine riga del testo per l'impronta canonica e
+confronta ogni valore attestato. Un byte cambiato, un file rimosso, un file in più o una
+licenza mancante fanno fallire la release.
 
-npm intentionally omits nested `.gitignore` files from package tarballs. One upstream file at `plugins/ship-mate/.gitignore` is therefore carried byte-for-byte as `npm-carriers/ship-mate.gitignore`, and the mapping is declared in `UPSTREAM.json`. The original remains in the Git vendor tree and its bytes remain part of the 1,007-file attestation; the carrier preserves those bytes in the npm artifact without pretending npm retained the original path.
+Il secondo lega quell'attestazione al manifest del pack e al catalogo delle fonti.
+`THIRD_PARTY_NOTICES.md` e `SBOM.spdx.json` sono generati, ed elencano lo snapshot del
+vendor separatamente dalle dipendenze npm. Il test del pacchetto pubblico conferma che
+licenza, attestazione e contenuto del catalogo siano presenti.
 
-## Authored versus vendored behavior
+La serializzazione dei pacchetti npm dentro lo SBOM usa soltanto il lock normalizzato —
+nome, versione, licenza dichiarata, URL e impronte — e comprende anche i pacchetti
+opzionali non installati. Una licenza mancante resta `NOASSERTION` invece di essere
+recuperata dal disco: altrimenti l'artefatto dipenderebbe dai binding nativi opzionali
+della piattaforma su cui è stato generato, e il confronto byte per byte non sarebbe
+riproducibile tra Linux e Windows.
 
-The vendor tree is immutable MIT material. Forgeyard's Apache-2.0 adapter code reads and transforms it without executing upstream scripts or hooks. Generated Codex output uses namespaced paths, validates TOML and skill metadata, rejects collisions, and records file-level ownership for update and rollback.
+## L'eccezione di trasporto npm
 
-The `full` profile produces **203 agent files** and **290 skill entrypoints** in Codex, while the curated `hackathon` profile produces **52 agent files** and **119 skill entrypoints**. Those are installation counts, not claims about simultaneous execution; the **maximum concurrency remains 4**.
+npm omette deliberatamente i file `.gitignore` annidati dai tarball dei pacchetti. Un
+file upstream, `plugins/ship-mate/.gitignore`, viaggia quindi byte per byte come
+`npm-carriers/ship-mate.gitignore`, e la corrispondenza è dichiarata in `UPSTREAM.json`.
+L'originale resta nell'albero vendored di Git e i suoi byte restano parte
+dell'attestazione sui 1.007 file; il vettore preserva quei byte nell'artefatto npm senza
+far finta che npm ne abbia mantenuto il percorso.
+
+## Ciò che è nostro e ciò che non lo è
+
+L'albero vendored è materiale MIT immutabile. Il codice di adattamento di Forgeyard, che
+è Apache-2.0, lo legge e lo trasforma **senza eseguire script o hook upstream**. Gli hook
+importati dal catalogo sono catalogati e lasciati disattivati, non simulati in silenzio.
+
+L'output generato usa percorsi con namespace, valida i metadati di skill e agenti,
+rifiuta le collisioni e registra la proprietà a livello di file per aggiornamento e
+rollback. I conteggi qui sopra descrivono materiale su disco: non sono un'affermazione su
+quanto venga eseguito contemporaneamente, e non sono la dimensione di un prompt. Come il
+catalogo entra in contesto è descritto in [Architettura](../guide/architettura.md).

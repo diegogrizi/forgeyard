@@ -4,10 +4,11 @@ Forgeyard deve diventare una forgia personale: programma installato una volta su
 
 ## Direzione approvata
 
-Leggere [il piano della forgia personale](docs/forgia-personale/PIANO.md) prima di modificare i confini del prodotto. Il piano distingue il comportamento implementato dalle fasi successive: non descrivere come gia funzionante l'intero percorso multi-repository.
+Leggere [la direzione](docs/DIREZIONE.md) prima di modificare i confini del prodotto, e [lo stato](docs/STATO.md) per sapere cosa e implementato. Distinguere sempre il comportamento implementato dalle fasi successive: non descrivere come gia funzionante l'intero percorso multi-repository.
 
 - Scrivere documentazione, nuovi messaggi utente, istruzioni first-party e commenti utili in italiano. Conservare identificatori tecnici e chiavi di protocollo; non tradurre licenze o contenuti di terzi.
-- Supportare Claude Code e Codex come obiettivo del prodotto. Cursor e i profili legacy rimangono solo finche la migrazione non ne elimina in sicurezza i riferimenti; non ampliarli.
+- Supportare Claude Code e Codex. L'adapter Cursor e il profilo full sono stati dismessi: non reintrodurli. I percorsi legacy ancora presenti sono elencati in [percorsi-legacy](docs/percorsi-legacy.md); non ampliarli.
+- Quando una regola puo diventare una proprieta del tipo o un controllo eseguibile, non scriverla in prosa. Una regola enunciata in due sedi diverge, e il consumatore piu permissivo diventa il contratto reale.
 - Lavorare per incrementi verificabili: prima test, poi implementazione minima. Non riscrivere il progetto da zero e non creare un secondo motore parallelo.
 - Separare workspace, repository membri e directory privata della forgia. Non eseguire git init nella cartella padre per aggirare l'assenza di un repository.
 - La suite personale non deve essere committata nei repository assistiti. Non modificare file gia tracciati per installarla; usare esclusioni Git locali soltanto per percorsi posseduti e non tracciati. Non usare assume-unchanged o skip-worktree.

@@ -18,15 +18,18 @@ interface PackResult {
 
 const repositoryRoot = path.resolve(".");
 let packed: PackResult;
-const publicGuides = new Set(["docs/guides/catalog-and-context.md", "docs/guides/delivery-workflow.md",
-  "docs/guides/harnesses.md", "docs/guides/native-factory.md", "docs/guides/forgia-personale.md"]);
+const publicGuides = new Set(["docs/DIREZIONE.md", "docs/MANIFESTO.md", "docs/STATO.md",
+  "docs/percorsi-legacy.md", "docs/guide/uso.md", "docs/guide/garanzie.md",
+  "docs/guide/architettura.md", "docs/provenance/catalog-sources.md"]);
 
 function allowed(filePath: string): boolean {
   if (publicGuides.has(filePath)) return true;
   if ([
     "package.json",
     "README.md",
-    "README-LEGACY.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.md",
@@ -50,8 +53,17 @@ describe("public npm package contents", () => {
     expect(paths).toEqual(expect.arrayContaining([
       "package.json",
       "README.md",
-      "README-LEGACY.md",
-      "docs/guides/forgia-personale.md",
+      "docs/DIREZIONE.md",
+      "docs/MANIFESTO.md",
+      "docs/STATO.md",
+      "docs/percorsi-legacy.md",
+      "docs/guide/uso.md",
+      "docs/guide/garanzie.md",
+      "docs/guide/architettura.md",
+      "docs/provenance/catalog-sources.md",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
       "LICENSE",
       "NOTICE",
       "THIRD_PARTY_NOTICES.md",
@@ -65,7 +77,6 @@ describe("public npm package contents", () => {
       "schemas/capability-rules.schema.json",
       "profiles/hackathon.yaml",
       "profiles/minimal.yaml",
-      "profiles/full.yaml",
       "profiles/tailored.yaml",
       "packs/foundation/pack.yaml",
       "packs/foundation/templates/COMPOSITION.md.tpl",
@@ -74,7 +85,6 @@ describe("public npm package contents", () => {
       "packs/presentation/pack.yaml",
       "sources/catalog.yaml",
       "sources/capabilities.yaml",
-      "docs/guides/native-factory.md",
       "dist/native/service.d.ts",
       "dist/native/protocol.d.ts",
       "dist/capsule/capsule.d.ts",
