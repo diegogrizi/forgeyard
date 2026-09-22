@@ -7,6 +7,7 @@ import { compileCapsule, readCapsule, readRegularProjectFile, type Capsule } fro
 import { createForgeyardService, renderFactoryPlan } from "../application/forgeyard.js";
 import { preparationConfig } from "../application/preparation.js";
 import { canonicalJson, sha256Bytes, sha256Text } from "../core/hash.js";
+import { checkCitations } from "../evidence/citations.js";
 import { resolveInsideRoot } from "../core/paths.js";
 import { inspectProject } from "../intake/inspect.js";
 import { validateProjectNeeds } from "../intake/semantic.js";
@@ -56,14 +57,18 @@ export class ProjectService {
       revision: this.store.read().revision, result };
   }
 
+  /** Liveness lives in one place: evidence/citations owns it, this method owns only the
+   *  native policy on what may be cited at all. A second copy of a rule diverges. */
   private async references(references: readonly EvidenceReference[]): Promise<void> {
     for (const reference of references) {
       if (/(^|\/)(\.env(?:\..*)?|auth\.json|credentials[^/]*|.*\.(?:pem|key))$/i.test(reference.path))
         throw nativeError("FY_EVIDENCE_INVALID", "Private files are not valid product evidence references.");
-      const content = await regularBytes(this.identity.root, reference.path, 262144);
-      if (sha256Bytes(content) !== reference.sha256)
-        throw nativeError("FY_EVIDENCE_INVALID", "An evidence reference is missing or stale.");
     }
+    let checks;
+    try { checks = await checkCitations(this.identity.root, references, 262144); }
+    catch { throw nativeError("FY_EVIDENCE_INVALID", "An evidence reference is not a usable project path."); }
+    if (checks.some((check) => check.status !== "live"))
+      throw nativeError("FY_EVIDENCE_INVALID", "An evidence reference is missing or stale.");
   }
 
   private async invalidEvidence(run: NativeRun, inputSha256: string): Promise<string[]> {

@@ -14,7 +14,13 @@ export async function assertDirectoryChain(directory: string, create = false): P
     let stats = await lstat(cursor).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return undefined; throw error;
     });
-    if (!stats && create) { await mkdir(cursor, { mode: 0o700 }); stats = await lstat(cursor); }
+    if (!stats && create) {
+      // A concurrent creator winning the race is success, not a failure to report.
+      await mkdir(cursor, { mode: 0o700 }).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "EEXIST") throw error;
+      });
+      stats = await lstat(cursor);
+    }
     if (!stats || stats.isSymbolicLink() || !stats.isDirectory())
       throw nativeError("FY_PATH_UNSAFE", "An authorized directory is missing, non-regular or traverses a symbolic link.");
   }
@@ -61,6 +67,21 @@ export async function atomicText(target: string, content: string, expectedSha256
   await check(); const temporary = `${target}.tmp-${randomUUID()}`;
   const file = await open(temporary, "wx", 0o600);
   try { await file.writeFile(content); await file.sync(); } finally { await file.close(); }
-  try { await check(); await rename(temporary, target); }
+  try {
+    await check();
+    // On Windows a rename onto an existing path fails with EPERM/EACCES while another
+    // process still holds a handle on it — an indexer or antivirus is enough, with no
+    // concurrency of ours. Retrying is safe because every attempt re-checks the digest
+    // of the bytes it would replace, so a drifted target still refuses the write.
+    for (let attempt = 0; ; attempt += 1) {
+      try { await rename(temporary, target); break; }
+      catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (attempt >= 4 || (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY")) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+        await check();
+      }
+    }
+  }
   finally { await unlink(temporary).catch((error: NodeJS.ErrnoException) => { if (error.code !== "ENOENT") throw error; }); }
 }
