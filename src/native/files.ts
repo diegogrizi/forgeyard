@@ -67,6 +67,7 @@ export async function atomicText(target: string, content: string, expectedSha256
   await check(); const temporary = `${target}.tmp-${randomUUID()}`;
   const file = await open(temporary, "wx", 0o600);
   try { await file.writeFile(content); await file.sync(); } finally { await file.close(); }
+  let linkUnsupported = false;
   try {
     await check();
     // Publishing a creation must be exclusive. A digest check followed by a rename is not
@@ -82,13 +83,20 @@ export async function atomicText(target: string, content: string, expectedSha256
     // would replace, so a drifted target still refuses the write.
     for (let attempt = 0; ; attempt += 1) {
       try {
-        if (expectedSha256 === null) await link(temporary, target);
+        if (expectedSha256 === null && !linkUnsupported) await link(temporary, target);
         else await rename(temporary, target);
         break;
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (code === "EEXIST") throw nativeError("FY_ARTIFACT_DRIFT",
           "Another writer created this artifact first; its bytes are preserved.");
+        // Not every filesystem offers hard links: exFAT volumes and some network shares
+        // do not. There the exclusive publish is unavailable, so fall back to rename and
+        // keep the wider window rather than refusing to write at all.
+        if (!linkUnsupported && (code === "ENOTSUP" || code === "EXDEV" || code === "EMLINK" || code === "EOPNOTSUPP")) {
+          linkUnsupported = true;
+          continue;
+        }
         if (attempt >= 4 || (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY")) throw error;
         await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
         await check();
