@@ -6,7 +6,9 @@ di errore e — soprattutto — ciò che non promettono.
 
 La tesi da cui discendono è in [Direzione](../DIREZIONE.md). Quanto di ognuna è
 davvero sul percorso di un comando ordinario è registrato, con la sua data, in
-[Stato](../STATO.md).
+[Stato](../STATO.md). Cosa fare quando una di queste garanzie ti si presenta come un
+rifiuto — un verdetto bloccato, una deriva segnalata — è in
+[Risoluzione dei problemi](problemi.md).
 
 ## G1 — Identità congelata
 
@@ -119,9 +121,10 @@ osservato, quindi restano conclusive.
 cresciuto, non un'installazione rotta. Ed è una scansione, non uno snapshot transazionale:
 il filesystem può cambiare mentre gira.
 
-**Cosa manca.** Il collegamento a un comando ordinario è **in lavorazione**: la scansione
-esiste con i suoi test, ma oggi nessun rapporto la esegue per te. Vedere
-[Stato](../STATO.md) prima di contarci.
+**Dove la incontri.** Nel controllo `harness-drift` di `forgeyard doctor`. Non è un
+controllo richiesto: la deriva non affonda il verdetto dell'installazione, perché un
+progetto che è cresciuto non ha un'installazione rotta. Un esito negativo è riservato alla
+deriva che impedisce all'imbracatura approvata di operare.
 
 ## G5 — Misura dichiarata
 

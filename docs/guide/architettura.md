@@ -25,9 +25,10 @@ una nota storica, sono percorsi ancora presenti nel checkout.
 | `src/provenance/` | SBOM, notices, attestazione del vendor |
 | `src/cli/` | superficie a riga di comando |
 
-La tabella descrive responsabilità, non attivazione. `src/drift/` e `src/measure/`
-esistono con i loro test ma non sono ancora chiamati da un percorso ordinario: quale
-garanzia sia attiva e quale no è registrato, con la sua data, in [Stato](../STATO.md).
+La tabella descrive responsabilità, non attivazione. Tutte e sei le garanzie
+attraversano oggi un percorso ordinario; per G5 il confronto con un costo umano compare
+soltanto se qualcuno lo ha dichiarato. Quale garanzia sia attiva, e con quale confine, è
+registrato con la sua data in [Stato](../STATO.md).
 
 ## Un motore solo
 
@@ -144,3 +145,6 @@ ancora collegato** a questo rapporto.
 Questo è tutto ciò che quel controllo dice. **Una verifica strutturale non è una sessione
 autenticata con un client reale.** Vedere [Stato](../STATO.md) per il confine, e
 [SECURITY.md](../../SECURITY.md) per il modello di minaccia.
+
+Come questi confini si manifestano a chi usa il prodotto — cosa vede, e cosa deve fare —
+è in [Primo avvio](primo-avvio.md) e in [Risoluzione dei problemi](problemi.md).

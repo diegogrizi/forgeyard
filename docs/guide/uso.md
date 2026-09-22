@@ -4,6 +4,10 @@ Forgeyard è un programma locale. Si installa una volta, prepara l'ambiente nell
 indicata e poi tiene i conti di ciò che quell'ambiente afferma. La conversazione resta
 dove già lavori: nelle app o nelle CLI di **Claude Code** e **Codex**.
 
+Se è la prima volta, non partire da qui: [Primo avvio](primo-avvio.md) porta una cartella
+qualsiasi al primo risultato senza dare niente per scontato, e
+[Risoluzione dei problemi](problemi.md) parte dai sintomi osservabili.
+
 Prima di leggere il resto: questo branch è in ristrutturazione, e i due percorsi descritti
 sotto **non sono ancora convergenti**. [Lo stato](../STATO.md) dice, alla data, cosa è
 implementato e cosa no.
@@ -165,6 +169,10 @@ locali espliciti (`reconcile`, `reconcile-writer`, `reconcile-install`,
 sconosciuta resta un blocco: la terminazione di un figlio diretto non prova che l'intero
 albero sia finito, e il recupero di un gate marca il tentativo come non verificato invece
 di dichiararlo riuscito.
+
+I sintomi osservabili, con la loro causa e cosa fare — dal comando non riconosciuto al
+verdetto bloccato, fino a come annullare — sono raccolti in
+[Risoluzione dei problemi](problemi.md).
 
 ## Cosa non succede, mai
 

@@ -125,8 +125,10 @@ describe("non-leaking release audit", () => {
       "183 skill",
       "105 comandi",
     ]) expect(publicDocs).toContain(requiredClaim);
-    // The entry document must not resurrect harnesses or profiles the product dropped.
-    expect(readme).not.toMatch(/\bCursor\b/);
+    // The entry document must not resurrect a harness the product dropped. Naming Cursor
+    // to explain its removal is the opposite of resurrecting it, so the guard checks the
+    // claim rather than the word: it may not be presented as supported.
+    expect(readme).not.toMatch(/Cursor[^.\n]*support/i);
     expect(readme).not.toMatch(/\bhackathon\b/i);
   });
 

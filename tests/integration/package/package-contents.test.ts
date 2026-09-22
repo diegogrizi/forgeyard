@@ -19,7 +19,8 @@ interface PackResult {
 const repositoryRoot = path.resolve(".");
 let packed: PackResult;
 const publicGuides = new Set(["docs/DIREZIONE.md", "docs/MANIFESTO.md", "docs/STATO.md",
-  "docs/percorsi-legacy.md", "docs/guide/uso.md", "docs/guide/garanzie.md",
+  "docs/percorsi-legacy.md", "docs/guide/primo-avvio.md", "docs/guide/uso.md",
+  "docs/guide/problemi.md", "docs/guide/garanzie.md",
   "docs/guide/architettura.md", "docs/provenance/catalog-sources.md"]);
 
 function allowed(filePath: string): boolean {
@@ -57,7 +58,9 @@ describe("public npm package contents", () => {
       "docs/MANIFESTO.md",
       "docs/STATO.md",
       "docs/percorsi-legacy.md",
+      "docs/guide/primo-avvio.md",
       "docs/guide/uso.md",
+      "docs/guide/problemi.md",
       "docs/guide/garanzie.md",
       "docs/guide/architettura.md",
       "docs/provenance/catalog-sources.md",

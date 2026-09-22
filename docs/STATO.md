@@ -69,7 +69,8 @@ ciò che lo scrittore reale produce, per entrambi i client. Ma **nessuno ha mai 
 cartella così preparata in un Claude Code o in un Codex autenticato.** Che il client legga
 quel namespace, chieda la fiducia che deve chiedere e attraversi il workflow è, alla data
 di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichiara invece
-di dedurlo.
+di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
+[Primo avvio](guide/primo-avvio.md).
 
 ## In corso di rimozione
 
@@ -130,6 +131,9 @@ Alla data di questo documento, e su questa macchina:
 - La stessa classe di scadenza si osserva, in modo intermittente, sul test che ricalcola
   le metriche del catalogo mentre la macchina è occupata: passa se rieseguito da solo.
   Un esito dipendente dal carico non è una prova, in nessuna delle due direzioni.
+
+Come riconoscere quelle due classi di fallimento ambientale, e cosa farne, è in
+[Risoluzione dei problemi](guide/problemi.md).
 
 Per l'esito di una revisione specifica va consultata la CI di quella revisione. Nessuna
 attestazione di questo documento va riusata per una revisione diversa.
