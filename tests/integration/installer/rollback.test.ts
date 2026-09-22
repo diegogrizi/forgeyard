@@ -40,8 +40,11 @@ describe("operation-scoped rollback", () => {
     expect(result.applied).toBe(true);
     expect(await exists(path.join(root, "forgeyard.yaml"))).toBe(true);
     expect(await readFile(path.join(root, "sentinel.txt"), "utf8")).toBe("unrelated\n");
+    // The private ignore rule is a seed too: uninstalling the factory must not silently
+    // remove a privacy rule the person may still rely on.
     expect(manifest.files.map((file) => file.path)).toEqual([
       "forgeyard.yaml",
+      ".forgeyard/.gitignore",
       "PROJECT.md",
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",

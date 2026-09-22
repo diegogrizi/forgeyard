@@ -5,8 +5,6 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { expect, test } from "vitest";
 import { createPersonalWorkspace, inspectPersonalWorkspace } from "../../../src/workspace/personal.js";
-import { runPersonalEntry } from "../../../src/workspace/entry.js";
-import type { PromptDriver } from "../../../src/config/wizard.js";
 
 const execute = promisify(execFile);
 async function temporary(run: (root: string) => Promise<void>): Promise<void> {
@@ -16,54 +14,27 @@ async function temporary(run: (root: string) => Promise<void>): Promise<void> {
 async function git(root: string, ...args: string[]): Promise<string> {
   return (await execute("git", ["-C", root, ...args], { timeout: 10000 })).stdout.trim();
 }
-function prompts(confirm: () => Promise<boolean>): PromptDriver {
-  const forbidden = async (): Promise<never> => { throw new Error("Domanda interna non consentita"); };
-  return { confirm, input: forbidden, number: forbidden, select: forbidden };
-}
-async function entry(root: string, interactive: boolean, confirm: () => Promise<boolean>) {
-  let stdout = ""; let stderr = "";
-  const exitCode = await runPersonalEntry(root, { interactive, prompts: prompts(confirm), io: {
-    writeOut: (value: string) => { stdout += value; }, writeErr: (value: string) => { stderr += value; },
-  } });
-  return { exitCode, stdout, stderr };
-}
 
-test("anteprima e rifiuto non creano alcun file", async () => temporary(async (root) => {
+// L'ingresso che consuma questo modulo è verificato in entry.test.ts: qui resta la registrazione.
+test("l'anteprima non crea alcun file", async () => temporary(async (root) => {
   const preview = await inspectPersonalWorkspace(root);
   expect(preview.current).toBeNull();
   expect(await readdir(root)).toEqual([]);
-  const result = await entry(root, true, async () => false);
-  expect(result.exitCode).toBe(0);
-  expect(result.stdout).toContain("annullata");
-  expect(await readdir(root)).toEqual([]);
 }));
 
-test("la conferma unica crea solo l'area personale e non dichiara gli agenti connessi", async () => temporary(async (root) => {
-  let count = 0;
-  const result = await entry(root, true, async () => { count++; return true; });
-  expect(count).toBe(1);
-  expect(result.exitCode, result.stderr).toBe(0);
-  expect(result.stdout).toContain("Area personale creata");
-  expect(result.stdout).toContain("non ancora configurato");
+test("la registrazione non dichiara gli agenti connessi", async () => temporary(async (root) => {
+  await createPersonalWorkspace(await inspectPersonalWorkspace(root));
   expect(await readdir(root)).toEqual([".forgeyard"]);
   const current = (await inspectPersonalWorkspace(root)).current;
   expect(current?.payload.connection).toBe("not-connected");
 }));
 
-test("la modalità non interattiva è sempre anteprima, senza consenso implicito", async () => temporary(async (root) => {
-  const result = await entry(root, false, async () => { throw new Error("non deve chiedere"); });
-  expect(result.exitCode).toBe(0);
-  expect(result.stdout).toMatch(/anteprima/i);
-  expect(await readdir(root)).toEqual([]);
-}));
-
-test("ripetere l'ingresso conserva byte e data senza richiedere un'altra installazione", async () => temporary(async (root) => {
-  await createPersonalWorkspace(await inspectPersonalWorkspace(root));
+test("una seconda registrazione conserva byte e data", async () => temporary(async (root) => {
+  const first = await createPersonalWorkspace(await inspectPersonalWorkspace(root));
   const file = path.join(root, ".forgeyard/workspace.json");
   const before = await readFile(file, "utf8"); const mtime = (await stat(file)).mtimeMs;
-  const result = await entry(root, true, async () => { throw new Error("non deve chiedere"); });
-  expect(result.exitCode, result.stderr).toBe(0);
-  expect(result.stdout).toContain("già presente");
+  const preview = await inspectPersonalWorkspace(root);
+  expect((await createPersonalWorkspace(preview)).sha256).toBe(first.sha256);
   expect(await readFile(file, "utf8")).toBe(before);
   expect((await stat(file)).mtimeMs).toBe(mtime);
 }));

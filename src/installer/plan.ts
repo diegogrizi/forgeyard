@@ -96,11 +96,17 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
   const files = [
     plannedFile("forgeyard.yaml", serializeConfig(input.config), "forgeyard.config", "seed"),
     plannedFile("forgeyard.lock", lockContent(input), "forgeyard.lock", "managed"),
+    // A privacy rule belongs to the person, not to the factory. Seed ownership means a rule
+    // already in place is preserved rather than refused: the personal entry writes a stricter
+    // one (every path, so the whole private area stays out of ordinary commits) before the
+    // harness is installed, and a managed file would have made that order impossible.
+    // Being a seed also keeps it out of the capsule inventory, which is right — an ignore rule
+    // is not harness identity — and out of the doctor's managed-hash comparison.
     plannedFile(
       ".forgeyard/.gitignore",
       "evidence/\nledger/\nreports/\nbindings.json\nstate/staging/\nstate/backups/\n",
       "forgeyard.runtime-ignore",
-      "managed",
+      "seed",
     ),
     ...input.renderedFiles,
   ];
