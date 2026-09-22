@@ -124,16 +124,16 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **La suite di integrazione del runtime nativo non è verificabile ora su questa
-  macchina.** I suoi tempi sono dominati dall'importazione dei moduli e superano la
-  scadenza di 30 secondi sotto carico. Non è un esito rosso e non è un esito verde: è un
-  controllo non eseguibile, e va dichiarato tale invece di essere simulato.
-- La stessa classe di scadenza si osserva, in modo intermittente, sul test che ricalcola
-  le metriche del catalogo mentre la macchina è occupata: passa se rieseguito da solo.
-  Un esito dipendente dal carico non è una prova, in nessuna delle due direzioni.
-
-Come riconoscere quelle due classi di fallimento ambientale, e cosa farne, è in
-[Risoluzione dei problemi](guide/problemi.md).
+- **Tre gruppi di test erano dichiarati «fallimenti ambientali»: non lo erano.** Una misura
+  li ha smentiti tutti e tre, e sono stati corretti il 22 settembre 2026. L'helper Git di
+  `discovery.test.ts` aveva un tetto di 10 secondi per un lavoro che ne richiede 23; la
+  fixture di `registry/load.test.ts` costruiva una radice non canonica e la confrontava con
+  una risolta; i test di `tests/integration/native` installano un'imbracatura vera e
+  costano circa cento secondi ciascuno, contro un tetto globale tarato sui test unitari.
+  Con tetti proporzionati e una fixture canonica, tutti e tre passano.
+- La lezione resta registrata in [AGENTS.md](../AGENTS.md): **«ambientale» è una diagnosi,
+  e una diagnosi va sostenuta come qualunque altra affermazione.** Un tetto più stretto del
+  lavoro che racchiude segnala un difetto che non c'è, e insegna a ignorare i rossi.
 
 Per l'esito di una revisione specifica va consultata la CI di quella revisione. Nessuna
 attestazione di questo documento va riusata per una revisione diversa.

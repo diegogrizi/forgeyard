@@ -143,7 +143,7 @@ npm run verify
 
 Comprende typecheck, test, build, controllo byte per byte del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del pacchetto. Le regole di sviluppo sono in [AGENTS.md](AGENTS.md), quelle di contribuzione in [CONTRIBUTING.md](CONTRIBUTING.md), il comportamento provato in [CHANGELOG.md](CHANGELOG.md) e il modello di minaccia in [SECURITY.md](SECURITY.md).
 
-Su macchine cariche una parte della suite di integrazione scade per tempi di importazione dei moduli, non per difetti: **un esito dipendente dal carico non è una prova in nessuna delle due direzioni**, e va rieseguito isolato prima di concluderne qualcosa.
+I test che installano un'imbracatura reale dichiarano in testa al file il proprio tetto di tempo, perché costano molto più di un test unitario. Se un test scade, **cronometra il lavoro prima di dare la colpa alla macchina**: su questo repository tre gruppi dati per «ambientali» erano tetti più stretti del lavoro che delimitavano.
 
 ## Documentazione
 

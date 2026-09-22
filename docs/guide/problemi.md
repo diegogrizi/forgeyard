@@ -383,30 +383,21 @@ sono l'imbracatura del progetto e qualunque configurazione estranea.
 
 ## Per chi sviluppa sul repository
 
-#### I test falliscono per ragioni che non sono difetti del codice
+#### Un test scade, e sembra colpa della macchina
 
-Ci sono **due classi di fallimento ambientale note**. Vanno riconosciute e dichiarate, non
-inseguite.
+Quasi sempre non lo è. Su questo repository tre gruppi di test venivano dati per
+«fallimenti ambientali» — carico della macchina, scanner di file, forma dei percorsi
+Windows — e una misura li ha smentiti tutti e tre: erano tetti di tempo più stretti del
+lavoro che delimitavano, e una fixture che costruiva un percorso non canonico.
 
-**Scadenze a 30 secondi.** Un test scade esattamente a 30 secondi, tipicamente in
-`tests/integration/native`. La scadenza è configurata a `30_000` millisecondi per i test e
-per gli hook, e su una macchina carica o con uno scanner di file aggressivo i tempi sono
-dominati dall'importazione dei moduli. Gli stessi test passano rieseguiti da soli.
+*Cosa fare:* riesegui il gruppo isolato **e cronometra ciò che fa davvero**. Se il lavoro
+dentro il test impiega più del suo tetto, il difetto è nel tetto. I test che installano
+un'imbracatura reale — caricamento del registro, rendering, applicazione, comandi Git —
+dichiarano il proprio tetto in testa al file, perché costano molto più di un test unitario.
 
-*Cosa fare:* riesegui il gruppo isolato prima di concludere qualcosa. Se continua a
-scadere sotto carico, quello non è un esito rosso e non è un esito verde: è **un controllo
-non eseguibile**, e va dichiarato tale invece di essere simulato o arrotondato a un
-successo.
-
-**Forma breve 8.3 dei percorsi Windows.** `tests/unit/registry/load.test.ts` confronta due
-percorsi temporanei che dovrebbero essere lo stesso e non lo sono: il test crea la propria
-cartella sotto la directory temporanea del sistema senza risolverla, e su Windows quella
-directory può arrivare nella forma breve 8.3 — un nome utente accorciato con una tilde —
-mentre il percorso risolto dal programma è nella forma lunga.
-
-*Cosa fare:* riconoscerla. Non è un difetto del codice sotto test e non si ripara
-cambiando il programma. Su una macchina la cui directory temporanea non passa dalla forma
-breve, lo stesso test non mostra la differenza.
+Soltanto dopo aver misurato, un esito può essere attribuito all'ambiente. Prima di allora
+non è un esito rosso e non è un esito verde: è una diagnosi non sostenuta, e vale quanto
+qualunque altra affermazione non sostenuta.
 
 In generale, prima di dichiarare un incremento verificato vale la verifica completa:
 

@@ -115,14 +115,21 @@ npm run verify
 più `git diff --check` e i test mirati dell'incremento. Distinguere sempre test locali, CI e
 prove reali nelle app.
 
-### ⚠️ Due classi di fallimento ambientale note
+### ⚠️ Un rosso non è ambientale finché non lo hai misurato
 
-Su macchine cariche o con uno scanner di file aggressivo, due gruppi di test falliscono per
-ragioni che **non sono difetti del codice**. Vanno riconosciuti e dichiarati, non inseguiti:
+Per un'intera sessione tre gruppi di test sono stati dichiarati «fallimenti ambientali»
+e non inseguiti. **Erano tutti e tre difetti nostri**, e una misura li ha smentiti:
 
-| Sintomo | Causa |
-|---|---|
-| Test che scadono esattamente a 30 s, spesso in `tests/integration/native` | tempi dominati dall'importazione dei moduli sotto carico; passano rieseguiti da soli |
-| `tests/unit/registry/load.test.ts` confronta percorsi temporanei diversi | forma breve 8.3 di Windows (`DIEGO~1.GRI`) contro forma lunga risolta |
+| Sintomo | Diagnosi data | Causa reale |
+|---|---|---|
+| `discovery.test.ts` sul submodule | carico della macchina | l'helper Git aveva un tetto di 10 s per un lavoro che ne richiede 23 |
+| `registry/load.test.ts` sui percorsi | forma breve 8.3 di Windows | la fixture costruiva una radice non canonica e la confrontava con una risolta |
+| `tests/integration/native` a 30 s | tempi di importazione sotto carico | il tetto globale è tarato sui test unitari; quei test installano un'imbracatura vera e costano ~100 s |
 
-Se un test scade, rieseguilo isolato prima di concludere qualcosa.
+La regola che ne segue vale quanto le tre correzioni: **«ambientale» è una diagnosi, e una
+diagnosi va sostenuta come qualunque altra affermazione.** Prima di attribuire un rosso
+alla macchina, misura quanto impiega davvero il lavoro che il test delimita. Un tetto più
+stretto del lavoro che racchiude segnala un difetto che non c'è, e insegna a ignorare i
+rossi — che è il danno peggiore.
+
+Se un test scade, rieseguilo isolato **e cronometra ciò che fa** prima di concludere.
