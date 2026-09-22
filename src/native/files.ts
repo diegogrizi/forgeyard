@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readFile, rename, unlink } from "node:fs/promises";
+import { link, lstat, mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { sha256Text } from "../core/hash.js";
@@ -69,14 +69,26 @@ export async function atomicText(target: string, content: string, expectedSha256
   try { await file.writeFile(content); await file.sync(); } finally { await file.close(); }
   try {
     await check();
-    // On Windows a rename onto an existing path fails with EPERM/EACCES while another
-    // process still holds a handle on it — an indexer or antivirus is enough, with no
-    // concurrency of ours. Retrying is safe because every attempt re-checks the digest
-    // of the bytes it would replace, so a drifted target still refuses the write.
+    // Publishing a creation must be exclusive. A digest check followed by a rename is not
+    // atomic: two writers that both observe an absent target can both publish, and the
+    // loser's bytes disappear without either being told. A hard link fails with EEXIST
+    // when the target already exists, so exactly one creation wins.
+    // Replacing known bytes keeps using rename, which is the correct atomic replace; the
+    // digest check bounds it, and the caller owns the revision or lease discipline.
+    //
+    // On Windows either call can fail transiently with EPERM/EACCES while another process
+    // holds a handle on the path — an indexer or antivirus is enough, with no concurrency
+    // of ours. Retrying is safe because every attempt re-checks the digest of the bytes it
+    // would replace, so a drifted target still refuses the write.
     for (let attempt = 0; ; attempt += 1) {
-      try { await rename(temporary, target); break; }
-      catch (error) {
+      try {
+        if (expectedSha256 === null) await link(temporary, target);
+        else await rename(temporary, target);
+        break;
+      } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
+        if (code === "EEXIST") throw nativeError("FY_ARTIFACT_DRIFT",
+          "Another writer created this artifact first; its bytes are preserved.");
         if (attempt >= 4 || (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY")) throw error;
         await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
         await check();
