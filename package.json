@@ -38,6 +38,7 @@
   },
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json",
+    "install:local": "npm ci && npm run build && npm link",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",

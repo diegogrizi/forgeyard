@@ -104,13 +104,16 @@ il `.gitignore` condiviso del software non viene modificato.
 ## Installazione dal checkout
 
 Il pacchetto non è presentato come una release pubblicata su npm. Servono Node **24.19.0 o
-una successiva versione 24.x** e Git. Una volta, nella cartella del repository Forgeyard:
+una successiva versione 24.x** e Git. Una volta sola, nella cartella del repository
+Forgeyard:
 
-```sh
-npm ci
-npm run build
-npm link
+```bash
+npm run install:local
 ```
+
+Fa le tre cose che servono — dipendenze dal lockfile, compilazione, collegamento del
+comando — e non tocca niente fuori da questo checkout e dal collegamento globale del
+comando `forgeyard`.
 
 Poi il comando ordinario resta `forgeyard`, dalla cartella del tuo lavoro. Il collegamento
 di sviluppo usa il checkout locale: una modifica al programma richiede una nuova
