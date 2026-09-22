@@ -1,5 +1,36 @@
 name: Verifica forgia personale
 
+# =============================================================================
+# La CI è una piramide, non una griglia.
+#
+#   verifica               1 job   ubuntu · Node 24.19.0   npm run verify intero
+#   matrice-rapida         6 job   3 OS × 2 Node           typecheck + suite deterministiche
+#   ciclo-vita-pacchetto   3 job   3 OS · Node 24.19.0     il tarball, installato e invocato
+#   riproducibilita        2 job   ubuntu + windows        SBOM e provenienza byte per byte
+#
+# Perché non una matrice che moltiplica la suite completa. AGENTS.md documenta due
+# classi di fallimento ambientale che non sono difetti del codice: i test di
+# tests/integration/native hanno tempi dominati dall'importazione dei moduli e
+# scadono a 30 s su una macchina carica, e i test che confrontano percorsi
+# temporanei dipendono dalla forma in cui il sistema espone la directory
+# temporanea. Ripetere la suite completa su nove combinazioni non aggiungerebbe
+# copertura: aggiungerebbe nove occasioni di rosso casuale, cioè un gate che non
+# distingue un difetto da un runner occupato. La suite completa gira una volta
+# sola, su una macchina sola, con un timeout largo; le altre combinazioni
+# eseguono soltanto ciò che è deterministico ovunque.
+#
+# Perché un solo file e non tre. Le SHA pinnate, la versione di Node e le regole
+# di igiene sono una regola sola. In tre workflow divergerebbero, e il
+# consumatore più permissivo diventerebbe il contratto reale.
+#
+# Questa CI non ha effetti esterni: nessun segreto, nessuna pubblicazione,
+# nessun push, nessuna scrittura fuori dal checkout, dalla cache di npm e da
+# RUNNER_TEMP.
+# Nessun continue-on-error: un job che non può fallire non è un gate.
+# Nessun rilassamento degli esiti: fail-fast è disattivato perché un job
+# annullato non è né verde né rosso, e un esito non eseguito va dichiarato.
+# =============================================================================
+
 on:
   pull_request:
     branches: [main]
@@ -8,10 +39,40 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # Una revisione superata non merita runner. Un run annullato resta «annullato»:
+  # non è verde, e la protezione del branch non lo accetta come tale.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # L'installazione non contatta l'endpoint di audit e non stampa richieste di
+  # finanziamento: meno traffico, e un effetto esterno in meno da giustificare.
+  NPM_CONFIG_AUDIT: 'false'
+  NPM_CONFIG_FUND: 'false'
+
+# Le action sono pinnate per SHA e non per tag: un tag è mutabile, una SHA no.
+# Le SHA qui sotto sono quelle già in uso in questo repository; vanno cambiate
+# deliberatamente, in un commit che dice quale versione si sta adottando.
+
 jobs:
+  # ---------------------------------------------------------------------------
+  # Il gate autoritativo. L'unico job che esegue l'intera suite — compresa
+  # tests/integration/native e i roundtrip che ricostruiscono il binario — e
+  # l'unico che esegue catalog:check, provenance:check, audit:release e
+  # pack:check. Se un altro job lo contraddice, ha ragione questo.
+  # Il timeout è largo per costruzione. Il valore precedente, 15 minuti, era
+  # vicino alla durata osservata e non lascia margine: la stessa suite impiega
+  # circa 25 minuti su una macchina di sviluppo scarica, e la classe di scadenza
+  # documentata in AGENTS.md dipende proprio dal carico. Un timeout stretto
+  # trasformerebbe un runner lento in un difetto inesistente.
+  # ---------------------------------------------------------------------------
+  # Senza `name:` di proposito: il nome del controllo resta `verifica`, che è
+  # quello che un'eventuale protezione del branch richiede già. Un'etichetta più
+  # bella non vale un controllo obbligatorio che smette di essere riportato.
   verifica:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - name: Checkout senza credenziali persistenti
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -24,25 +85,221 @@ jobs:
           cache: npm
       - name: Dipendenze dal lockfile
         run: npm ci
+      # Prima della verifica lunga, l'area in ristrutturazione: se è rotta si sa
+      # in pochi minuti invece che alla fine.
       - name: Test mirati del workspace personale
         run: npx --no-install vitest run tests/unit/workspace tests/roundtrip/workspace-inspection.test.ts tests/roundtrip/personal-entry.test.ts
       - name: Verifica completa senza account AI
         run: npm run verify
+      # Eseguito dopo verify, non prima. La domanda non è «il checkout è pulito»
+      # — su un checkout fresco lo è sempre — ma «verify ha rigenerato un
+      # artefatto versionato invece di limitarsi a confrontarlo».
       - name: Controlla diff e artefatti versionati
         run: git diff --check && git diff --exit-code -- SBOM.spdx.json THIRD_PARTY_NOTICES.md package-lock.json
 
-  riproducibilita-windows:
-    runs-on: windows-latest
-    timeout-minutes: 10
+  # ---------------------------------------------------------------------------
+  # Portabilità. Copre ciò che deve dare lo stesso risultato ovunque: i tipi e le
+  # suite deterministiche (tests/unit, tests/adversarial, tests/golden).
+  # Restano fuori tutto tests/integration e tutto tests/roundtrip, per due
+  # ragioni distinte: tests/integration/native è la classe di scadenza
+  # documentata, e il resto ricostruisce il binario, il che renderebbe questo job
+  # lungo quanto quello autoritativo senza esserlo. Quelle suite girano comunque,
+  # una volta, in `verifica`.
+  # L'asse Node ha due valori e non uno: il pavimento dichiarato in
+  # package.json#engines e il soffitto dello stesso intervallo.
+  # ---------------------------------------------------------------------------
+  matrice-rapida:
+    name: matrice rapida (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      # Un runner rosso non deve cancellare gli altri cinque: da un job annullato
+      # non si impara né che passa né che fallisce.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node:
+          # Il pavimento di engines: la versione che promettiamo di supportare.
+          - '24.19.0'
+          # Il soffitto dello stesso intervallo, non pinnato di proposito. Se
+          # l'ultima 24.x ci rompe, a mentire è `engines`, non la CI a essere
+          # instabile — e vogliamo saperlo prima di chi installa il pacchetto.
+          - '24.x'
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Checkout senza credenziali persistenti
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - name: Node della combinazione
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      # I test che creano una cartella temporanea confrontano il percorso che il
+      # sistema ha dato loro con il percorso risolto. Se la directory temporanea
+      # predefinita è esposta in una forma che la risoluzione cambia — forma
+      # breve 8.3 su Windows, /var collegato a /private/var su macOS — il
+      # confronto fallisce senza che nulla sia rotto. RUNNER_TEMP è una directory
+      # del runner, non la temporanea dell'utente: fissarlo rimuove la causa
+      # invece di escludere il test che la incontra. Che la forma sia davvero
+      # stabile su tutti e tre i runner è un'aspettativa verificabile solo in CI:
+      # se un leg fallisce ancora sul confronto dei percorsi, è qui che si guarda.
+      - name: Directory temporanea in forma risolta
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TEMP=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TMP=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Dipendenze dal lockfile
+        run: npm ci
+      - name: Tipi
+        run: npx --no-install tsc --noEmit
+      - name: Suite deterministiche
+        run: npm run test:fast
+
+  # ---------------------------------------------------------------------------
+  # Ciò che distribuiamo, non ciò che c'è nel checkout. Costruisce il tarball con
+  # la stessa sequenza di npm publish (npm pack esegue prepack, cioè la build),
+  # lo installa in un prefisso isolato e invoca il comando installato. È l'unico
+  # job in cui un errore di `files`, di `bin`, di `engines` o di risoluzione dei
+  # moduli in dist/ può emergere: nel checkout quei percorsi esistono comunque.
+  # L'installazione usa --ignore-scripts e un --prefix dentro RUNNER_TEMP:
+  # nessuna esecuzione durante l'installazione, nessuna scrittura nello spazio
+  # globale del runner.
+  # ---------------------------------------------------------------------------
+  ciclo-vita-pacchetto:
+    name: ciclo di vita del pacchetto (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout senza credenziali persistenti
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Node richiesto dal progetto
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.19.0'
-      - run: npm ci
-      - name: Regressione SBOM, workspace e binario su Windows
+          cache: npm
+      - name: Directory temporanea in forma risolta
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TEMP=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TMP=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Dipendenze dal lockfile
+        run: npm ci
+      - name: Costruisci il tarball che distribuiremmo
+        shell: bash
+        run: |
+          set -euo pipefail
+          # npm pack esegue prepack, quindi npm run build: la stessa sequenza di
+          # npm publish. Il checkout è fresco e *.tgz è ignorato da Git, quindi
+          # il tarball prodotto deve essere esattamente uno.
+          npm pack
+          if [ "$(ls -1 forgeyard-*.tgz | wc -l)" -ne 1 ]; then
+            echo "Atteso un solo tarball, trovati:"; ls -1 forgeyard-*.tgz; exit 1
+          fi
+          ls -l forgeyard-*.tgz
+      - name: Installa il tarball in un prefisso isolato
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Su Windows RUNNER_TEMP arriva con le barre rovesciate. Qui si porta a
+          # una forma sola, valida sia per le utilità POSIX del runner sia per
+          # Node, invece di dipendere da come ciascuna delle due tratta un
+          # separatore che per una delle due è un carattere di escape.
+          # In TEMP/TMP resta la forma originale: lì il lettore è Node.
+          temp="${RUNNER_TEMP//\\\\//}"
+          prefix="$temp/prefisso-globale"
+          mkdir -p "$prefix"
+          tarball="$(ls -1 forgeyard-*.tgz)"
+          npm install --global --prefix "$prefix" --ignore-scripts "./$tarball"
+          if [ -x "$prefix/bin/forgeyard" ]; then
+            bin="$prefix/bin/forgeyard"
+          elif [ -f "$prefix/forgeyard" ]; then
+            bin="$prefix/forgeyard"
+          else
+            echo "Nessun comando forgeyard nel prefisso di installazione:"; ls -la "$prefix"; exit 1
+          fi
+          printf 'FORGEYARD_BIN=%s\n' "$bin" >> "$GITHUB_ENV"
+      - name: Il comando installato risponde
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$FORGEYARD_BIN" --version
+          "$FORGEYARD_BIN" --help
+      - name: L'ingresso senza argomenti è un'anteprima che non scrive
+        shell: bash
+        run: |
+          set -euo pipefail
+          temp="${RUNNER_TEMP//\\\\//}"
+          progetto="$temp/progetto-vuoto"
+          rm -rf "$progetto"
+          mkdir -p "$progetto"
+          cd "$progetto"
+          # Senza terminale l'ingresso ordinario mostra l'anteprima ed esce 0:
+          # è verificabile senza che il job scriva o confermi niente. stdin è
+          # chiuso esplicitamente perché la condizione sia dichiarata, non dedotta
+          # dalla configurazione del runner.
+          "$FORGEYARD_BIN" < /dev/null > "$temp/ingresso.txt"
+          cat "$temp/ingresso.txt"
+          grep -q 'Solo anteprima: nessun file scritto.' "$temp/ingresso.txt"
+          # La garanzia che conta davvero: l'anteprima non ha lasciato byte.
+          if [ "$(ls -A . | wc -l)" -ne 0 ]; then
+            echo "L'anteprima ha scritto nella cartella:"; ls -aR .; exit 1
+          fi
+      - name: analizza --json risponde su una cartella temporanea
+        shell: bash
+        run: |
+          set -euo pipefail
+          temp="${RUNNER_TEMP//\\\\//}"
+          # L'uscita passa da un parser vero: che sia JSON valido è parte
+          # dell'affermazione, non un dettaglio del formato. Il controllo usa solo
+          # variabili globali, così non dipende dal fatto che `node -e` sia
+          # interpretato come CommonJS o come modulo. pipefail conserva l'esito
+          # del comando, che altrimenti la pipe nasconderebbe.
+          "$FORGEYARD_BIN" analizza --json "$temp/progetto-vuoto" | tee "$temp/analisi.json" | node -e 'let s="";process.stdin.setEncoding("utf8");process.stdin.on("data",(d)=>{s+=d});process.stdin.on("end",()=>{const r=JSON.parse(s);if(r.ok!==true){process.stderr.write(s);process.exit(1)}process.stdout.write("analizza --json: ok, tipo "+r.workspace.kind+"\n")})'
+
+  # ---------------------------------------------------------------------------
+  # Riproducibilità. Era il motivo del job Windows esistente ed è conservato:
+  # lo SBOM e la provenienza devono essere identici byte per byte su sistemi
+  # diversi, ed è già successo che non lo fossero (i binding nativi opzionali
+  # installati differiscono fra Linux e Windows). Ubuntu resta nella matrice
+  # anche se `verifica` lo copre: senza il confronto fra i due sistemi il
+  # controllo non dice niente, e qui la risposta arriva in pochi minuti invece
+  # che alla fine del job autoritativo.
+  # `provenance:check` confronta senza rigenerare i risultati attesi.
+  # ---------------------------------------------------------------------------
+  riproducibilita:
+    name: riproducibilità di SBOM e provenienza (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout senza credenziali persistenti
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Node richiesto dal progetto
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - name: Dipendenze dal lockfile
+        run: npm ci
+      - name: Regressione SBOM, workspace e binario
         run: npx --no-install vitest run tests/unit/provenance/sbom-reproducibility.test.ts tests/integration/provenance/generated-files.test.ts tests/unit/workspace tests/roundtrip/personal-entry.test.ts
       - name: Verifica provenienza senza rigenerare i risultati attesi
         run: npm run provenance:check
+      - name: Gli artefatti versionati non sono cambiati
+        run: git diff --exit-code -- SBOM.spdx.json THIRD_PARTY_NOTICES.md package-lock.json
