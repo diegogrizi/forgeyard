@@ -33,7 +33,7 @@ async function nativeGuard(root) {
   let state;
   try { const row = database.prepare("SELECT state FROM workspaces WHERE id=?").get(workspaceId); state = JSON.parse(row?.state || "null"); }
   finally { database.close(); }
-  if (!state) return null; /* A genuinely legacy claim can still use its old guard. */
+  if (!state) return null; /* No project state: the caller denies, it does not fall back. */
   if (state.capsuleId === null && !state.writer && state.runs.length === 0 && !state.installation) return null;
   if (state.installation || !state.writer || Date.parse(state.writer.expiresAt) < Date.now()) throw new Error("No current writer");
   const capsule = JSON.parse(readFileSync(path.join(root, ".forgeyard/capsule.json"), "utf8"));
@@ -107,34 +107,13 @@ async function readInput() {
 try {
   const input = await readInput();
   const root = path.resolve(process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd());
-  let runtime;
-  if (process.env.LOCALAPPDATA || process.platform !== "win32") {
-    runtime = await nativeGuard(root);
-  }
-  if (!runtime) {
-  const state = JSON.parse(readFileSync(path.join(root, ".forgeyard", "state", "run.json"), "utf8"));
-  const active = Object.entries(state.tasks || {}).filter(([, value]) => value?.status === "active");
-  const requestedId = process.env.FORGEYARD_TASK_ID;
-  let selected;
-  if (requestedId) {
-    selected = active.find(([id]) => id === requestedId);
-    if (!selected) {
-      deny("FORGEYARD_TASK_ID does not name an active claimed task");
-      process.exit(0);
-    }
-  } else if (input.session_id) {
-    const sessionMatches = active.filter(([, value]) => value?.sessionId === input.session_id);
-    if (sessionMatches.length === 1) selected = sessionMatches[0];
-  }
-  if (!selected && active.length === 1) selected = active[0];
-  if (!selected) {
-    deny("the active task identity is ambiguous");
-    process.exit(0);
-  }
-  runtime = selected[1];
-  }
+  /* One source of scope truth. A second, weaker path that trusted a plain JSON file
+     would become the real contract, because the most permissive consumer always does:
+     the native route verifies the capsule, the writer lease, the consent grant and every
+     frozen harness digest before it answers. */
+  const runtime = await nativeGuard(root);
   if (!runtime?.guard || !Array.isArray(runtime.guard.writeScopes) || !Array.isArray(runtime.guard.protectedPaths)) {
-    deny("the claimed task has no validated guard snapshot");
+    deny("no current native work order defines a write scope for this project");
     process.exit(0);
   }
   const field = input.tool_name === "NotebookEdit" ? "notebook_path" : input.tool_name === "Edit" || input.tool_name === "Write" ? "file_path" : undefined;

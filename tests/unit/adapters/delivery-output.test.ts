@@ -116,7 +116,9 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
     expect(byPath.get("PROJECT.md")).toContain("one trustworthy user journey");
     expect(byPath.get(".forgeyard/handoffs/CURRENT.md")).toContain("Current revision");
     expect(byPath.get(".forgeyard/reports/RUN_REPORT.md")).toContain("Revision-bound evidence");
-    expect(byPath.get(".forgeyard/usage/README.md")).toContain("forgeyard ledger record");
+    // Usage is recorded through the native protocol, and an absent observation stays unknown.
+    expect(byPath.get(".forgeyard/usage/README.md")).toContain("`fy_record`");
+    expect(byPath.get(".forgeyard/usage/README.md")).toContain("never be converted into a zero-cost claim");
   });
 
   test("keeps the minimal profile to the reusable kernel", async () => {

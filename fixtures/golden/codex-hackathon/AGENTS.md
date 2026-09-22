@@ -25,11 +25,11 @@ This is a new project initialized with a 300-minute delivery horizon.
 
 ## Delivery workflow
 
-Prioritize the smallest visible user outcome before generalized infrastructure. Claim only dependency-ready tasks and keep no more than 4 independent work items active. Use isolated Git worktrees for concurrent writes. Installed agents and skills are a catalog of capabilities; they are not running workers and should be loaded only when relevant.
+Prioritize the smallest visible user outcome before generalized infrastructure. Keep no more than 4 independent work items active. Installed agents and skills are a catalog of capabilities; they are not running workers and should be loaded only when relevant.
 
 The workflow skill is the ordinary controller: `fy_attach`, `fy_plan`, local human consent, `fy_next`, `fy_record`, all frozen `fy_verify` gates, review and `fy_finalize`. Only a current delivered verdict certifies delivery. Native clients own AI sessions, subagents, permissions and Stop; Forgeyard never launches them or handles accounts. One cooperative writer owns this tree. A claimed reviewer name is not independent provenance; medium/high risk needs verified independent review or the supported local human-review dialog.
 
-Use `fy_pause` and explicit local reconciliation for uncertain resumption. MCP arguments are `{requestId, payload}`; the shared strict JSON fallback is `forgeyard tool --root . --json` via stdin. Legacy task/worktree services remain available but are not native certificates. Never merge automatically: integrate registered work only with authorization, then exact registered cleanup. Unregistered/app-owned worktrees must not be deleted.
+Use `fy_pause` and explicit local reconciliation for uncertain resumption. MCP arguments are `{requestId, payload}`; the shared strict JSON fallback is `forgeyard tool --root . --json` via stdin. Never merge automatically and never push: integration and every other external effect need explicit authorization at the point of action.
 
 Required quality commands:
 

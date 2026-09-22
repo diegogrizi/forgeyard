@@ -6,8 +6,6 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type {
   InitCommandResult,
-  GuardCommandResult,
-  TaskCommandResult,
   UpdateCommandResult,
   VerifyCommandResult,
 } from "../../src/application/forgeyard.js";
@@ -236,71 +234,6 @@ describe("built Forgeyard CLI round trip", () => {
     expect(receipt).not.toHaveProperty("stdout");
     expect(receipt).not.toHaveProperty("stderr");
     expect(await getReceiptStatus(targetRoot, receipt)).toBe("current");
-  });
-
-  test("resumes a claimed task through fresh CLI processes and records local accounting", async () => {
-    const status = parseJson<TaskCommandResult>((await runBuiltCli(
-      repositoryRoot,
-      ["task", "status", "--root", targetRoot, "--json"],
-      sandboxRoot,
-    )).stdout);
-    expect(status.snapshot.readyTaskIds).toEqual(["T001"]);
-
-    for (const args of [
-      ["task", "claim", "T001", "--worker", "roundtrip-worker", "--session", "roundtrip-session"],
-      ["task", "checkpoint", "T001", "--worker", "roundtrip-worker", "--note", "Visible slice implemented"],
-    ]) {
-      const result = await runBuiltCli(repositoryRoot, [...args, "--root", targetRoot, "--json"], sandboxRoot);
-      expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    }
-
-    const resumed = parseJson<TaskCommandResult>((await runBuiltCli(
-      repositoryRoot,
-      ["task", "resume", "T001", "--worker", "roundtrip-worker", "--root", targetRoot, "--json"],
-      sandboxRoot,
-    )).stdout);
-    expect(resumed.task).toEqual(expect.objectContaining({
-      status: "active",
-      checkpoint: expect.objectContaining({ note: "Visible slice implemented" }),
-    }));
-
-    const allowedGuard = await runBuiltCli(repositoryRoot, [
-      "guard", "T001", "src/feature.ts", "presentation/demo.html", "--root", targetRoot, "--json",
-    ], sandboxRoot);
-    expect(allowedGuard).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    expect(parseJson<GuardCommandResult>(allowedGuard.stdout)).toEqual(expect.objectContaining({
-      allowed: true,
-      paths: ["src/feature.ts", "presentation/demo.html"],
-    }));
-    const deniedGuard = await runBuiltCli(repositoryRoot, [
-      "guard", "T001", ".env", "--root", targetRoot, "--json",
-    ], sandboxRoot);
-    expect(deniedGuard.exitCode).toBe(9);
-    expect(parseJson<{ ok: false; error: { code: string } }>(deniedGuard.stdout).error.code).toBe("FY_SCOPE_DENIED");
-
-    const completedProcess = await runBuiltCli(repositoryRoot, [
-      "task", "complete", "T001", "--worker", "roundtrip-worker", "--receipt", verificationReceiptId,
-      "--root", targetRoot, "--json",
-    ], sandboxRoot);
-    const completed = parseJson<TaskCommandResult>(completedProcess.stdout);
-    expect(completedProcess).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    expect(completed.task).toEqual(expect.objectContaining({ status: "completed", receiptId: verificationReceiptId }));
-
-    const usage = await runBuiltCli(repositoryRoot, [
-      "ledger", "record", "--task", "T001", "--provider", "local-test", "--model", "fixture",
-      "--input-tokens", "120", "--output-tokens", "45", "--cost-usd", "0.031", "--duration-ms", "2400",
-      "--root", targetRoot, "--json",
-    ], sandboxRoot);
-    expect(usage).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
-    const ledgerLines = (await readFile(path.join(targetRoot, ".forgeyard", "ledger", "events.jsonl"), "utf8"))
-      .trim().split("\n").map((line) => JSON.parse(line));
-    expect(ledgerLines.map((event) => event.kind)).toEqual([
-      "task-transition",
-      "task-transition",
-      "task-transition",
-      "task-transition",
-      "usage",
-    ]);
   });
 
   test("dry-run and applied update are deterministic no-ops", async () => {

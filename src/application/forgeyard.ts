@@ -17,29 +17,11 @@ import { applyUpdate, planUpdate } from "../installer/update.js";
 import { loadRegistry } from "../registry/load.js";
 import { resolveProfile } from "../registry/resolve.js";
 import {
-  recordUsageCommand,
-  runTaskCommand,
-  type TaskCommandInput,
-  type TaskCommandResult,
-  type UsageCommandInput,
-  type UsageCommandResult,
-} from "./orchestration.js";
-import { runGuardCommand, type GuardCommandInput, type GuardCommandResult } from "./guard.js";
-import {
-  runWorkspaceCommand,
-  type WorkspaceCommandInput,
-  type WorkspaceCommandResult,
-} from "./workspace.js";
-import {
   analyzePreparation,
   intakeIncomplete,
   preparationConfig,
 } from "./preparation.js";
 import type { ComposeProjectOptions, PreparationDecision, ProjectInspection } from "../intake/contracts.js";
-
-export type { TaskCommandInput, TaskCommandResult, UsageCommandInput, UsageCommandResult } from "./orchestration.js";
-export type { GuardCommandInput, GuardCommandResult } from "./guard.js";
-export type { WorkspaceCommandInput, WorkspaceCommandResult } from "./workspace.js";
 
 export type WriteStatus = "applied" | "preview" | "declined" | "no-op";
 
@@ -183,11 +165,7 @@ export type ForgeyardCommandResult =
   | DoctorCommandResult
   | VerifyCommandResult
   | UpdateCommandResult
-  | RollbackCommandResult
-  | TaskCommandResult
-  | UsageCommandResult
-  | GuardCommandResult
-  | WorkspaceCommandResult;
+  | RollbackCommandResult;
 
 export interface ForgeyardService {
   inspect(input: InspectCommandInput): Promise<InspectCommandResult>;
@@ -197,10 +175,6 @@ export interface ForgeyardService {
   verify(input: VerifyCommandInput): Promise<VerifyCommandResult>;
   update(input: UpdateCommandInput): Promise<UpdateCommandResult>;
   rollback(input: RollbackCommandInput): Promise<RollbackCommandResult>;
-  task(input: TaskCommandInput): Promise<TaskCommandResult>;
-  recordUsage(input: UsageCommandInput): Promise<UsageCommandResult>;
-  guard(input: GuardCommandInput): Promise<GuardCommandResult>;
-  workspace(input: WorkspaceCommandInput): Promise<WorkspaceCommandResult>;
 }
 
 export interface ForgeyardApplicationOptions {
@@ -637,13 +611,5 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         changes: { removed: result.removed, restored: result.restored },
       };
     },
-
-    task: runTaskCommand,
-
-    recordUsage: recordUsageCommand,
-
-    guard: runGuardCommand,
-
-    workspace: runWorkspaceCommand,
   };
 }

@@ -150,29 +150,6 @@ export function formatSuccess(result: ForgeyardCommandResult, json: boolean): st
         lineList("Removed", result.changes.removed),
         lineList("Restored", result.changes.restored),
       ].join("\n")}\n`;
-    case "task":
-      return `${[
-        `Forgeyard task ${result.action}: passed`,
-        ...(result.task === undefined ? [] : [`Task: ${result.task.id} (${result.task.status})`]),
-        `Active: ${result.snapshot.activeCount}/${result.snapshot.maxConcurrency}`,
-        lineList("Ready", result.snapshot.readyTaskIds),
-        ...(result.action === "next"
-          ? [lineList("Work orders", (result.workOrders ?? []).map((order) => `${order.taskId} — ${order.title}`))]
-          : []),
-        `Stop: ${result.snapshot.stopped?.reason ?? "none"}`,
-      ].join("\n")}\n`;
-    case "ledger":
-      return `Forgeyard ledger: recorded\nEvent: ${result.eventId}\n`;
-    case "guard":
-      return `Forgeyard guard: allowed\nTask: ${result.taskId}\n${lineList("Paths", result.paths)}\n`;
-    case "workspace":
-      return `${[
-        `Forgeyard workspace ${result.action}: ${result.workspace.status}`,
-        `Task: ${result.workspace.taskId}`,
-        `Branch: ${result.workspace.branch}`,
-        `Path: ${result.workspace.workspaceRoot}`,
-        ...(result.workspace.cleanedAt === undefined ? [] : [`Cleanup: completed at ${result.workspace.cleanedAt}`]),
-      ].join("\n")}\n`;
   }
 }
 
@@ -187,7 +164,22 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
     .description("Prepare and verify a project-specific agentic development environment.")
     .version(dependencies.version)
     .option("--debug", "include local diagnostic details");
-  program.addHelpText("after", "\nNative-first project commands:\n  connect/disconnect --root <project> --client codex|claude-code\n  mcp --root <project> [--client codex|claude-code] (stdio)\n  tool --root <project> --json (strict protocol 0.2 JSON stdin)\n  consent/human-review/reconcile --root <project> --run <id> --session <id>\n  reconcile-install --root <project>\n  reconcile-writer --root <project> --session <id>\n  reconcile-operation --root <project> --operation <id>\nNative human confirmations have no --yes. Legacy task receipts are not native certificates.\n");
+  program.addHelpText("after", `
+L'ingresso ordinario e 'forgeyard' senza argomenti: riconosce la cartella, chiede una
+sola conferma e prepara l'area personale. I comandi qui sotto sono operazioni avanzate,
+non passi del percorso normale.
+
+Comandi del runtime nativo:
+  connect/disconnect --root <project> --client codex|claude-code
+  mcp --root <project> [--client codex|claude-code] (stdio)
+  tool --root <project> --json (strict protocol 0.2 JSON stdin)
+  consent/human-review/reconcile --root <project> --run <id> --session <id>
+  reconcile-install --root <project>
+  reconcile-writer --root <project> --session <id>
+  reconcile-operation --root <project> --operation <id>
+
+Le conferme umane native non hanno --yes.
+`);
 
   program
     .command("inspect")
@@ -339,174 +331,6 @@ export function createProgram(dependencies: CliDependencies = defaultDependencie
       });
       writeResult(result, json);
     });
-
-  const task = program.command("task").description("Inspect and transition the resumable task graph.");
-
-  for (const action of ["status", "next"] as const) {
-    task.command(action)
-      .option("--root <target>", "project directory", ".")
-      .option("--json", "emit machine-readable output")
-      .action(async (options: Record<string, unknown>) => {
-        const json = booleanOption(options, "json");
-        const result = await dependencies.service.task({
-          action,
-          root: stringOption(options, "root") ?? ".",
-        });
-        writeResult(result, json);
-      });
-  }
-
-  task.command("claim")
-    .argument("<task-id>", "task identifier")
-    .requiredOption("--worker <id>", "stable worker identifier")
-    .option("--session <id>", "optional harness session identifier")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (taskId: string, options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const sessionId = stringOption(options, "session");
-      const result = await dependencies.service.task({
-        action: "claim",
-        root: stringOption(options, "root") ?? ".",
-        taskId,
-        workerId: stringOption(options, "worker")!,
-        ...(sessionId === undefined ? {} : { sessionId }),
-      });
-      writeResult(result, json);
-    });
-
-  task.command("checkpoint")
-    .argument("<task-id>", "task identifier")
-    .requiredOption("--worker <id>", "stable worker identifier")
-    .requiredOption("--note <text>", "short resumable checkpoint")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (taskId: string, options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const result = await dependencies.service.task({
-        action: "checkpoint",
-        root: stringOption(options, "root") ?? ".",
-        taskId,
-        workerId: stringOption(options, "worker")!,
-        note: stringOption(options, "note")!,
-      });
-      writeResult(result, json);
-    });
-
-  for (const action of ["resume", "cancel"] as const) {
-    task.command(action)
-      .argument("<task-id>", "task identifier")
-      .requiredOption("--worker <id>", "stable worker identifier")
-      .option("--root <target>", "project directory", ".")
-      .option("--json", "emit machine-readable output")
-      .action(async (taskId: string, options: Record<string, unknown>) => {
-        const json = booleanOption(options, "json");
-        const result = await dependencies.service.task({
-          action,
-          root: stringOption(options, "root") ?? ".",
-          taskId,
-          workerId: stringOption(options, "worker")!,
-        });
-        writeResult(result, json);
-      });
-  }
-
-  task.command("complete")
-    .argument("<task-id>", "task identifier")
-    .requiredOption("--worker <id>", "stable worker identifier")
-    .option("--receipt <id>", "current successful receipt identifier")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (taskId: string, options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const receiptId = stringOption(options, "receipt");
-      const result = await dependencies.service.task({
-        action: "complete",
-        root: stringOption(options, "root") ?? ".",
-        taskId,
-        workerId: stringOption(options, "worker")!,
-        ...(receiptId === undefined ? {} : { receiptId }),
-      });
-      writeResult(result, json);
-    });
-
-  task.command("fail")
-    .argument("<task-id>", "task identifier")
-    .requiredOption("--worker <id>", "stable worker identifier")
-    .requiredOption("--fingerprint <value>", "stable failure category or digest")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (taskId: string, options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const result = await dependencies.service.task({
-        action: "fail",
-        root: stringOption(options, "root") ?? ".",
-        taskId,
-        workerId: stringOption(options, "worker")!,
-        fingerprint: stringOption(options, "fingerprint")!,
-      });
-      writeResult(result, json);
-    });
-
-  const ledger = program.command("ledger").description("Record explicit local run accounting.");
-  ledger.command("record")
-    .requiredOption("--task <id>", "task identifier")
-    .requiredOption("--provider <id>", "provider identifier")
-    .requiredOption("--model <id>", "model identifier")
-    .requiredOption("--input-tokens <count>", "observed input tokens")
-    .requiredOption("--output-tokens <count>", "observed output tokens")
-    .requiredOption("--cost-usd <value>", "observed cost in USD")
-    .requiredOption("--duration-ms <count>", "observed duration in milliseconds")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const result = await dependencies.service.recordUsage({
-        root: stringOption(options, "root") ?? ".",
-        taskId: stringOption(options, "task")!,
-        provider: stringOption(options, "provider")!,
-        model: stringOption(options, "model")!,
-        inputTokens: Number(stringOption(options, "inputTokens")),
-        outputTokens: Number(stringOption(options, "outputTokens")),
-        costUsd: Number(stringOption(options, "costUsd")),
-        durationMs: Number(stringOption(options, "durationMs")),
-      });
-      writeResult(result, json);
-    });
-
-  program.command("guard")
-    .argument("<task-id>", "active task identifier")
-    .argument("<paths...>", "candidate project paths")
-    .option("--root <target>", "project directory", ".")
-    .option("--json", "emit machine-readable output")
-    .action(async (taskId: string, paths: string[], options: Record<string, unknown>) => {
-      const json = booleanOption(options, "json");
-      const result = await dependencies.service.guard({
-        root: stringOption(options, "root") ?? ".",
-        taskId,
-        paths,
-      });
-      writeResult(result, json);
-    });
-
-  const workspace = program.command("workspace").description("Manage isolated Git task worktrees and integration.");
-  for (const action of ["status", "create", "validate", "integrate", "cleanup"] as const) {
-    workspace.command(action)
-      .argument("<task-id>", "task identifier")
-      .requiredOption("--worker <id>", "stable worker identifier")
-      .option("--root <target>", "integration project directory", ".")
-      .option("--json", "emit machine-readable output")
-      .action(async (taskId: string, options: Record<string, unknown>) => {
-        const json = booleanOption(options, "json");
-        const result = await dependencies.service.workspace({
-          action,
-          taskId,
-          workerId: stringOption(options, "worker")!,
-          root: stringOption(options, "root") ?? ".",
-        });
-        writeResult(result, json);
-      });
-  }
 
   return program;
 }

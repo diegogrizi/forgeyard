@@ -15,4 +15,4 @@ List unresolved blockers, failed checks, and assumptions. Do not describe a chan
 
 ## Local recovery
 
-Start with `forgeyard task status --root .`, inspect Git status, and resume the named worker session. Never paste credentials or private transcripts into this file.
+Start with `fy_context`, inspect Git status, and resume the recorded run. If the writer lease is uncertain, use `forgeyard reconcile` rather than starting a second writer. Never paste credentials or private transcripts into this file.
