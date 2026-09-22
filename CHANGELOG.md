@@ -1,8 +1,60 @@
 # Changelog
 
-All notable changes to Forgeyard are documented here. This project follows semantic versioning once releases are published.
+Le modifiche rilevanti sono registrate qui. Il versionamento semantico si applica da
+quando esistono release pubblicate.
+
+## Non rilasciato
+
+Ristrutturazione verso la tesi descritta in [Direzione](docs/DIREZIONE.md). Per lo stato
+alla data, con la distinzione fra implementato, sul percorso e provato live, vedere
+[Stato](docs/STATO.md).
+
+### Aggiunto
+
+- Sei garanzie meccaniche come moduli con i propri test: scala dell'evidenza e citazioni
+  vive (`src/evidence/`), scansione della deriva (`src/drift/`), contabilità dichiarata
+  (`src/measure/`), coerenza dell'imbracatura generata (`src/doctor/harness-lint.ts`) e un
+  registro append-only con catena di impronte (`src/ledger/`).
+- Il lint dell'imbracatura come gate su `buildInstallPlan`: ogni percorso di installazione
+  lo attraversa, e un'imbracatura incoerente viene rifiutata prima di essere scritta. I
+  byte di terze parti sono dichiarati ma non respingono l'installazione.
+- Il certificato di consegna dichiara i livelli di evidenza del proprio supporto, il
+  livello più debole e ciò su cui poggia in ultima istanza.
+
+### Corretto
+
+- Le istruzioni sempre installate rimandavano a due seed che solo il pack `delivery`
+  installa: con il profilo `minimal` la forgia consegnava percorsi inesistenti. Trovato
+  dal lint dell'imbracatura al primo giro.
+- Il binario instradava i comandi nativi su una seconda copia più corta dell'elenco: tre
+  comandi documentati fallivano come sconosciuti.
+- `atomicText` perdeva il rename per fallimenti transitori su Windows, e verificava
+  l'impronta prima di una pubblicazione non atomica: due creazioni concorrenti potevano
+  essere entrambe acconsentite con i byte di una sola. La pubblicazione di una creazione è
+  ora esclusiva, con degradazione dove i link fisici non esistono.
+- La liveness dei riferimenti di evidenza era implementata due volte; ne resta una.
+
+### Rimosso
+
+- L'adapter Cursor. Il prodotto supporta Claude Code e Codex.
+- Il profilo `full`, che installava l'intero catalogo senza scegliere niente.
+- `README-LEGACY.md` e la pianificazione storica; il contenuto di riferimento ancora vero
+  è in [percorsi-legacy](docs/percorsi-legacy.md).
+
+### Non ancora collegato
+
+- La contabilità di misura e il registro a catena sono primitive verificate dai propri
+  test, **non attraversate da nessun percorso del prodotto**.
+- Il ciclo di vita legacy (`orchestrator/`, `worktrees/`, i comandi `task`, `workspace` e
+  `ledger`) e il pacchetto presentazione sono ancora presenti.
 
 ## 0.1.0 - 2026-09-15
+
+> **Nota aggiunta il 22 settembre 2026.** Questa voce descrive uno stato **mai
+> pubblicato** e superato dalla ristrutturazione qui sopra: l'adapter Cursor e il profilo
+> `full` non esistono più, e i conteggi di file installati che cita non sono più
+> raggiungibili da nessun profilo. Il corpo non è stato modificato, perché resta il
+> registro di ciò che fu costruito allora.
 
 ### Added
 
