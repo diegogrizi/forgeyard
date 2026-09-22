@@ -48,7 +48,7 @@
     "test:integration": "vitest run tests/integration tests/adversarial tests/golden",
     "test:roundtrip": "npm run build && vitest run tests/roundtrip",
     "catalog:check": "tsx scripts/vendor-catalog.ts --check",
-    "verify": "npm run typecheck && npm test && npm run build && npm run catalog:check && npm run provenance:check && npm run audit:release && npm run pack:check",
+    "verify": "npm run typecheck && npm run build && npm test && npm run catalog:check && npm run provenance:check && npm run audit:release && npm run pack:check",
     "provenance:generate": "tsx scripts/generate-provenance.ts --write",
     "provenance:check": "tsx scripts/generate-provenance.ts --check",
     "audit:release": "tsx scripts/release-audit.ts",
