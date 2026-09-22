@@ -19,7 +19,7 @@ import { projectContext } from "./context.js";
 import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
-import { assertWriter, budgetGaps, contains, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
+import { assertWriter, budgetGaps, contains, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
 import { NativeStore, nativeError } from "./store.js";
 import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
 import { atomicText, regularBytes, assertDirectoryChain } from "./files.js";
@@ -293,6 +293,10 @@ export class ProjectService {
       if (envelope.tool === "fy_finalize") {
         const finalGaps = [...evidenceGaps(state, run, capsule, snapshot.sha256, invalid), ...budgetGaps(run, capsule, this.now()),
           ...(!snapshot.clean ? ["git:dirty-inputs"] : [])];
+        // Restate the run on the epistemic ladder: the certificate must declare what it rests
+        // on, and the model's prose must never be able to carry it.
+        const evidence = deliveryEvidence(state, run, capsule, snapshot.sha256, invalid);
+        if (!evidence.certification.certifiable) finalGaps.push("evidence:unsupported-verdict");
         const verdict = finalGaps.length > 0 ? "blocked" : "delivered";
         const reportPath = `.forgeyard/reports/${run.plan.id}/${snapshot.sha256}.json`;
         run.status = verdict;
@@ -303,11 +307,17 @@ export class ProjectService {
             verdict, criteria: run.criteria, gates: state.operations.filter((operation) => operation.runId === run.plan.id &&
               operation.inputSha256 === snapshot.sha256).map(({ processOwner: _owner, ...operation }) => operation),
             reviews: run.reviews, limits: { recordedCostUsd: run.recordedCostUsd, hardProviderSpendLimit: false },
-            interpretation: "Criteria are evidence-linked declarations; gates are observed. This certificate does not prove universal software correctness." })}\n`;
+            evidence: { levels: evidence.summary, supporting: evidence.supportingIds.length,
+              weakestLevel: evidence.certification.weakestLevel,
+              weakestGrounding: evidence.certification.weakestGrounding, claims: evidence.claims },
+            interpretation: "Criteria are evidence-linked declarations; gates are observed. Every supporting claim carries a declared evidence level, and prose cannot support this verdict. This certificate does not prove universal software correctness." })}\n`;
           if (!state.artifacts.some((artifact) => artifact.path === reportPath))
             state.artifacts.push({ path: reportPath, content, sha256: sha256Text(content) });
         }
         return { verdict, gaps: finalGaps, capsuleId: capsule.id, runId: run.plan.id,
+          evidence: { levels: evidence.summary, weakestLevel: evidence.certification.weakestLevel,
+            weakestGrounding: evidence.certification.weakestGrounding,
+            blocking: evidence.certification.blocking.map((entry) => entry.id) },
           report: verdict === "delivered" ? reportPath : null };
       }
       throw nativeError("FY_PROTOCOL_INVALID", "This tool is not implemented for the current project state.");

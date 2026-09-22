@@ -11,7 +11,7 @@ This is a {{project.mode}} project initialized with a {{workflow.timeboxMinutes}
 - Start with native `fy_context`; read current requirements, plans, decisions and evidence gaps.
 - A new request needs a requirement-linked `fy_plan`, even after an earlier delivery. Reuse the stable capsule.
 - Load `.agents/skills/forgeyard-workflow/SKILL.md` when planning or executing work.
-- Read `PROJECT.md` for the visible journey and `.forgeyard/handoffs/CURRENT.md` when resuming another session.
+- {{continuity.sources}}
 - Keep detailed workflow guidance in skills; keep this file navigational.
 - Do not ask the user to choose catalog skills or internal workflow components during normal use; translate the product request into the prepared workflow.
 

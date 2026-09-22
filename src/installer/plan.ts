@@ -7,6 +7,7 @@ import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js"
 import type { ResolvedProfile } from "../registry/resolve.js";
 import { serializeConfig } from "../config/config.js";
 import { capsuleFile, compileCapsule } from "../capsule/capsule.js";
+import { assertHarnessAccepted, lintHarness } from "../doctor/harness-lint.js";
 
 export interface BuildInstallPlanInput {
   targetRoot: string;
@@ -105,6 +106,10 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
   ];
   files.push(capsuleFile(compileCapsule(input.config, files, input.forgeyardVersion)));
   assertNoCaseCollisions(files.map((file) => file.path));
+  // A harness is compiled, not copied: an incoherent one is refused before it reaches the disk.
+  // Vendored bytes are disclosed but never reject, because they are preserved verbatim under
+  // their own license and are not ours to repair.
+  assertHarnessAccepted(lintHarness(files));
   if (new Set(files.map((file) => file.componentId)).size !== files.length) {
     throw new ForgeyardError({
       code: "FY_COMPONENT_CONFLICT",

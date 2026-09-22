@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 
 import { createClaudeCodeAdapter } from "../../../src/adapters/claude-code.js";
 import { createCodexAdapter } from "../../../src/adapters/codex.js";
+import { lintHarness } from "../../../src/doctor/harness-lint.js";
 import { loadConfig, validateConfig } from "../../../src/config/config.js";
 import type { ForgeyardConfig, HarnessAdapter, HarnessId } from "../../../src/core/contracts.js";
 import { loadRegistry } from "../../../src/registry/load.js";
@@ -179,4 +180,31 @@ test("Claude Code preserves an existing CLAUDE.md instruction surface", async ()
   expect(files.some((file) => file.path === "CLAUDE.md")).toBe(false);
   expect(files.find((file) => file.componentId === "foundation.project-instructions")?.path)
     .toBe(".forgeyard/HOST.md");
+});
+
+describe("navigational instructions only point at seeds the composition installs", () => {
+  test.each(adapters)("%s minimal instructions do not promise a delivery seed", async (harness, factory) => {
+    const { files } = await render(harness, factory, "minimal");
+    const instruction = files.find((file) => file.componentId === "foundation.project-instructions")!;
+
+    expect(instruction.content).not.toContain(".forgeyard/handoffs/CURRENT.md");
+    expect(instruction.content).toContain("installs no delivery seed");
+  });
+
+  // The lint is the gate; asserting through it keeps the regression tied to the mechanism.
+  test.each(adapters)("%s minimal renders a coherent harness", async (harness, factory) => {
+    const { files } = await render(harness, factory, "minimal");
+    const report = lintHarness(files);
+
+    expect(report.findings).toEqual([]);
+    expect(report.status).toBe("clean");
+  });
+
+  test.each(adapters)("%s hackathon keeps both delivery seeds reachable", async (harness, factory) => {
+    const { files } = await render(harness, factory, "hackathon");
+    const instruction = files.find((file) => file.componentId === "foundation.project-instructions")!;
+
+    expect(instruction.content).toContain("`PROJECT.md`");
+    expect(instruction.content).toContain(".forgeyard/handoffs/CURRENT.md");
+  });
 });

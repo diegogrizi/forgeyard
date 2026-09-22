@@ -13,6 +13,7 @@ import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderCodexCatalog } from "./codex-catalog.js";
 import {
   compositionVariables,
+  continuityVariables,
   instructionTarget,
   projectContextVariables,
   taskContractVariables,
@@ -173,7 +174,7 @@ function presentationTimeline(config: ForgeyardConfig): string {
   }).join("\n");
 }
 
-function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<string, string>> {
+function variablesFor(slot: string, config: ForgeyardConfig, slots: ReadonlySet<string>): Readonly<Record<string, string>> {
   switch (slot) {
     case "project.instructions":
       return {
@@ -186,6 +187,7 @@ function variablesFor(slot: string, config: ForgeyardConfig): Readonly<Record<st
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
         "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        ...continuityVariables(slots),
       };
     case "workflow.primary":
       return {
@@ -376,12 +378,13 @@ export function createCodexAdapter(): HarnessAdapter {
         }
       }
 
+      const renderedSlots = new Set<string>(requiredSlots);
       const files: PlannedFile[] = [];
       for (const slot of requiredSlots) {
         const component = bySlot.get(slot);
         if (component === undefined) throw adapterError(`Required Codex component slot '${slot}' is missing.`);
         const target = targetForSlot(slot, config);
-        files.push(await renderComponent(component, target, variablesFor(slot, config)));
+        files.push(await renderComponent(component, target, variablesFor(slot, config, renderedSlots)));
       }
       for (const catalog of catalogComponents) {
         files.push(...await renderCodexCatalog(catalog, catalog.catalogSelection ?? "all"));

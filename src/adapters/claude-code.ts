@@ -14,6 +14,7 @@ import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderClaudeCodeCatalog } from "./claude-code-catalog.js";
 import {
   compositionVariables,
+  continuityVariables,
   instructionTarget,
   projectContextVariables,
   taskContractVariables,
@@ -175,7 +176,7 @@ function presentationTimeline(config: ForgeyardConfig): string {
   }).join("\n");
 }
 
-function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig): Readonly<Record<string, string>> {
+function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig, slots: ReadonlySet<string>): Readonly<Record<string, string>> {
   switch (slot) {
     case "project.instructions":
       return {
@@ -188,6 +189,7 @@ function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig): Readonly<Recor
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
         "presentation.path": escapeMarkdownInline(config.paths.presentation),
+        ...continuityVariables(slots),
       };
     case "workflow.primary":
       return {
@@ -372,11 +374,12 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         }
       }
 
+      const renderedSlots = new Set<string>(requiredSlots);
       const files: PlannedFile[] = [];
       for (const slot of requiredSlots) {
         const component = bySlot.get(slot);
         if (component === undefined) throw adapterError(`Required Claude Code component slot '${slot}' is missing.`);
-        let rendered = await renderComponent(component, targetForSlot(slot, config), variablesFor(slot, config));
+        let rendered = await renderComponent(component, targetForSlot(slot, config), variablesFor(slot, config, renderedSlots));
         if (slot === "project.instructions") {
           rendered = withContent(
             rendered,

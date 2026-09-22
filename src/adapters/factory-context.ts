@@ -41,6 +41,21 @@ export function instructionTarget(config: ForgeyardConfig, canonicalPath: string
   return hasExistingHostInstructions(config, canonicalPath) ? ".forgeyard/HOST.md" : canonicalPath;
 }
 
+/**
+ * Navigational instructions must not point at a seed this composition does not install.
+ * The sentence is derived from the slots actually being rendered, not from the profile name.
+ */
+export function continuityVariables(slots: ReadonlySet<string>): Readonly<Record<string, string>> {
+  const brief = slots.has("project.brief");
+  const handoff = slots.has("memory.handoff");
+  if (brief && handoff) {
+    return { "continuity.sources": "Read `PROJECT.md` for the visible journey and `.forgeyard/handoffs/CURRENT.md` when resuming another session." };
+  }
+  if (brief) return { "continuity.sources": "Read `PROJECT.md` for the visible journey; this composition installs no handoff seed." };
+  if (handoff) return { "continuity.sources": "Read `.forgeyard/handoffs/CURRENT.md` when resuming another session." };
+  return { "continuity.sources": "This composition installs no delivery seed: resume from `fy_context` and the frozen capsule." };
+}
+
 export function compositionVariables(config: ForgeyardConfig): Readonly<Record<string, string>> {
   const intake = config.intake;
   const composition = config.composition;

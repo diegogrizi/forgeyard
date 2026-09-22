@@ -1,6 +1,7 @@
 import type { Capsule } from "../capsule/capsule.js";
 import { canonicalJson, sha256Text } from "../core/hash.js";
 import { normalizePortablePath } from "../core/paths.js";
+import { certifyVerdict, summarizeEvidence, validateClaims, type Claim, type VerdictCertification } from "../evidence/epistemic.js";
 import type { NativeRun, NativeState, ProductPlan, ProductTask } from "./contracts.js";
 import { nativeError } from "./store.js";
 
@@ -103,4 +104,90 @@ export function evidenceGaps(state: NativeState, run: NativeRun, capsule: Capsul
 export function requiredGates(task: ProductTask, capsule: Capsule): readonly string[] {
   return [...new Set([...task.criteria.flatMap((criterion) => criterion.gateIds),
     ...(task.writeScopes.length > 0 ? capsule.payload.gates.map((gate) => gate.id) : [])])].sort();
+}
+
+export interface DeliveryEvidence {
+  claims: readonly Claim[];
+  /** Claims the verdict rests on: satisfied criteria and current reviews. */
+  supportingIds: readonly string[];
+  certification: VerdictCertification;
+  summary: Readonly<Record<string, number>>;
+}
+
+/** A digest is quotable as observed evidence only if its path is portable and its hash well formed. */
+function quotableReference(reference: { path: string; sha256: string; locator?: string }): boolean {
+  if (!/^[a-f0-9]{64}$/.test(reference.sha256) || reference.path.length === 0 || reference.path.length > 1024) return false;
+  try { return normalizePortablePath(reference.path) === reference.path; } catch { return false; }
+}
+
+/**
+ * Restate the run's evidence on the epistemic ladder so the certificate can declare what it
+ * rests on. Gates that ran are `executed`; a criterion satisfied by gates is a `derived`
+ * inference over them; a criterion backed only by digests, and every review, is `observed`.
+ * Recorded decisions are the model's prose: they are carried as `asserted` and can never
+ * support a verdict.
+ */
+export function deliveryEvidence(state: NativeState, run: NativeRun, capsule: Capsule,
+  inputSha256: string, invalidEvidence: readonly string[] = []): DeliveryEvidence {
+  const claims: Claim[] = [];
+  const supportingIds: string[] = [];
+  const gateClaimByKey = new Map<string, string>();
+
+  const passed = state.operations.filter((operation) => operation.runId === run.plan.id &&
+    operation.capsuleId === capsule.id && operation.planSha256 === run.planSha256 &&
+    operation.inputSha256 === inputSha256 && operation.status === "passed");
+  for (const [index, operation] of passed.entries()) {
+    const definition = capsule.payload.gates.find((gate) => gate.id === operation.gateId);
+    if (!definition) continue;
+    const id = `gate-${String(index + 1)}`;
+    gateClaimByKey.set(`${operation.taskId}/${operation.gateId}`, id);
+    claims.push({ id, statement: `Frozen gate ${operation.gateId} passed for task ${operation.taskId}.`,
+      evidence: { level: "executed", gateId: operation.gateId, argvSha256: sha256Text(canonicalJson(definition.argv)),
+        exitCode: operation.exitCode ?? 0, inputSha256: operation.inputSha256,
+        at: operation.finishedAt ?? operation.startedAt } });
+  }
+
+  for (const [index, record] of run.criteria.entries()) {
+    if (record.outcome !== "met") continue;
+    if (invalidEvidence.includes(`criterion-evidence:${record.taskId}/${record.criterionId}`)) continue;
+    const criterion = run.plan.tasks.find((task) => task.id === record.taskId)
+      ?.criteria.find((entry) => entry.id === record.criterionId);
+    if (!criterion) continue;
+    const id = `crit-${String(index + 1)}`;
+    const from = criterion.gateIds.map((gateId) => gateClaimByKey.get(`${record.taskId}/${gateId}`))
+      .filter((value): value is string => value !== undefined);
+    if (from.length === criterion.gateIds.length && from.length > 0) {
+      claims.push({ id, statement: `Criterion ${record.criterionId} of task ${record.taskId} is satisfied.`,
+        evidence: { level: "derived", from, rule: "Every gate the criterion names passed at this revision." } });
+      supportingIds.push(id);
+      continue;
+    }
+    const reference = record.evidence.find(quotableReference);
+    if (!reference) continue;
+    claims.push({ id, statement: `Criterion ${record.criterionId} of task ${record.taskId} is declared satisfied by a read source.`,
+      evidence: { level: "observed", path: reference.path, sha256: reference.sha256,
+        ...(reference.locator === undefined ? {} : { locator: reference.locator }),
+        at: run.createdAt } });
+    supportingIds.push(id);
+  }
+
+  for (const [index, review] of run.reviews.entries()) {
+    if (review.inputSha256 !== inputSha256 || invalidEvidence.includes(`review:evidence-stale:${String(index)}`)) continue;
+    if (!quotableReference(review.artifact)) continue;
+    const id = `review-${String(index + 1)}`;
+    claims.push({ id, statement: `A ${review.independent ? "independent" : "same-session"} review artifact exists at this revision.`,
+      evidence: { level: "observed", path: review.artifact.path, sha256: review.artifact.sha256,
+        ...(review.artifact.locator === undefined ? {} : { locator: review.artifact.locator }),
+        at: run.createdAt } });
+    supportingIds.push(id);
+  }
+
+  for (const [index, decision] of run.decisions.entries()) {
+    claims.push({ id: `decision-${String(index + 1)}`, statement: decision.description,
+      evidence: { level: "asserted", origin: "model-prose" } });
+  }
+
+  validateClaims(claims);
+  return { claims, supportingIds, certification: certifyVerdict(claims, supportingIds),
+    summary: summarizeEvidence(claims) };
 }
