@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createHarnessAdapter } from "../adapters/create.js";
@@ -13,11 +13,20 @@ import {
 } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
-import { resolveInsideRoot } from "../core/paths.js";
+import { normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
 import { loadInstallManifest, type InstallManifest } from "../installer/manifest.js";
 import { scanGeneratedContent } from "./content-audit.js";
 import { auditPresentationBundle } from "./presentation-audit.js";
-import { readCapsule } from "../capsule/capsule.js";
+import { readCapsule, readRegularProjectFile, type Capsule } from "../capsule/capsule.js";
+import {
+  currentProfileFromInspection,
+  frozenProfileFromCapsule,
+  scanDrift,
+  type DriftKind,
+  type DriftReport,
+  type FrozenProfile,
+} from "../drift/scan.js";
+import { inspectProject } from "../intake/inspect.js";
 
 interface LockComponent {
   id: string;
@@ -165,12 +174,180 @@ async function checkPresentationOutput(
   }
 }
 
+const DRIFT_CHECK_ID = "harness-drift";
+const DRIFT_FINDINGS_IN_MESSAGE = 3;
+
+/** Finding kinds whose subject is a project-relative path, and only those, are reported as paths. */
+const DRIFT_PATH_SUBJECTS: ReadonlySet<DriftKind> = new Set<DriftKind>([
+  "harness-file-changed",
+  "harness-file-unreadable",
+  "mutable-root-missing",
+  "protected-path-missing",
+]);
+
+/**
+ * Root-confined presence probe that refuses to traverse a symbolic link, exactly like the capsule
+ * reader. The bounded inspection never walks `.git`, `node_modules` or `vendor`, which are exactly
+ * the paths a capsule protects, so protected paths and mutable roots need their own confirmation or
+ * every capsule would report a missing protected path. A path that cannot be confirmed is left out:
+ * presence is never invented for the scan.
+ */
+export async function presentHarnessPaths(root: string, candidates: readonly string[]): Promise<readonly string[]> {
+  const present: string[] = [];
+  for (const candidate of candidates) {
+    try {
+      const portable = normalizePortablePath(candidate);
+      let traversed = false;
+      let cursor = "";
+      for (const segment of portable === "." ? [] : portable.split("/")) {
+        cursor = cursor === "" ? segment : `${cursor}/${segment}`;
+        if ((await lstat(resolveInsideRoot(root, cursor))).isSymbolicLink()) {
+          traversed = true;
+          break;
+        }
+      }
+      if (!traversed) present.push(portable);
+    } catch {
+      // Absent, unreadable or outside the root: report nothing rather than claim it exists.
+    }
+  }
+  return present;
+}
+
+/**
+ * Current digests of the harness files the capsule froze, read bounded and root-confined. An absent,
+ * irregular or symlinked file is `null`, which the scan reports as `harness-file-unreadable`: a
+ * read-only diagnostic never throws because a project file went missing.
+ */
+export async function harnessFileDigests(
+  root: string,
+  files: FrozenProfile["files"],
+): Promise<Record<string, string | null>> {
+  const digests: Record<string, string | null> = {};
+  for (const file of files) {
+    try {
+      digests[file.path] = sha256Text(await readRegularProjectFile(root, file.path));
+    } catch {
+      digests[file.path] = null;
+    }
+  }
+  return digests;
+}
+
+function driftCounts(report: DriftReport): string {
+  return `${report.counts.blocking} blocking, ${report.counts.important} important, ` +
+    `${report.counts.informational} informational`;
+}
+
+/** The first findings only: a check message has to stay readable, the report carries the rest. */
+function driftHeadline(report: DriftReport): string {
+  const shown = report.findings
+    .slice(0, DRIFT_FINDINGS_IN_MESSAGE)
+    .map((finding) => `${finding.kind} '${finding.subject}'`);
+  const remaining = report.findings.length - shown.length;
+  return remaining > 0 ? `${shown.join("; ")}; and ${remaining} more` : shown.join("; ");
+}
+
+function driftPaths(report: DriftReport): readonly string[] {
+  return [...new Set(
+    report.findings.filter((finding) => DRIFT_PATH_SUBJECTS.has(finding.kind)).map((finding) => finding.subject),
+  )].sort((left, right) => left.localeCompare(right, "en"));
+}
+
+async function compareHarnessDrift(
+  root: string,
+  capsule: Capsule,
+): Promise<{ report: DriftReport; limitations: readonly string[] } | undefined> {
+  try {
+    const frozen = frozenProfileFromCapsule(capsule.payload);
+    const inspection = await inspectProject({ root });
+    const walked = (inspection.evidenceRecords ?? [])
+      .filter((record) => record.signal === "file:observed")
+      .map((record) => record.path);
+    const confirmed = await presentHarnessPaths(root, [...frozen.protectedPaths, ...frozen.mutableRoots,
+      ...frozen.gates.flatMap((gate) => (gate.cwd === undefined ? [] : [gate.cwd]))]);
+    const current = currentProfileFromInspection(
+      inspection,
+      await harnessFileDigests(root, frozen.files),
+      [...walked, ...inspection.instructionSurfaces, ...confirmed],
+    );
+    return { report: scanDrift(frozen, current), limitations: inspection.scan?.limitations ?? [] };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Compare what the frozen harness asserts about the project with what the project shows now. Drift
+ * is information about a project that grew, not a broken installation, so this check is never
+ * required and no verdict of it sinks the doctor report.
+ *
+ * A failed check means the installed state needs correcting, and the product counts it as a
+ * failure, so only drift that stops the approved harness from operating earns it: a gate whose
+ * command is gone, harness bytes that are not the approved ones, a writable root that disappeared.
+ * A difference below blocking severity is reported without a verdict, because the capsule froze a
+ * policy rather than an observation: a protected path the project never had cannot be told from one
+ * it lost, and a freshly installed, entirely correct project would otherwise report a failure.
+ */
+async function checkHarnessDrift(root: string, capsule: Capsule | undefined): Promise<CheckResult> {
+  const comparison = capsule === undefined ? undefined : await compareHarnessDrift(root, capsule);
+  if (comparison === undefined) {
+    return {
+      id: DRIFT_CHECK_ID,
+      status: "unavailable",
+      required: false,
+      message: capsule === undefined
+        ? "No readable frozen capsule is available, so the project cannot be compared with an approved harness."
+        : "The project could not be inspected read-only, so drift against the frozen harness was not compared.",
+    };
+  }
+  const { report, limitations } = comparison;
+  if (report.status === "aligned") {
+    return passed(DRIFT_CHECK_ID, "The project still shows what the frozen harness asserts about it.", false);
+  }
+  if (report.status === "inconclusive") {
+    const unconfirmed = report.findings.filter((finding) => finding.inconclusive).length;
+    return {
+      id: DRIFT_CHECK_ID,
+      status: "skipped",
+      required: false,
+      message: `The bounded project inspection was partial (${limitations.join(", ") || "undeclared bounds"}), ` +
+        "so alignment with the frozen harness cannot be declared" +
+        (unconfirmed === 0 ? "." : `; ${unconfirmed} finding(s) could not be confirmed within those bounds.`),
+    };
+  }
+  const paths = driftPaths(report);
+  const reported = { ...(paths.length === 0 ? {} : { paths }) };
+  if (report.counts.blocking === 0) {
+    return {
+      id: DRIFT_CHECK_ID,
+      status: "skipped",
+      required: false,
+      message: "The project differs from the frozen harness without contradicting what it needs to " +
+        `operate (${driftCounts(report)}): ${driftHeadline(report)}. No verdict is claimed on a ` +
+        "difference below blocking severity; it is reported so it can be reviewed.",
+      ...reported,
+    };
+  }
+  return {
+    id: DRIFT_CHECK_ID,
+    status: "failed",
+    required: false,
+    message: "The frozen harness no longer operates as approved against this project " +
+      `(${driftCounts(report)}): ${driftHeadline(report)}. Drift is reported without failing the ` +
+      "installation verdict: a project that grew is not a broken install.",
+    remediation: "Review the drift, then update the harness explicitly or restore what the frozen harness assumes.",
+    ...reported,
+  };
+}
+
 export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   const root = path.resolve(input.root);
   const checks: CheckResult[] = [];
   let config: Awaited<ReturnType<typeof loadConfig>> | undefined;
   let manifest: InstallManifest | undefined;
   let lock: LockDocument | undefined;
+  let capsule: Capsule | undefined;
 
   try {
     config = await loadConfig(path.join(root, "forgeyard.yaml"));
@@ -211,7 +388,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
 
   if (manifest !== undefined && lock !== undefined) {
     if (manifest.files.some((record) => record.componentId === "forgeyard.capsule")) {
-      try { await readCapsule(root); checks.push(passed("capsule", "Frozen native capsule, policy, provenance and gates agree.")); }
+      try { capsule = await readCapsule(root); checks.push(passed("capsule", "Frozen native capsule, policy, provenance and gates agree.")); }
       catch (error) { checks.push(failed("capsule", "Frozen native capsule integrity could not be established.", errorPaths(error))); }
     } else checks.push({ id: "capsule", status: "skipped", required: false,
       message: "Legacy installation has no native capsule; its task receipts are not native certificates." });
@@ -254,6 +431,8 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     checks.push(failed("presentation-output", "Presentation output cannot be audited because install metadata is invalid."));
     checks.push(failed("content-audit", "Generated content cannot be audited because install metadata is invalid."));
   }
+
+  checks.push(await checkHarnessDrift(root, capsule));
 
   const lookup = input.commandLookup ?? defaultCommandLookup;
   const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
