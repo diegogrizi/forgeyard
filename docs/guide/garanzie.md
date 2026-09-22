@@ -125,10 +125,9 @@ esiste con i suoi test, ma oggi nessun rapporto la esegue per te. Vedere
 
 ## G5 — Misura dichiarata
 
-> **Questa garanzia non è su nessun percorso del prodotto.** Il modulo è una primitiva
-> verificata con i suoi test, ma nessun comando lo chiama, e **oggi il certificato di
-> consegna non riporta nessuna contabilità.** Il resto di questa sezione descrive il
-> meccanismo e cosa manca per collegarlo.
+> **Il confronto con un costo umano avviene solo se qualcuno lo dichiara.** Il certificato
+> riporta sempre il lato agentico; il lato umano compare soltanto quando è stato dichiarato
+> in `forgeyard.yaml`, e in sua assenza resta **assente** — non stimato.
 
 **La promessa.** «L'AI è stata più veloce» diventa un numero con un metodo dichiarato e
 un margine, oppure resta non misurato.
@@ -161,14 +160,28 @@ file che quella persona possiede. Senza quella dichiarazione il confronto resta
 **assente**, non stimato: nessun rapporto, nessun intervallo, nessun «circa». Un numero
 che nessuno ha firmato non è una linea di base, è un'opinione con i decimali.
 
-**Cosa manca per collegarla.** Due cose, ed entrambe sono lavoro sul percorso e non sul
-modulo:
+**Come si dichiara.** In `forgeyard.yaml`, che è il file posseduto dalla persona:
 
-1. **registrare le osservazioni di consumo una per una** — provider, modello, token in
-   ingresso e in uscita, durata e costo — estendendo il protocollo nativo e lo stato del
-   run, invece di sommare a posteriori qualcosa che nessuno ha riportato;
-2. **leggere la linea di base umana** dal file in cui è stata dichiarata, con il suo
-   metodo, la sua confidenza, la sua fonte ispezionabile e il suo intervallo di ore.
+```yaml
+measurement:
+  humanBaseline:
+    method: declared-estimate      # oppure reference-class
+    hours: 8
+    hourlyRateUsd: 75
+    confidence: medium
+    source: "Stima del responsabile tecnico, 2026-09-22"
+    rangeHours: { low: 6, high: 12 }
+```
+
+Il run conserva le osservazioni **una per una** — provider, modello, token in ingresso e
+in uscita, durata, costo — invece del solo totale, perché un totale non è auditabile.
+L'istante di ciascuna lo timbra il programma: un timestamp fornito dal modello non è
+un'osservazione.
+
+La linea di base **non entra nella capsula**: non governa niente in esecuzione, e
+congelarla avrebbe cambiato l'identità delle imbracature già installate senza motivo. Il
+certificato registra invece i valori usati e la loro impronta, così una modifica
+successiva del file non può cambiare un verdetto già emesso.
 
 **Cosa non promette.** Il tetto di costo registrato non è un limite di spesa presso il
 provider, e Forgeyard non misura automaticamente i token.
