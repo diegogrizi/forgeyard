@@ -7,7 +7,9 @@ import { createProjectService, type ProjectService } from "./service.js";
 import { nativeError } from "./store.js";
 import { connectNativeClient, disconnectNativeClient, type NativeClient } from "./bindings.js";
 
-export const NATIVE_COMMANDS = ["mcp", "tool", "consent", "human-review", "reconcile", "reconcile-install", "reconcile-writer", "reconcile-operation", "connect", "disconnect"];
+/** The single list the binary routes on: a second copy would diverge, and it did. */
+export const NATIVE_COMMANDS: readonly string[] = ["mcp", "tool", "consent", "human-review", "reconcile",
+  "reconcile-install", "reconcile-writer", "reconcile-operation", "connect", "disconnect"];
 
 async function readEnvelope(): Promise<unknown> {
   const chunks: Buffer[] = []; let bytes = 0;
