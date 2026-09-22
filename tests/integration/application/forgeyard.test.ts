@@ -129,6 +129,7 @@ describe("Forgeyard application transaction boundary", () => {
     expect(await exists(path.join(targetRoot, "AGENTS.md"))).toBe(false);
     expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual([
       "forgeyard.yaml",
+      ".forgeyard/.gitignore",
       "PROJECT.md",
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",
@@ -191,6 +192,7 @@ describe("Forgeyard application transaction boundary", () => {
     expect(await exists(path.join(targetRoot, "AGENTS.md"))).toBe(false);
     expect((await loadInstallManifest(targetRoot)).files.map((file) => file.path)).toEqual([
       "forgeyard.yaml",
+      ".forgeyard/.gitignore",
       "PROJECT.md",
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",

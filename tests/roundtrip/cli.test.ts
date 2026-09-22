@@ -281,6 +281,7 @@ describe("built Forgeyard CLI round trip", () => {
     expect(await readFile(path.join(targetRoot, "sentinel.txt"), "utf8")).toBe("unrelated\n");
     expect(manifest.files.map((file) => file.path)).toEqual([
       "forgeyard.yaml",
+      ".forgeyard/.gitignore",
       "PROJECT.md",
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",
