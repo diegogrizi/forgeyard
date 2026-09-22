@@ -22,7 +22,6 @@ una nota storica, sono percorsi ancora presenti nel checkout.
 | `src/doctor/` | controlli strutturali e lint dell'imbracatura (G6) |
 | `src/registry/` | caricamento e risoluzione dei pack |
 | `src/catalog/` | lettura del catalogo portabile e del suo frontmatter |
-| `src/guard/` | decisione pura su un percorso proposto per la scrittura |
 | `src/provenance/` | SBOM, notices, attestazione del vendor |
 | `src/cli/` | superficie a riga di comando |
 
@@ -30,11 +29,13 @@ La tabella descrive responsabilità, non attivazione. `src/drift/` e `src/measur
 esistono con i loro test ma non sono ancora chiamati da un percorso ordinario: quale
 garanzia sia attiva e quale no è registrato, con la sua data, in [Stato](../STATO.md).
 
-## Moduli in uscita
+## Un motore solo
 
-Sopravvive un motore solo. Questi sono ancora nel checkout e i loro comandi rispondono,
-ma non fanno parte del prodotto di arrivo: `src/orchestrator/`, `src/worktrees/`,
-`src/observability/`, più la parte legacy di `src/config/` e `src/application/`. Vedere
+Il secondo ciclo di vita è stato rimosso il 22 settembre 2026: `src/orchestrator/`,
+`src/worktrees/`, `src/observability/` e `src/guard/` non esistono più, con i comandi
+`task`, `workspace`, `ledger` e `guard`. Restano nel checkout, come percorsi avanzati e
+non come tutorial, i comandi `inspect`, `prepare`, `init`, `doctor`, `verify`, `update` e
+`rollback`, più il pacchetto presentazione. Vedere
 [Percorsi legacy](../percorsi-legacy.md) e [Stato](../STATO.md).
 
 ## I confini

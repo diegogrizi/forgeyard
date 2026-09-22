@@ -166,12 +166,14 @@ Il repository contiene tre motori sovrapposti. Ne sopravvive uno.
 |---|---|---|
 | Adapter Cursor | ~760 righe + riferimenti in 19 file | Il prodotto supporta Claude Code e Codex. Un terzo adapter descrittivo non enforceable diluisce le garanzie. |
 | Pacchetto presentazione | 2 auditor, 1 pack, fixture golden | Un motore di slide non appartiene a una fabbrica di imbracature. |
-| Profili `full` e `hackathon` | 69 plugin vendored senza selettore | `full` installa tutto: è esattamente la libreria di intenzioni da cui ci distinguiamo. |
-| Ciclo di vita legacy: `orchestrator/`, `worktrees/`, comandi `task`/`workspace`/`ledger` | ~2.200 righe | Duplica il runtime nativo cooperativo. Due sistemi di task significano zero autorità. |
+| Profilo `full` | 69 plugin vendored senza selettore | Installava tutto: è esattamente la libreria di intenzioni da cui ci distinguiamo. `hackathon` resta come selezione curata. |
+| Ciclo di vita legacy: `orchestrator/`, `worktrees/`, `observability/`, `guard/`, comandi `task`/`workspace`/`ledger`/`guard` | 4.715 righe | Duplicava il runtime nativo cooperativo. Due sistemi di task significano zero autorità. |
 | Superficie CLI legacy `init`/`inspect`/`prepare`/`update`/`rollback` come percorso ordinario | — | Un ingresso. Restano operazioni avanzate, non il tutorial. |
 
-Conservato e rilegato: `guard/evaluate` (logica di percorso pura) viene riattaccato
-agli scope del run nativo invece che al grafo YAML legacy.
+Conservati il contratto di attività e le ricevute di verifica: un file di task è un
+contratto con obiettivo, criteri, argv di verifica e ambiti, non un pezzo di scheduler.
+Il guard di scrittura è diventato nativo soltanto: il suo ramo legacy era il più
+permissivo dei due percorsi che proteggono la stessa cosa.
 
 Il catalogo vendored resta uno snapshot MIT pinnato e attestato: la potatura richiede
 di rigenerare `UPSTREAM.json`, SBOM e notices, ed è un incremento a sé.
@@ -190,7 +192,7 @@ src/
   evidence/    ricevute + scala epistemica + citazioni       [G2, G3]
   drift/       scansione imbracatura ↔ codice               [G4]
   measure/     contabilità costo/tempo con linea di base    [G5]
-  ledger/      stato ricostruibile da eventi
+  ledger/      catena di eventi verificabile
   doctor/      controlli strutturali + lint dell'imbracatura [G6]
   registry/    caricamento dei pack
   provenance/  SBOM e notices

@@ -81,53 +81,33 @@ preservati anche i file seme umani — il brief di progetto, il passaggio di con
 corrente e il rapporto di run — così disinstallare la fabbrica gestita non cancella
 l'intento del progetto né la storia della consegna.
 
-## Grafo delle attività e worktree
+## Rimossi: grafo delle attività, worktree e ledger
 
-```sh
-forgeyard task status --root .
-forgeyard task next --root . --json
-forgeyard task claim T001 --worker implementer-1 --root .
-forgeyard task checkpoint T001 --worker implementer-1 --note "test RED catturato" --root .
-forgeyard task resume T001 --worker implementer-1 --root .
-forgeyard task complete T001 --worker implementer-1 --receipt <id-ricevuta> --root .
-forgeyard guard T001 src/esempio.ts --root .
-```
+Registrato il **22 settembre 2026.** I comandi `forgeyard task`, `forgeyard workspace`,
+`forgeyard ledger` e `forgeyard guard` **non esistono più**, insieme allo scheduler, ai
+worktree Git di attività, al registro delle osservazioni e alla valutazione degli ambiti
+fuori dal runtime nativo.
 
-Le osservazioni di consumo sono esplicite, una per volta, e tutte obbligatorie:
+Il repository conteneva due cicli di vita per la stessa cosa — piano, attività, claim,
+checkpoint, verifica, finalizzazione — e due sistemi di attività significano zero autorità.
+È sopravvissuto il runtime nativo cooperativo, che è quello allineato al manifesto e quello
+che le app attraversano davvero.
 
-```sh
-forgeyard ledger record --task T001 --provider <id> --model <id> \
-  --input-tokens <n> --output-tokens <n> --cost-usd <valore> --duration-ms <n> --root .
-```
+**Cosa resta.** Il contratto di attività e le ricevute di verifica: un file in
+`.forgeyard/tasks/` non è un pezzo di scheduler, è un contratto con obiettivo, criteri,
+argv di verifica e ambiti di scrittura, e `forgeyard verify <task-id>` produce ancora una
+ricevuta legata ai byte dell'attività e alla revisione Git.
 
-Le definizioni delle attività stanno in `.forgeyard/tasks/`; claim, checkpoint, scadenze,
-fallimenti e identificativi di evidenza stanno separatamente in
-`.forgeyard/state/run.json`, così modificare una definizione non riscrive in silenzio la
-storia. Un ordine di lavoro non rivendica un'attività e non avvia un client. `claim`
-applica la prontezza delle dipendenze, il tetto di concorrenza, i budget di
-tentativi, tempo e costo, e gli ambiti di scrittura sovrapposti. Se esiste un tetto di
-costo ma il client non ha riportato un consumo, l'ordine dice `unmeasured`: mai zero.
+**Il guard di scrittura.** Il gancio `PreToolUse` per Claude Code resta, ed è diventato
+nativo soltanto. Prima preferiva lo stato nativo e in sua mancanza cadeva su un file JSON:
+ma quel ramo era il più permissivo dei due percorsi che proteggono la stessa cosa, e il
+consumatore più permissivo diventa il contratto reale. Il percorso nativo verifica
+capsula, lease dello scrittore, concessione di consenso e ogni impronta dell'imbracatura
+congelata prima di rispondere; l'assenza di un work order nativo adesso nega, non degrada.
 
-```sh
-forgeyard workspace create T001 --worker implementer-1 --root .
-forgeyard workspace validate T001 --worker implementer-1 --root .
-forgeyard workspace integrate T001 --worker implementer-1 --root .
-forgeyard workspace cleanup T001 --worker implementer-1 --root .
-```
-
-L'integrazione è serializzata da un lock atomico su una ref Git con un record immutabile
-di proprietario — token, host, processo — che permette di recuperare un proprietario locale
-morto senza un timeout sul tempo trascorso. Verifica il branch dell'attività, prepara un
-merge senza commit, esegue il comando sull'albero combinato, annulla un merge fallito o in
-conflitto, crea il commit di merge soltanto dopo quel gate, e verifica di nuovo il commit
-congelato. Dopo quel punto di successo durevole rimuove il worktree, verifica che l'esatta
-registrazione in `.git/worktrees` sia scomparsa, e in una sola transazione di ref conferma
-che il branch obiettivo è invariato mentre elimina il branch del worker soltanto sul
-commit validato. Se la pulizia si interrompe, l'integrazione completata resta registrata e
-`workspace cleanup` ritenta soltanto la pulizia.
-
-Forgeyard non esegue push, non fa deploy, non elimina con forza un branch non unito, non
-rimuove una directory non registrata e non risolve un conflitto al posto dell'operatore.
+Per Codex, che non offre lo stesso contratto `PreToolUse`, gli ambiti di scrittura
+arrivano nel work order restituito da `fy_next` e restano **consultivi**: un'istruzione
+non è un confine applicato dal sistema operativo.
 
 ## Limiti dichiarati di questi percorsi
 
@@ -135,8 +115,9 @@ rimuove una directory non registrata e non risolve un conflitto al posto dell'op
 - Non garantisce isolamento dal sistema operativo a partire da una policy nei prompt.
 - Non analizza comandi di shell arbitrari per inferire ogni mutazione possibile del
   filesystem.
-- Non misura automaticamente i token o il costo di un provider: `forgeyard ledger record`
-  accetta soltanto osservazioni esplicite.
+- Non misura automaticamente i token o il costo di un provider: il runtime nativo accetta
+  soltanto osservazioni esplicitamente riportate, e un'osservazione assente resta non
+  misurata.
 - I controlli strutturali dell'adapter non sono evidenza di una sessione autenticata con
   un client reale.
 - Deploy, pubblicazione, messaggi e acquisti restano fuori dal workflow installato.

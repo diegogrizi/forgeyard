@@ -82,10 +82,13 @@ Vedere [Uso](guide/uso.md) per cosa si può provare oggi.
 Questi tagli sono **in corso**, non compiuti. Il checkout li contiene ancora, e i
 comandi corrispondenti rispondono ancora:
 
-- il pacchetto presentazione;
-- i profili manuali `full` e `hackathon`;
-- il ciclo di vita legacy: `src/orchestrator/`, `src/worktrees/` e i comandi
-  `task`, `workspace`, `ledger`.
+- il pacchetto presentazione.
+
+Il **ciclo di vita legacy è stato rimosso** il 22 settembre 2026: `src/orchestrator/`,
+`src/worktrees/`, `src/observability/`, `src/guard/` e i comandi `task`, `workspace`,
+`ledger` e `guard` non esistono più. Sono sopravvissuti il contratto di attività e le
+ricevute di verifica, e il guard di scrittura è diventato nativo soltanto. Il profilo
+manuale `full` è stato rimosso; resta `hackathon` come selezione curata.
 
 Ciò che resta di essi è descritto, per la sola manutenzione, in
 [Percorsi legacy](percorsi-legacy.md). Non è la guida di ingresso, e non va ampliato.
