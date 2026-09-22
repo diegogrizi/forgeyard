@@ -225,12 +225,25 @@ test("il rifiuto della conferma non scrive niente e non installa niente", async 
   expect(await readdir(root)).toEqual([]);
 }));
 
-test("una risposta vuota alla domanda di prodotto non prepara niente", async () => temporary(async (root) => {
+// Leggere prima di chiedere: una risposta vuota fa tentare l'evidenza del progetto,
+// e soltanto se non basta viene detto che serve una descrizione.
+test("una risposta vuota prepara comunque se il progetto dice da solo cosa vuole", async () => temporary(async (root) => {
   const harness = harnessDouble();
+  const native = nativeDouble();
+  const result = await entry(root, { outcome: "   ", confirm: true, harness, native });
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(result.stdout).toContain("provo a dedurre il risultato dal progetto");
+  expect(harness.previews).toHaveLength(1);
+  expect(harness.previews[0]).not.toHaveProperty("brief");
+  expect(native.connected).toEqual(["claude-code"]);
+}));
+
+test("una risposta vuota su un progetto che non si spiega chiede una descrizione", async () => temporary(async (root) => {
+  const harness = harnessDouble({ failPreview: { code: "FY_INTAKE_INCOMPLETE" } });
   const result = await entry(root, { outcome: "   ", harness, native: nativeDouble() });
   expect(result.exitCode, result.stderr).toBe(0);
-  expect(result.stdout).toContain("Nessun risultato descritto");
-  expect(harness.previews).toEqual([]);
+  expect(result.stdout).toContain("Il progetto non dice da solo quale risultato vuoi ottenere");
+  expect(harness.applies).toEqual([]);
   expect(await readdir(root)).toEqual([]);
 }));
 

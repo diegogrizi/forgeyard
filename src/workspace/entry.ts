@@ -221,11 +221,18 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
     if (!steps.harness) {
       // The one thing the program cannot deduce. Asked once, whatever the reconnaissance found.
       brief = (await prompts.input("workspace.outcome", "Che risultato vuoi ottenere?")).trim();
-      if (brief.length === 0) {
-        io.writeOut("Nessun risultato descritto: non c'è niente da preparare. Nessun file scritto.\n");
+      // An empty answer is not a refusal: the factory reads what already exists before it
+      // asks, so it tries the project's own evidence and only then says it is not enough.
+      const described = brief.length === 0 ? null : brief;
+      if (described === null) io.writeOut("Nessuna descrizione: provo a dedurre il risultato dal progetto.\n");
+      try {
+        plan = await (await harness()).prepare(prepareInput(preview.root, described, false));
+      } catch (error) {
+        if (described !== null || (error as { code?: unknown } | null)?.code !== "FY_INTAKE_INCOMPLETE") throw error;
+        io.writeOut("Il progetto non dice da solo quale risultato vuoi ottenere.\n" +
+          "Riesegui forgeyard e descrivi il risultato in una riga: è l'unica cosa che il programma non può dedurre.\n");
         return 0;
       }
-      plan = await (await harness()).prepare(prepareInput(preview.root, brief, false));
     }
     const target = plan?.decision.adapter ?? client!;
     writePlanSummary(io, plan, target);
