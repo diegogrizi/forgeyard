@@ -4,6 +4,7 @@ import { createInquirerPromptDriver, type PromptDriver } from "../config/wizard.
 import { HARNESS_IDS, type HarnessId } from "../core/contracts.js";
 import { WorkspaceDiscoveryError } from "./discovery.js";
 import { inspectPersonalWorkspace, createPersonalWorkspace, PersonalWorkspaceError, type PersonalPreview } from "./personal.js";
+import { commandOnPath } from "../doctor/run-doctor.js";
 import type { WorkspaceCliIo } from "./cli.js";
 import type { PrepareCommandInput, PrepareCommandResult } from "../application/forgeyard.js";
 
@@ -22,6 +23,8 @@ export interface PersonalEntryOptions {
   io?: WorkspaceCliIo;
   harness?: HarnessPreparation;
   native?: NativeBinding;
+  /** Executable probe, injectable: a test must not depend on what this machine has installed. */
+  commandLookup?: (name: string) => Promise<boolean>;
   forgeyardVersion?: string;
 }
 interface EntrySteps { area: boolean; harness: boolean; connection: boolean }
@@ -151,9 +154,25 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
   io.writeOut("  I file privati restano in .forgeyard; codice, Git e repository figli non vengono modificati.\n");
 }
 
-function prepareInput(root: string, brief: string | null, apply: boolean): PrepareCommandInput {
+function prepareInput(root: string, brief: string | null, apply: boolean,
+  availability?: Partial<Record<HarnessId, boolean>>): PrepareCommandInput {
   // nonInteractive keeps the service silent: the entry has already asked, once.
-  return { targetRoot: root, yes: apply, dryRun: !apply, nonInteractive: true, ...(brief === null ? {} : { brief }) };
+  return { targetRoot: root, yes: apply, dryRun: !apply, nonInteractive: true,
+    ...(brief === null ? {} : { brief }),
+    ...(availability === undefined ? {} : { harnessAvailability: availability }) };
+}
+
+/**
+ * Which client is actually installed. A project with no instruction file would otherwise
+ * fall back to the portable layout even on a machine that only has the other client, and
+ * choosing for the person is the whole point. Reading PATH is not an external effect, and
+ * the candidate is never executed.
+ */
+async function installedClients(
+  lookup: (name: string) => Promise<boolean>,
+): Promise<Partial<Record<HarnessId, boolean>>> {
+  const [claude, codex] = await Promise.all([lookup("claude"), lookup("codex")]);
+  return { "claude-code": claude, codex };
 }
 
 /** Unico ingresso ordinario. I dettagli diagnostici non diventano una sequenza per l'utente. */
@@ -161,6 +180,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
   const io = options.io ?? output;
   try {
     const preview = await inspectPersonalWorkspace(root);
+    const availability = await installedClients(options.commandLookup ?? commandOnPath);
     io.writeOut(`Forgeyard — preparazione personale\nCartella: ${preview.root}\n`);
     writeTopology(io, preview);
 
@@ -203,7 +223,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
         // Without a terminal the product question cannot be asked, so the plan is previewed
         // from the project's own inputs when they carry the outcome, and declared missing otherwise.
         try {
-          const previewed = await (await harness()).prepare(prepareInput(preview.root, null, false));
+          const previewed = await (await harness()).prepare(prepareInput(preview.root, null, false, availability));
           writePlanSummary(io, previewed, previewed.decision.adapter);
         } catch (error) {
           io.writeOut((error as { code?: unknown } | null)?.code === "FY_INTAKE_INCOMPLETE"
@@ -226,7 +246,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
       const described = brief.length === 0 ? null : brief;
       if (described === null) io.writeOut("Nessuna descrizione: provo a dedurre il risultato dal progetto.\n");
       try {
-        plan = await (await harness()).prepare(prepareInput(preview.root, described, false));
+        plan = await (await harness()).prepare(prepareInput(preview.root, described, false, availability));
       } catch (error) {
         if (described !== null || (error as { code?: unknown } | null)?.code !== "FY_INTAKE_INCOMPLETE") throw error;
         io.writeOut("Il progetto non dice da solo quale risultato vuoi ottenere.\n" +
@@ -255,7 +275,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
     }
     if (!steps.harness) {
       let applied: PrepareCommandResult;
-      try { applied = await (await harness()).prepare(prepareInput(preview.root, brief, true)); }
+      try { applied = await (await harness()).prepare(prepareInput(preview.root, brief, true, availability)); }
       catch (error) {
         io.writeErr(`Imbracatura non installata: ${declaredCause(error)}\n`);
         io.writeOut("L'area personale resta come è e nessun collegamento nativo è stato configurato.\n" +

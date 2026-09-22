@@ -84,7 +84,8 @@ function parseLock(source: string): LockDocument {
   return value as LockDocument;
 }
 
-async function defaultCommandLookup(name: string): Promise<boolean> {
+/** Looks for an executable on PATH without running it. Reading PATH is not an effect. */
+export async function commandOnPath(name: string): Promise<boolean> {
   const pathValue = process.env.PATH ?? "";
   const extensions = process.platform === "win32" ? (process.env.PATHEXT ?? ".EXE;.CMD;.BAT").split(";") : [""];
   for (const directory of pathValue.split(path.delimiter).filter(Boolean)) {
@@ -433,7 +434,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
 
   checks.push(await checkHarnessDrift(root, capsule));
 
-  const lookup = input.commandLookup ?? defaultCommandLookup;
+  const lookup = input.commandLookup ?? commandOnPath;
   const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
   const executable = adapterId === "claude-code" ? "claude" : "codex";
   const label = adapterId === "claude-code" ? "Claude Code" : "Codex";

@@ -111,6 +111,7 @@ function driver(answers: { outcome?: string; confirm?: boolean }, log: string[])
 async function entry(root: string, options: {
   interactive?: boolean; outcome?: string; confirm?: boolean;
   harness?: HarnessPreparation; native?: NativeBinding;
+  commandLookup?: (name: string) => Promise<boolean>;
 }) {
   const log: string[] = [];
   let stdout = ""; let stderr = "";
@@ -121,6 +122,9 @@ async function entry(root: string, options: {
     io: { writeOut: (text) => { stdout += text; }, writeErr: (text) => { stderr += text; } },
     ...(options.harness === undefined ? {} : { harness: options.harness }),
     ...(options.native === undefined ? {} : { native: options.native }),
+    // Senza iniezione la sonda leggerebbe il PATH reale: un test non dipende da cosa
+    // questa macchina ha installato.
+    commandLookup: options.commandLookup ?? (async () => false),
   };
   return { exitCode: await runPersonalEntry(root, injected), stdout, stderr, log };
 }
@@ -359,4 +363,28 @@ test("un'area della forgia non riconosciuta viene preservata e dichiarata", asyn
   expect(result.log).toEqual([]);
   expect(harness.previews).toEqual([]);
   expect(await readFile(path.join(root, ".forgeyard/capsule.json"), "utf8")).toBe("legacy");
+}));
+
+// Scegliere per la persona: senza un file di istruzioni, l'adapter segue il client che
+// la macchina ha davvero, invece del formato portabile predefinito.
+test("l'adapter segue il client installato quando il progetto non lo dichiara", async () => temporary(async (root) => {
+  const harness = harnessDouble();
+  await entry(root, {
+    outcome: "Un servizio", confirm: true, harness, native: nativeDouble(),
+    commandLookup: async (name) => name === "claude",
+  });
+
+  expect(harness.previews[0]?.harnessAvailability).toEqual({ "claude-code": true, codex: false });
+}));
+
+test("la sonda non viene eseguita al posto della persona: il progetto che dichiara vince", async () => temporary(async (root) => {
+  await writeFile(path.join(root, "CLAUDE.md"), "# Progetto" + String.fromCharCode(10));
+  const harness = harnessDouble();
+  await entry(root, {
+    outcome: "Un servizio", confirm: true, harness, native: nativeDouble(),
+    commandLookup: async (name) => name === "codex",
+  });
+
+  // La disponibilità viene comunque riportata; la precedenza la decide la composizione.
+  expect(harness.previews[0]?.harnessAvailability).toEqual({ "claude-code": false, codex: true });
 }));
