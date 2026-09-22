@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { deliveryAccounting } from "../../../src/native/runs.js";
 import type { NativeRun } from "../../../src/native/contracts.js";
-import type { UsageObservation } from "../../../src/measure/accounting.js";
+import type { HumanBaseline, UsageObservation } from "../../../src/measure/accounting.js";
 
 function run(usage?: readonly UsageObservation[]): NativeRun {
   return {
@@ -65,5 +65,18 @@ describe("declared accounting on a delivery", () => {
     expect(report.human.measured).toBe(false);
     expect(report.comparison.costRatio.measured).toBe(false);
     expect(report.method).toMatch(/\S/);
+  });
+
+  test("a declared baseline produces a ratio, and the method says what was compared", () => {
+    const baseline: HumanBaseline = {
+      method: "declared-estimate", hours: 8, hourlyRateUsd: 75, confidence: "medium",
+      source: "Stima del responsabile tecnico, 2026-09-22", rangeHours: { low: 6, high: 12 },
+    };
+    const report = deliveryAccounting(run([observation({ costUsd: 0.5 }), observation({ costUsd: 0.5 })]), baseline);
+
+    expect(report.human).toEqual({ measured: true, value: expect.objectContaining({ costUsd: 600, hours: 8 }) });
+    expect(report.comparison.costRatio).toEqual({ measured: true, value: 600 });
+    expect(report.comparison.costRatioRange.measured).toBe(true);
+    expect(report.method).toContain("declared-estimate");
   });
 });

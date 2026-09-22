@@ -102,6 +102,12 @@ export interface ForgeyardConfig {
   intake?: IntakeConfig;
   composition?: CompositionConfig;
   autonomy?: AutonomyConfig;
+  /**
+   * Reporting input, owned by a person. Deliberately not part of the capsule policy: it
+   * governs nothing at execution time, and the certificate records the values it used
+   * so a later edit cannot change an issued verdict.
+   */
+  measurement?: { humanBaseline?: import("../measure/accounting.js").HumanBaseline };
 }
 
 export interface InitRequest {

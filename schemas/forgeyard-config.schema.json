@@ -231,6 +231,33 @@
         "stopOnAmbiguity": { "const": true },
         "externalEffects": { "const": "ask" }
       }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "humanBaseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "hours", "hourlyRateUsd", "confidence", "source"],
+          "properties": {
+            "method": { "enum": ["declared-estimate", "reference-class"] },
+            "hours": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000 },
+            "hourlyRateUsd": { "type": "number", "minimum": 0, "maximum": 1000000 },
+            "confidence": { "enum": ["high", "medium", "low"] },
+            "source": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "rangeHours": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["low", "high"],
+              "properties": {
+                "low": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000 },
+                "high": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000 }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

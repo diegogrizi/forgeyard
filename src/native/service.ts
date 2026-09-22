@@ -4,6 +4,8 @@ import path from "node:path";
 import { execa } from "execa";
 
 import { compileCapsule, readCapsule, readRegularProjectFile, type Capsule } from "../capsule/capsule.js";
+import { loadConfig } from "../config/config.js";
+import { resolveInsideRoot as insideRoot } from "../core/paths.js";
 import { createForgeyardService, renderFactoryPlan } from "../application/forgeyard.js";
 import { preparationConfig } from "../application/preparation.js";
 import { canonicalJson, sha256Bytes, sha256Text } from "../core/hash.js";
@@ -21,6 +23,7 @@ import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
 import { assertWriter, budgetGaps, contains, deliveryAccounting, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
+import { validateHumanBaseline, type HumanBaseline } from "../measure/accounting.js";
 import { NativeStore, nativeError } from "./store.js";
 import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
 import { atomicText, regularBytes, assertDirectoryChain } from "./files.js";
@@ -69,6 +72,17 @@ export class ProjectService {
     catch { throw nativeError("FY_EVIDENCE_INVALID", "An evidence reference is not a usable project path."); }
     if (checks.some((check) => check.status !== "live"))
       throw nativeError("FY_EVIDENCE_INVALID", "An evidence reference is missing or stale.");
+  }
+
+  /** A missing or unreadable declaration is no declaration: the comparison stays absent. */
+  private async declaredBaseline(): Promise<HumanBaseline | null> {
+    try {
+      const config = await loadConfig(insideRoot(this.identity.root, "forgeyard.yaml"));
+      const baseline = config.measurement?.humanBaseline;
+      if (baseline === undefined) return null;
+      validateHumanBaseline(baseline);
+      return baseline;
+    } catch { return null; }
   }
 
   private async invalidEvidence(run: NativeRun, inputSha256: string): Promise<string[]> {
@@ -185,6 +199,8 @@ export class ProjectService {
     }
     if (envelope.tool === "fy_review") await this.references([payload.artifact as unknown as EvidenceReference]);
     const invalid = payload.runId ? await this.invalidEvidence(findRun(this.store.read(), String(payload.runId)), snapshot.sha256) : [];
+    // Read before the transaction: the mutate callback is synchronous, and a declaration is I/O.
+    const declared = envelope.tool === "fy_finalize" ? await this.declaredBaseline() : null;
     const changedPaths = payload.runId ? await changedSince(this.identity.root,
       findRun(this.store.read(), String(payload.runId)).baselineHead) : [];
     const transaction = this.store.change(envelope, Number(payload.expectedRevision), (state) => {
@@ -313,7 +329,9 @@ export class ProjectService {
         // Restate the run on the epistemic ladder: the certificate must declare what it rests
         // on, and the model's prose must never be able to carry it.
         const evidence = deliveryEvidence(state, run, capsule, snapshot.sha256, invalid);
-        const accounting = deliveryAccounting(run);
+        // The baseline is a human declaration, read before this transaction and recorded in
+        // the certificate with its digest: a later edit cannot change a verdict already issued.
+        const accounting = deliveryAccounting(run, declared);
         if (!evidence.certification.certifiable) finalGaps.push("evidence:unsupported-verdict");
         const verdict = finalGaps.length > 0 ? "blocked" : "delivered";
         const reportPath = `.forgeyard/reports/${run.plan.id}/${snapshot.sha256}.json`;
