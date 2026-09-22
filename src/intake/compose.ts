@@ -33,13 +33,10 @@ function selectAdapter(
   if (inspection.instructionSurfaces.includes("CLAUDE.md")) {
     return { adapter: "claude-code", reason: "Existing CLAUDE.md instructions identify the project host." };
   }
-  if (inspection.instructionSurfaces.includes(".cursor/rules")) {
-    return { adapter: "cursor", reason: "Existing Cursor rules identify the project host." };
-  }
   if (inspection.instructionSurfaces.includes("AGENTS.md")) {
     return { adapter: "codex", reason: "Existing AGENTS.md instructions identify the project host." };
   }
-  for (const adapter of ["codex", "claude-code", "cursor"] as const) {
+  for (const adapter of ["codex", "claude-code"] as const) {
     if (options.harnessAvailability?.[adapter] === true) {
       return { adapter, reason: `The ${adapter} executable is available on this host.` };
     }

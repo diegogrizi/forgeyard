@@ -5,7 +5,6 @@ import { describe, expect, test } from "vitest";
 
 import { createClaudeCodeAdapter } from "../../../src/adapters/claude-code.js";
 import { createCodexAdapter } from "../../../src/adapters/codex.js";
-import { createCursorAdapter } from "../../../src/adapters/cursor.js";
 import { loadConfig, validateConfig } from "../../../src/config/config.js";
 import type { ForgeyardConfig, HarnessAdapter, HarnessId } from "../../../src/core/contracts.js";
 import { loadRegistry } from "../../../src/registry/load.js";
@@ -14,7 +13,6 @@ import { resolveProfile } from "../../../src/registry/resolve.js";
 const adapters: ReadonlyArray<readonly [HarnessId, () => HarnessAdapter]> = [
   ["codex", createCodexAdapter],
   ["claude-code", createClaudeCodeAdapter],
-  ["cursor", createCursorAdapter],
 ];
 
 async function render(harness: HarnessId, factory: () => HarnessAdapter, profile: "minimal" | "hackathon") {

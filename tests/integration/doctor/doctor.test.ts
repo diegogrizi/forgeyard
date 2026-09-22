@@ -90,27 +90,6 @@ describe("Forgeyard doctor", () => {
     ]));
   }, 30_000);
 
-  test("validates a Cursor install and probes the CLI executable name", async () => {
-    const root = await installedRoot("cursor");
-    const lookedUp: string[] = [];
-
-    const report = await runDoctor({
-      root,
-      commandLookup: async (name) => {
-        lookedUp.push(name);
-        return false;
-      },
-    });
-
-    expect(report.ok).toBe(true);
-    expect(lookedUp).toEqual(["cursor-agent"]);
-    expect(report.checks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "cursor-output", status: "passed", required: true }),
-      expect.objectContaining({ id: "cursor-executable", status: "unavailable", required: false }),
-      expect.objectContaining({ id: "cursor-roundtrip", status: "skipped", required: false }),
-    ]));
-  }, 30_000);
-
   test("reports managed drift as a required failure", async () => {
     const root = await installedRoot();
     await writeFile(path.join(root, "AGENTS.md"), "changed\n", "utf8");

@@ -144,13 +144,10 @@ describe("non-leaking release audit", () => {
     for (const requiredClaim of [
       "Codex",
       "Claude Code",
-      "Cursor",
       "202 agents, 183 skills, and 105 commands",
-      "490 agent-requested rules",
       "disableSkillShellExecution",
     ]) expect(publicDocs).toContain(requiredClaim);
     expect(publicDocs).not.toContain("The current executable adapter is Codex");
-    expect(publicDocs).not.toContain("Claude Code and Cursor output are not yet claimed");
   });
 
   test("reports generic rules for unfinished, unresolved, logged, remote, and identity-bearing content", async () => {

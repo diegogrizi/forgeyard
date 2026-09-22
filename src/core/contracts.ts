@@ -1,6 +1,6 @@
 export type NonEmptyArgv = readonly [executable: string, ...args: string[]];
 
-export const HARNESS_IDS = ["codex", "claude-code", "cursor"] as const;
+export const HARNESS_IDS = ["codex", "claude-code"] as const;
 export type HarnessId = (typeof HARNESS_IDS)[number];
 
 export interface QualityCommand {

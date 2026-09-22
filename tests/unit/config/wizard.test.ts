@@ -106,7 +106,7 @@ describe("initialization wizard", () => {
     }));
   });
 
-  test.each(["claude-code", "cursor"])("collects the %s adapter selected by the user", async (adapter) => {
+  test.each(["claude-code"])("collects the %s adapter selected by the user", async (adapter) => {
     const request = await collectInitRequest(
       { targetRoot: ".", nonInteractive: false, profile: "minimal", adapter },
       promptDriver({

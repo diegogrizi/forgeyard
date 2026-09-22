@@ -65,7 +65,7 @@ describe("bounded need-level capability resolver", () => {
     expect(() => resolveCapabilities(["a", "b"], [candidate("a", ["a"], { orchestration: true }), candidate("b", ["b"], { orchestration: true })], { client: "codex" })).toThrow(/coverage/i);
   });
   test("excludes revoked, incompatible, unlicensed and over-budget candidates", () => {
-    const bad = [candidate("revoked", ["domain.react"], { admitted: false }), candidate("license", ["domain.react"], { license: "" }), candidate("client", ["domain.react"], { clients: ["cursor"] }), candidate("permission", ["domain.react"], { permissions: ["network"] }), candidate("context", ["domain.react"], { contextTokens: 100 })];
+    const bad = [candidate("revoked", ["domain.react"], { admitted: false }), candidate("license", ["domain.react"], { license: "" }), candidate("client", ["domain.react"], { clients: ["claude-code"] }), candidate("permission", ["domain.react"], { permissions: ["network"] }), candidate("context", ["domain.react"], { contextTokens: 100 })];
     const result = resolveCapabilities(["domain.react"], [method, candidate("good", ["domain.react"]), ...bad], { client: "codex", allowedPermissions: [], maxContextTokens: 30 });
     expect(result.selected).toEqual(["good", "method"]);
     expect(result.excluded.map((item) => item.id)).toEqual(["client", "context", "license", "permission", "revoked"]);

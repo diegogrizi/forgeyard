@@ -41,7 +41,7 @@ export interface CapabilityResolution {
 // Curated mapping over existing first-party and pinned MIT vendored definitions.
 // Context values are policy reservations, not measured model usage or live/evaluated support.
 function bundled(id: string, provides: readonly string[], source: NonNullable<CapabilityCandidate["source"]>, orchestration = false): CapabilityCandidate {
-  return { id, provides, admitted: true, license: source.pluginId === undefined ? "Apache-2.0" : "MIT", clients: ["codex", "claude-code", "cursor"], permissions: [], contextTokens: 4096, dependencies: [], conflicts: [], orchestration, ...(orchestration ? { exclusiveGroup: "workflow.primary" } : {}), source };
+  return { id, provides, admitted: true, license: source.pluginId === undefined ? "Apache-2.0" : "MIT", clients: ["codex", "claude-code"], permissions: [], contextTokens: 4096, dependencies: [], conflicts: [], orchestration, ...(orchestration ? { exclusiveGroup: "workflow.primary" } : {}), source };
 }
 export const BUNDLED_CAPABILITIES: readonly CapabilityCandidate[] = [
   bundled("forgeyard-workflow", ["method.coordinate"], { original: true, skillPath: "packs/foundation/skills/forgeyard-workflow/SKILL.md.tpl", support: "descriptor-only" }, true),

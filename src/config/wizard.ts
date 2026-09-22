@@ -74,7 +74,7 @@ function unsupported(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex', 'claude-code', or 'cursor'.",
+    remediation: "Use profile 'minimal', 'hackathon', or 'full' with adapter 'codex' or 'claude-code'.",
     exitCode: 2,
   });
 }

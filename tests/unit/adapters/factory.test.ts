@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { createHarnessAdapter } from "../../../src/adapters/create.js";
 
 describe("harness adapter factory", () => {
-  test.each(["codex", "claude-code", "cursor"] as const)("creates the %s adapter", (id) => {
+  test.each(["codex", "claude-code"] as const)("creates the %s adapter", (id) => {
     expect(createHarnessAdapter(id).id).toBe(id);
   });
 

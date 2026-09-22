@@ -174,10 +174,10 @@ describe("project composition", () => {
 
   test("selects the adapter from override, project evidence, availability, or disclosed fallback", async () => {
     const rules = await loadCapabilityRules(path.resolve("."));
-    expect(composeProject(inspection(), { adapter: "cursor" }, rules).adapter).toBe("cursor");
+    expect(composeProject(inspection(), { adapter: "claude-code" }, rules).adapter).toBe("claude-code");
     expect(composeProject(inspection({ instructionSurfaces: ["CLAUDE.md"] }), {}, rules).adapter).toBe("claude-code");
     expect(composeProject(inspection(), { harnessAvailability: { codex: false, "claude-code": true } }, rules).adapter).toBe("claude-code");
-    const fallback = composeProject(inspection(), { harnessAvailability: { codex: false, "claude-code": false, cursor: false } }, rules);
+    const fallback = composeProject(inspection(), { harnessAvailability: { codex: false, "claude-code": false } }, rules);
     expect(fallback.adapter).toBe("codex");
     expect(fallback.adapterReason).toContain("format fallback");
   });

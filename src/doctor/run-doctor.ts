@@ -119,7 +119,7 @@ async function checkManagedFiles(root: string, manifest: InstallManifest, lock: 
 }
 
 async function checkHarnessOutput(root: string, manifest: InstallManifest): Promise<CheckResult> {
-  const label = manifest.adapter === "claude-code" ? "Claude Code" : manifest.adapter === "cursor" ? "Cursor" : "Codex";
+  const label = manifest.adapter === "claude-code" ? "Claude Code" : "Codex";
   try {
     const adapterFiles = manifest.files.filter(
       (record) =>
@@ -257,8 +257,8 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
 
   const lookup = input.commandLookup ?? defaultCommandLookup;
   const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
-  const executable = adapterId === "claude-code" ? "claude" : adapterId === "cursor" ? "cursor-agent" : "codex";
-  const label = adapterId === "claude-code" ? "Claude Code" : adapterId === "cursor" ? "Cursor" : "Codex";
+  const executable = adapterId === "claude-code" ? "claude" : "codex";
+  const label = adapterId === "claude-code" ? "Claude Code" : "Codex";
   const executableAvailable = await lookup(executable).catch(() => false);
   checks.push(
     executableAvailable

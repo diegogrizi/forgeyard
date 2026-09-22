@@ -131,7 +131,7 @@ export class ProjectService {
         ...(Array.isArray(payload.specificationPaths) ? { specificationPaths: payload.specificationPaths as string[] } : {}) });
       if (envelope.tool === "fy_inspect") return this.response(envelope, { inspection });
       const profile = validateProjectNeeds(inspection, payload.proposal);
-      const client = (payload.adapter ?? this.client ?? "codex") as "codex" | "claude-code" | "cursor";
+      const client = (payload.adapter ?? this.client ?? "codex") as "codex" | "claude-code";
       if (this.client && client !== this.client) throw nativeError("FY_CLIENT_MISMATCH", "The proposal conflicts with this native client's project binding.");
       const composition = resolveCapabilities(projectRequirements(inspection, profile), BUNDLED_CAPABILITIES, { client,
         allowedLicenses: ["Apache-2.0", "MIT"],
@@ -323,7 +323,7 @@ export class ProjectService {
   }
 
   private async prepare(envelope: NativeEnvelope, payload: Record<string, unknown>, request: string,
-    profile: unknown, composition: unknown, client: "codex" | "claude-code" | "cursor"): Promise<NativeResponse> {
+    profile: unknown, composition: unknown, client: "codex" | "claude-code"): Promise<NativeResponse> {
     if (this.store.read().installation) throw nativeError("FY_RECONCILIATION_REQUIRED", "An installer reservation is unresolved. Use the local reconcile-install route before any further installation or product run.");
     const installed = await this.optionalCapsule();
     if (installed) return this.response(envelope, { status: "already-frozen", capsuleId: installed.id,

@@ -19,7 +19,6 @@ const PRIMARY_MUTABLE_ROOTS = ["api", "app", "apps", "backend", "client", "front
 const HOST_INSTRUCTIONS = new Map([
   ["AGENTS.md", "host-instructions:codex"],
   ["CLAUDE.md", "host-instructions:claude-code"],
-  [".cursor/rules", "host-instructions:cursor"],
 ]);
 
 interface ReadTextResult {

@@ -22,7 +22,7 @@ function selectionError(message: string): ForgeyardError {
   return new ForgeyardError({
     code: "FY_UNSUPPORTED_SELECTION",
     message,
-    remediation: "Use a supported profile with adapter 'codex', 'claude-code', or 'cursor'.",
+    remediation: "Use a supported profile with adapter 'codex' or 'claude-code'.",
     exitCode: 2,
   });
 }

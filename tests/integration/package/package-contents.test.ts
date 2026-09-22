@@ -61,8 +61,6 @@ describe("public npm package contents", () => {
       "dist/adapters/create.d.ts",
       "dist/adapters/claude-code.d.ts",
       "dist/adapters/claude-code-catalog.d.ts",
-      "dist/adapters/cursor.d.ts",
-      "dist/adapters/cursor-catalog.d.ts",
       "schemas/forgeyard-config.schema.json",
       "schemas/capability-rules.schema.json",
       "profiles/hackathon.yaml",

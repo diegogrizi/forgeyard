@@ -162,7 +162,7 @@ describe("profile resolver", () => {
     );
   });
 
-  test.each(["codex", "claude-code", "cursor"])("resolves the same canonical profile for %s", async (adapter) => {
+  test.each(["codex", "claude-code"])("resolves the same canonical profile for %s", async (adapter) => {
     const registry = await loadRegistry(path.resolve("."));
     const resolved = resolveProfile(registry, "hackathon", adapter);
 

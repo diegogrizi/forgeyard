@@ -155,7 +155,7 @@ describe("Forgeyard configuration", () => {
     }).profile).toBe("tailored");
   });
 
-  test.each(["codex", "claude-code", "cursor"])("accepts the %s project adapter", (adapter) => {
+  test.each(["codex", "claude-code"])("accepts the %s project adapter", (adapter) => {
     expect(validateConfig({ ...validConfig(), harnesses: [adapter] }).harnesses).toEqual([adapter]);
   });
 
