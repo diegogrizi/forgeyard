@@ -262,7 +262,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
       const createdCount = applied.changes.created.length;
       io.writeOut(createdCount === 0
         ? "Imbracatura già coerente: nessun file creato.\n"
-        : `Imbracatura installata: ${createdCount} file${preserved === 0 ? "" : `, ${preserved} conservati`}.\n`);
+        : `Imbracatura installata: ${createdCount} file${preserved === 0 ? "" : `, ${preserved} ${preserved === 1 ? "conservato" : "conservati"}`}.\n`);
     }
     if (!steps.connection) {
       try { await native.connect({ root: preview.root, client: target }); }
