@@ -6,6 +6,7 @@ import {
   type ForgeyardService,
 } from "../application/forgeyard.js";
 import { createInquirerPromptDriver } from "../config/wizard.js";
+import { latestReversibleOperation } from "../installer/rollback.js";
 import type { HarnessId } from "../core/contracts.js";
 import { ForgeyardError, formatFailure } from "../core/errors.js";
 
@@ -317,14 +318,26 @@ Le conferme umane native non hanno --yes.
 
   program
     .command("rollback")
-    .argument("<operation-id>", "operation to reverse")
+    .argument("[operation-id]", "operazione da annullare; senza argomento, l'ultima reversibile")
     .option("--root <target>", "project directory", ".")
     .option("--yes", "apply without an interactive confirmation")
     .option("--json", "emit machine-readable output")
-    .action(async (sourceOperationId: string, options: Record<string, unknown>) => {
+    .action(async (requestedOperationId: string | undefined, options: Record<string, unknown>) => {
       const json = booleanOption(options, "json");
+      const root = stringOption(options, "root") ?? ".";
+      // Only the latest operation is reversible at all, so asking a person to find its
+      // identifier adds a lookup without adding a choice.
+      const sourceOperationId = requestedOperationId ?? await latestReversibleOperation(root);
+      if (sourceOperationId === null) {
+        throw new ForgeyardError({
+          code: "FY_OPERATION_UNKNOWN",
+          message: "Questa cartella non ha operazioni Forgeyard da annullare.",
+          remediation: "Esegui forgeyard in questa cartella per prepararla.",
+          exitCode: 2,
+        });
+      }
       const result = await dependencies.service.rollback({
-        root: stringOption(options, "root") ?? ".",
+        root,
         sourceOperationId,
         yes: booleanOption(options, "yes"),
         nonInteractive: !dependencies.interactive || json,

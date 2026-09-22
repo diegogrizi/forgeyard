@@ -74,6 +74,19 @@ async function requiredBackup(
   }
 }
 
+/**
+ * The only reversible operation is the latest one, because planRollback refuses any other.
+ * Resolving it here means a person does not have to find an identifier to undo the last
+ * thing the factory did.
+ */
+export async function latestReversibleOperation(
+  root: string,
+  fileSystem: FileSystemPort = nodeFileSystem,
+): Promise<string | null> {
+  const current = await optionalManifest(path.resolve(root), fileSystem);
+  return current.manifest?.latestOperationId ?? null;
+}
+
 export async function planRollback(
   root: string,
   sourceOperationId: string,

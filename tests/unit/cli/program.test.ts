@@ -1,3 +1,5 @@
+import { mkdtemp } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, test, vi } from "vitest";
@@ -366,5 +368,38 @@ describe("Forgeyard CLI boundary", () => {
     expect(capture.read().stderr).toContain("FY_INTERNAL");
     expect(capture.read().stderr).not.toContain("private diagnostic detail");
     expect(capture.read().stderr).not.toContain("at ");
+  });
+});
+
+describe("undoing without an identifier", () => {
+  test("a folder the factory never touched says so instead of asking for an identifier", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-undo-"));
+    const io = { written: [] as string[], errors: [] as string[] };
+
+    const exitCode = await runCli(["rollback", "--root", root, "--json"], dependencies(), {
+      writeOut: (value) => io.written.push(value),
+      writeErr: (value) => io.errors.push(value),
+      debug: false,
+    });
+
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(io.written.join(""))).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "FY_OPERATION_UNKNOWN",
+        message: "Questa cartella non ha operazioni Forgeyard da annullare.",
+      }),
+    });
+  });
+
+  test("an explicit identifier is still honoured", async () => {
+    const double = service();
+
+    await runCli(["rollback", "20260915T140000000Z-init01", "--root", ".", "--json"],
+      dependencies({ service: double }), { writeOut: () => {}, writeErr: () => {}, debug: false });
+
+    expect(double.rollback).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceOperationId: "20260915T140000000Z-init01" }),
+    );
   });
 });
