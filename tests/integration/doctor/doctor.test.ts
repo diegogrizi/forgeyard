@@ -206,7 +206,7 @@ describe("Forgeyard doctor", () => {
     expect(report.checks.filter((check) => check.required).every((check) => check.status === "passed")).toBe(true);
   });
 
-  test("reports the protected path the project lost and not the one the inspection skips", async () => {
+  test("a freshly prepared project shows no drift from a protection it never needed", async () => {
     const root = await minimalRoot();
     await mkdir(path.join(root, ".git"));
 
@@ -214,10 +214,9 @@ describe("Forgeyard doctor", () => {
 
     const drift = report.checks.find((check) => check.id === "harness-drift");
     expect(report.ok).toBe(true);
-    expect(drift).toEqual(expect.objectContaining({ status: "skipped", required: false, paths: [".env"] }));
-    expect(drift?.message).toContain("protected-path-missing '.env'");
-    // A capsule protects a path whether or not the project has one, so its absence claims no
-    // verdict: an otherwise correct installation must not be counted as a failed check.
+    // The capsule protects '.env' whether or not the project has one, so its absence is not
+    // drift. Measuring it flagged every correct installation, which is a check nobody reads.
+    expect(drift?.message).not.toContain("protected-path-missing");
     expect(report.checks.every((check) => check.status !== "failed")).toBe(true);
   });
 

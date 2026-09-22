@@ -302,20 +302,17 @@ describe("drift scanner", () => {
     ).findings).toEqual([]);
   });
 
-  test("reports a disappeared protected path as important", () => {
+  // A protection is a policy, not an observation: the harness protects a path so that writes
+  // are refused if it ever appears. Comparing it against what the project shows measured every
+  // correctly prepared project as drifted.
+  test("does not measure a frozen protection against what the project shows", () => {
     const report = scanDrift(
       frozenProfile({ protectedPaths: [".env", ".git"] }),
       currentProfile(),
     );
 
-    expect(report.findings).toHaveLength(1);
-    expect(report.findings[0]).toMatchObject({
-      kind: "protected-path-missing",
-      severity: "important",
-      subject: ".env",
-      frozen: ".env",
-      inconclusive: false,
-    });
+    expect(report.findings).toEqual([]);
+    expect(report.status).toBe("aligned");
   });
 
   test("orders mixed findings by severity, then kind, then subject", () => {
@@ -342,10 +339,9 @@ describe("drift scanner", () => {
       "framework-disappeared:vue",
       "kind-changed:kind",
       "language-disappeared:go",
-      "protected-path-missing:.env",
       "language-appeared:python",
     ]);
-    expect(report.counts).toEqual({ blocking: 3, important: 4, informational: 1 });
+    expect(report.counts).toEqual({ blocking: 3, important: 3, informational: 1 });
     expect(report.status).toBe("drifted");
   });
 

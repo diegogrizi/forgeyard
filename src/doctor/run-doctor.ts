@@ -182,7 +182,6 @@ const DRIFT_PATH_SUBJECTS: ReadonlySet<DriftKind> = new Set<DriftKind>([
   "harness-file-changed",
   "harness-file-unreadable",
   "mutable-root-missing",
-  "protected-path-missing",
 ]);
 
 /**

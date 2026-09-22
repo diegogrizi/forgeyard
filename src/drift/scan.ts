@@ -37,7 +37,6 @@ export type DriftKind =
   | "harness-file-changed"
   | "harness-file-unreadable"
   | "mutable-root-missing"
-  | "protected-path-missing"
   | "framework-appeared"
   | "framework-disappeared"
   | "language-appeared"
@@ -71,7 +70,6 @@ const SEVERITIES: Readonly<Record<DriftKind, DriftSeverity>> = {
   "harness-file-changed": "blocking",
   "harness-file-unreadable": "blocking",
   "mutable-root-missing": "blocking",
-  "protected-path-missing": "important",
   "framework-disappeared": "important",
   "language-disappeared": "important",
   "kind-changed": "important",
@@ -91,7 +89,6 @@ const BOUNDED_BY_SCAN: ReadonlySet<DriftKind> = new Set<DriftKind>([
   "gate-command-missing",
   "gate-cwd-missing",
   "mutable-root-missing",
-  "protected-path-missing",
   "framework-disappeared",
   "language-disappeared",
   "kind-changed",
@@ -353,16 +350,10 @@ export function scanDrift(frozen: FrozenProfile, current: CurrentProfile): Drift
     ));
   }
 
-  for (const protectedPath of asserted.protectedPaths) {
-    if (observed.has(pathKey(protectedPath))) continue;
-    findings.push(finding(
-      "protected-path-missing",
-      protectedPath,
-      `The frozen policy protects '${protectedPath}', a path the project no longer shows.`,
-      { frozen: protectedPath },
-      partialScan,
-    ));
-  }
+  // The frozen protected paths are deliberately not compared against what the project shows.
+  // A protection is a policy, not an observation: the harness protects '.env' so that writes
+  // are refused if it ever appears, and a project that never had one is not in drift. Comparing
+  // them measured every correctly prepared project as drifted, which is a check nobody reads.
 
   findings.push(...compareLabels("framework", asserted.frameworks, shown.frameworks, partialScan));
   findings.push(...compareLabels("language", asserted.languages, shown.languages, partialScan));
