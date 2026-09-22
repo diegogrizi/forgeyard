@@ -87,8 +87,9 @@ scansione confronta ciò che le istruzioni affermano con ciò che il codice most
 riporta i punti divergenti. La documentazione che invecchia è un difetto rilevabile,
 non un fatto della vita.
 
-*Stato: `src/drift/scan.ts`. Il collegamento al doctor è **in corso**: non dichiararlo
-fatto.*
+*Stato: `src/drift/scan.ts`. Sul percorso ordinario: il controllo `harness-drift` del
+doctor. Non è richiesto e non affonda il verdetto dell'installazione: un progetto che è
+cresciuto non ha un'installazione rotta.*
 
 ### G5 — Misura dichiarata
 
@@ -96,9 +97,9 @@ Costo e tempo del lavoro agentico, confrontati con una linea di base umana
 **esplicita e ispezionabile**. «L'AI è stata più veloce» diventa un numero con un
 metodo dichiarato e un margine di incertezza, oppure resta non misurato — mai zero.
 
-*Stato: `src/measure/accounting.ts`, primitiva verificata. **Su nessun percorso**: va
-collegata registrando le osservazioni di consumo una per una e dichiarando la linea di
-base in un file posseduto da una persona.*
+*Stato: `src/measure/accounting.ts`, riportata dal certificato di consegna. La linea di
+base umana **non è ancora dichiarabile**, quindi il confronto resta assente invece di
+stimato: dichiararla in un file posseduto da una persona è il prossimo incremento.*
 
 ### G6 — Coerenza dell'imbracatura generata
 

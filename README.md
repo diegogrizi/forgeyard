@@ -70,10 +70,11 @@ fallimento e ciò che **non** promette, è in [Garanzie](docs/guide/garanzie.md)
 | G5 | misura dichiarata | una misura assente resta non misurata, mai zero | *primitiva, non collegata* |
 | G6 | coerenza dell'imbracatura | un'imbracatura incoerente viene rifiutata prima di essere scritta | |
 
-Le prime tre e la sesta sono attive: le attraversa un percorso ordinario. G4 esiste come
-modulo e il collegamento è in lavorazione. G5 è una primitiva verificata che **nessun
-percorso del prodotto chiama ancora**: oggi il certificato di consegna non riporta nessuna
-contabilità. La colonna a destra lo dice per non farlo dedurre.
+Tutte e sei attraversano un percorso ordinario. Per G5 vale una precisazione che la
+colonna a destra segnala: il certificato riporta la contabilità del lavoro agentico, ma
+**la linea di base umana non è dichiarabile**, quindi il confronto con un costo umano
+resta assente — non stimato. Dire «l'AI è stata più veloce» senza un metodo dichiarato è
+esattamente il tipo di affermazione che questo prodotto rifiuta, anche quando è la nostra.
 
 Un esempio di cosa significa «può fallire»: al primo giro, il lint dell'imbracatura (G6)
 ha trovato un difetto reale nel nostro stesso template. Il file di istruzioni sempre

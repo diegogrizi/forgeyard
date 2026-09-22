@@ -36,7 +36,7 @@ Le garanzie sono descritte una per una, con le loro modalità di fallimento, in
 | G2 evidenza classificata | `src/evidence/epistemic.ts` | sì | sì: il verdetto di consegna `fy_finalize` |
 | G3 citazioni vive | `src/evidence/citations.ts` | sì | sì: validazione dei riferimenti di evidenza nel runtime nativo |
 | G4 deriva rilevata | `src/drift/scan.ts` | sì | **in corso**: il collegamento al doctor è in lavorazione |
-| G5 misura dichiarata | `src/measure/accounting.ts` | sì | **no**: nessun percorso del prodotto la chiama |
+| G5 misura dichiarata | `src/measure/accounting.ts` | sì | sì: contabilità nel certificato di consegna, senza linea di base umana |
 | G6 coerenza dell'imbracatura | `src/doctor/harness-lint.ts` | sì | sì: gate su `buildInstallPlan`, quindi su ogni percorso di installazione |
 
 Quattro delle sei garanzie sono collegate, e lo sono davvero. Le altre due non vanno
