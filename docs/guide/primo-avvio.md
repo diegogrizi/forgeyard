@@ -186,6 +186,13 @@ nessuno, la riga non compare.
 **`  File dell'imbracatura da creare: 80`** — quanti file verrebbero scritti. Il numero è
 del piano, e il resoconto dopo la conferma può differire: vedere §4.
 
+**`  Il client fornisce già: ...`** — i plugin che il tuo client ha già attivi **per questa
+cartella**, letti dal suo registro senza toccarlo. Non vengono rimossi né sostituiti: le
+capacità dell'imbracatura si aggiungono a quelli, e se due fanno una cosa simile lo vedi
+prima di confermare invece di scoprirlo dopo. Un plugin installato per un altro progetto
+non compare, perché qui non vale. Se il registro non è leggibile la riga lo dice, e non
+finge che tu non abbia niente. Per Codex la riga non compare: non ha un registro del genere.
+
 **`  Fuori da .forgeyard: ...`** — le scritture che escono dall'area personale, elencate
 prima della domanda e non scoperte dopo in `git status`: la configurazione MCP del client,
 un'esclusione Git locale per quella sola configurazione e, **soltanto se un file di

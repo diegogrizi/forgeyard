@@ -39,6 +39,12 @@ non come tutorial, i comandi `inspect`, `prepare`, `init`, `doctor`, `verify`, `
 `rollback`. Vedere
 [Percorsi legacy](../percorsi-legacy.md) e [Stato](../STATO.md).
 
+`src/inventory/` legge ciò che il client dichiara di avere già installato. È sola lettura, e la
+sua unica decisione è quale installazione vale per *questa* cartella: il registro distingue
+`user` da `local` e `project`, e questi ultimi nominano il progetto a cui appartengono.
+Un registro assente, illeggibile o vuoto resta `non osservato`, perché un client che tiene i
+propri plugin altrove non è un client senza plugin.
+
 ## I confini
 
 **Un ingresso.** `forgeyard` senza argomenti è l'ingresso ordinario. La ricognizione

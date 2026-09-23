@@ -16,6 +16,7 @@ import type { HarnessId } from "../../../src/core/contracts.js";
 import type { PrepareCommandInput, PrepareCommandResult } from "../../../src/application/forgeyard.js";
 import type { PreparationDecision, ProjectInspection } from "../../../src/intake/contracts.js";
 import type { PromptDriver } from "../../../src/config/wizard.js";
+import type { ClientInventory } from "../../../src/inventory/client-plugins.js";
 
 const execute = promisify(execFile);
 async function temporary(run: (root: string) => Promise<void>): Promise<void> {
@@ -107,10 +108,23 @@ function driver(answers: { outcome?: string; confirm?: boolean }, log: string[])
     number: async () => { throw new Error("nessun budget o concorrenza è chiesto all'utente"); },
   };
 }
+function inventory(plugins: readonly { id: string; scope: "user" | "local"; projectPath?: string }[],
+  observed = true): ClientInventory {
+  return {
+    observed,
+    limitations: [],
+    plugins: plugins.map((plugin) => ({
+      id: plugin.id, marketplace: "un-mercato", scope: plugin.scope,
+      projectPath: plugin.projectPath ?? null, version: "v1", gitCommitSha: "a".repeat(40),
+    })),
+  };
+}
+
 async function entry(root: string, options: {
   interactive?: boolean; outcome?: string; confirm?: boolean;
   harness?: HarnessPreparation; native?: NativeBinding;
   commandLookup?: (name: string) => Promise<boolean>;
+  clientInventory?: () => Promise<ClientInventory>;
 }) {
   const log: string[] = [];
   let stdout = ""; let stderr = "";
@@ -124,6 +138,7 @@ async function entry(root: string, options: {
     // Senza iniezione la sonda leggerebbe il PATH reale: un test non dipende da cosa
     // questa macchina ha installato.
     commandLookup: options.commandLookup ?? (async () => false),
+    ...(options.clientInventory === undefined ? {} : { clientInventory: options.clientInventory }),
   };
   return { exitCode: await runPersonalEntry(root, injected), stdout, stderr, log };
 }
@@ -175,6 +190,56 @@ test("l'anteprima nomina le scritture fuori dall'area personale prima di chieder
     // La riga di chiusura non può più affermare che Git non viene toccato.
     expect(summary).not.toContain("Git e repository figli non vengono modificati");
   }));
+
+// Un agente che riceve la nostra imbracatura sopra i plugin che il client già fornisce si
+// ritrova due autorità sulla stessa cosa. Dirlo prima della conferma non lo impedisce, ma
+// smette di nasconderlo.
+test("l'anteprima dice quali plugin il client fornisce già per questa cartella", async () =>
+  temporary(async (root) => {
+    const result = await entry(root, {
+      outcome: "Un servizio di ricerca", confirm: false, harness: harnessDouble(), native: nativeDouble(),
+      clientInventory: async () => inventory([
+        { id: "superpowers", scope: "user" },
+        { id: "auth0", scope: "user" },
+        { id: "altrui", scope: "local", projectPath: path.join(root, "altro-progetto") },
+      ]),
+    });
+
+    // Ordinati e senza quello legato a un altro progetto.
+    expect(result.stdout).toContain("Il client fornisce già: auth0, superpowers");
+    expect(result.stdout).not.toContain("altrui");
+  }));
+
+test("un registro illeggibile non diventa 'nessun plugin'", async () => temporary(async (root) => {
+  const result = await entry(root, {
+    outcome: "Un servizio di ricerca", confirm: false, harness: harnessDouble(), native: nativeDouble(),
+    clientInventory: async () => inventory([], false),
+  });
+
+  // Assenza di osservazione, non osservazione di assenza.
+  expect(result.stdout).toContain("non osservabili su questa macchina");
+}));
+
+test("nessun plugin attivo qui e' detto, non taciuto", async () => temporary(async (root) => {
+  const result = await entry(root, {
+    outcome: "Un servizio di ricerca", confirm: false, harness: harnessDouble(), native: nativeDouble(),
+    clientInventory: async () => inventory([]),
+  });
+
+  expect(result.stdout).toContain("nessuno attivo per questa cartella");
+}));
+
+test("per Codex non si annuncia un registro che non esiste", async () => temporary(async (root) => {
+  const result = await entry(root, {
+    outcome: "Un servizio di ricerca", confirm: false, native: nativeDouble(),
+    harness: harnessDouble({ adapter: "codex" }),
+    clientInventory: async () => { throw new Error("Codex non ha un registro di plugin da leggere"); },
+  });
+
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(result.stdout).not.toContain("Il client fornisce");
+  expect(result.stdout).not.toContain("Plugin già presenti");
+}));
 
 test("l'anteprima non annuncia un blocco in un file di istruzioni che non esiste", async () =>
   temporary(async (root) => {

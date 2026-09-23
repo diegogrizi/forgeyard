@@ -34,6 +34,11 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 - `forgeyard rollback` senza argomenti annulla l'ultima operazione reversibile, che è
   l'unica che il sistema permette di annullare.
 
+- Forgeyard guarda per la prima volta cosa il client fornisce già: un modulo in sola lettura
+  interpreta il registro dei plugin, distingue le installazioni valide per questa cartella da
+  quelle legate ad altri progetti, e l'anteprima le nomina prima della conferma. Un registro
+  illeggibile resta `non osservato`, mai «zero plugin».
+
 ### Corretto
 
 - Le istruzioni sempre installate rimandavano a due seed che solo il pack `delivery`

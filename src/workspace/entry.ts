@@ -5,6 +5,7 @@ import { HARNESS_IDS, type HarnessId } from "../core/contracts.js";
 import { WorkspaceDiscoveryError } from "./discovery.js";
 import { inspectPersonalWorkspace, createPersonalWorkspace, PersonalWorkspaceError, type PersonalPreview } from "./personal.js";
 import { commandOnPath } from "../doctor/run-doctor.js";
+import { partitionForProject, readClientInventory, type ClientInventory } from "../inventory/client-plugins.js";
 import type { WorkspaceCliIo } from "./cli.js";
 import type { PrepareCommandInput, PrepareCommandResult } from "../application/forgeyard.js";
 
@@ -25,6 +26,8 @@ export interface PersonalEntryOptions {
   native?: NativeBinding;
   /** Executable probe, injectable: a test must not depend on what this machine has installed. */
   commandLookup?: (name: string) => Promise<boolean>;
+  /** What the client already provides. Injectable: a test must not read this machine's registry. */
+  clientInventory?: () => Promise<ClientInventory>;
   forgeyardVersion?: string;
 }
 interface EntrySteps { area: boolean; harness: boolean; connection: boolean }
@@ -126,6 +129,23 @@ function declaredCause(error: unknown): string {
   return paths.length === 0 ? code : `${code} (${paths.join(", ")})`;
 }
 
+/**
+ * The plugin ids the client already provides for this project, deduplicated and ordered.
+ * `null` when the registry could not be read; `undefined` for a client that has no such
+ * registry to read, where announcing one would invent a concept the user does not have.
+ */
+async function providedByClient(
+  client: HarnessId,
+  root: string,
+  read: () => Promise<ClientInventory>,
+): Promise<readonly string[] | null | undefined> {
+  if (client !== "claude-code") return undefined;
+  const inventory = await read();
+  if (!inventory.observed) return null;
+  return [...new Set(partitionForProject(inventory, root).available.map((plugin) => plugin.id))]
+    .sort((left, right) => left.localeCompare(right, "en"));
+}
+
 /** True when the client's instruction file is already there, and so will be appended to. */
 async function instructionsPresent(root: string, client: HarnessId): Promise<boolean> {
   try { return (await lstat(path.join(root, client === "codex" ? "AGENTS.md" : "CLAUDE.md"))).isFile(); }
@@ -138,6 +158,23 @@ async function instructionsPresent(root: string, client: HarnessId): Promise<boo
  * afterwards in `git status`. An instruction file the factory creates itself already carries
  * the pointer, so only one that was already there gets a block appended.
  */
+/**
+ * What the client already provides for this project. Our capabilities are added on top of
+ * these, not instead of them: a plugin from another marketplace is not ours to equate with
+ * one of ours, so the overlap is declared and left to the reader rather than resolved by a
+ * guess. `null` means the registry could not be read, which is not the same as no plugins.
+ */
+function writeProvidedByClient(io: WorkspaceCliIo, provided: readonly string[] | null | undefined): void {
+  if (provided === undefined) return;
+  if (provided === null) {
+    io.writeOut("  Plugin già presenti nel client: non osservabili su questa macchina.\n");
+    return;
+  }
+  io.writeOut(provided.length === 0
+    ? "  Plugin già presenti nel client: nessuno attivo per questa cartella.\n"
+    : `  Il client fornisce già: ${provided.join(", ")}. Le capacità qui sopra si aggiungono a quelle.\n`);
+}
+
 function connectionEffects(client: HarnessId, present: boolean): readonly string[] {
   return [
     client === "codex" ? ".codex/config.toml" : ".mcp.json",
@@ -160,7 +197,7 @@ function writeState(io: WorkspaceCliIo, steps: EntrySteps, client: HarnessId | n
 }
 
 function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null, client: HarnessId,
-  connection: readonly string[] | null): void {
+  connection: readonly string[] | null, provided: readonly string[] | null | undefined): void {
   io.writeOut("Verrà preparato:\n");
   const translated = plan === null ? undefined : ADAPTER_REASON[plan.decision.adapterReason];
   io.writeOut(`  Client: ${CLIENT_LABEL[client]}${translated === undefined ? "" : ` — ${translated}`}\n`);
@@ -172,6 +209,7 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
     if (checks.length > 0) io.writeOut(`  Verifiche: ${checks.join(" · ")}\n`);
     io.writeOut(`  File dell'imbracatura da creare: ${plan.changes.created.length}\n`);
   }
+  writeProvidedByClient(io, provided);
   if (connection !== null)
     io.writeOut(`  Fuori da .forgeyard: ${connection.join("; ")}. Ogni scrittura è delimitata e reversibile.\n`);
   io.writeOut("  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.\n");
@@ -213,6 +251,7 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
       return 4;
     }
     const native = options.native ?? projectNativeBinding;
+    const inventoryOf = options.clientInventory ?? (() => readClientInventory());
     // `steps.harness` is exactly `client !== null`: an installed harness always names its client,
     // so the entry never decides the adapter again for a project that already carries one.
     const client = installed === "absent" ? null : installed;
@@ -250,7 +289,8 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
           writePlanSummary(io, previewed, previewed.decision.adapter, steps.connection
             ? null
             : connectionEffects(previewed.decision.adapter,
-              await instructionsPresent(preview.root, previewed.decision.adapter)));
+              await instructionsPresent(preview.root, previewed.decision.adapter)),
+            await providedByClient(previewed.decision.adapter, preview.root, inventoryOf));
         } catch (error) {
           io.writeOut((error as { code?: unknown } | null)?.code === "FY_INTAKE_INCOMPLETE"
             ? "Il piano dell'imbracatura dipende dal risultato voluto: quella domanda richiede un terminale interattivo.\n"
@@ -283,7 +323,8 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
     const target = plan?.decision.adapter ?? client!;
     writePlanSummary(io, plan, target, steps.connection
       ? null
-      : connectionEffects(target, await instructionsPresent(preview.root, target)));
+      : connectionEffects(target, await instructionsPresent(preview.root, target)),
+      await providedByClient(target, preview.root, inventoryOf));
     if (!await prompts.confirm("workspace.prepare", "Confermi la preparazione di questa cartella?", false)) {
       io.writeOut("Preparazione annullata. Nessun file scritto.\n");
       return 0;

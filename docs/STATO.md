@@ -53,7 +53,7 @@ con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di b
 | P2a | ingresso senza argomenti, riepilogo italiano, registrazione privata | implementato |
 | P2b | installazione della suite nell'area personale | implementato |
 | P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
-| P4 | inventario e riuso dei componenti globali già presenti | da fare |
+| P4 | inventario e riuso dei componenti globali già presenti | inventario fatto; il riuso è un'altra cosa (sotto) |
 | P5 | esecuzione su più repository membri | da fare |
 | P6 | selezione unificata e profili pertinenti | da fare |
 | P7 | percorso ordinario interamente italiano, rimozione dei percorsi legacy | in corso |
@@ -72,6 +72,26 @@ di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichia
 di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 [Primo avvio](guide/primo-avvio.md).
 
+## Cosa la misura ha detto su P4
+
+P4 era scritto come «inventario e **riuso** dei componenti globali». Il riuso, come lo
+immaginavamo, non esiste: su questa macchina il client ha **10 plugin** dal marketplace
+`claude-plugins-official`, il nostro catalogo ne distribuisce **92** da `wshobson/agents`, e i
+nomi in comune sono **zero**. Non c'è niente da non reinstallare.
+
+Il problema vero è un altro, e si vede negli stessi dati: le funzioni si sovrappongono anche
+quando i nomi no. Il client fornisce già `superpowers`, che porta la propria disciplina su TDD,
+debug e su quando si può dire «fatto»; noi installiamo `tdd-workflows`, `debugging-toolkit` e la
+scala dell'evidenza. Non sono file duplicati: sono **autorità concorrenti**, ed è esattamente il
+problema che questa suite dice di voler togliere.
+
+Quindi P4 dichiara e non deduce. L'anteprima nomina i plugin che il client fornisce **per
+questa cartella** prima della conferma, e si ferma là: due plugin di marketplace diversi con
+funzione simile non sono lo stesso artefatto, e affermare un'equivalenza che non possiamo
+provare sarebbe il difetto che la scala dell'evidenza esiste per impedire.
+
+Un plugin installato con `scope: local` appartiene al progetto che il registro nomina.
+Su questa macchina sono 10 su 13, e nessuno di essi vale qui.
 ## Rimozioni compiute
 
 Il **pacchetto presentazione è stato rimosso** il 23 settembre 2026: `packs/presentation/`,
@@ -149,7 +169,7 @@ Alla data di questo documento, e su questa macchina:
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
 - **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 71 file
-  di test, 565 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+  di test, 569 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
   riusabile per un'altra.
