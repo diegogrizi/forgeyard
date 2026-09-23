@@ -1,6 +1,6 @@
 # Stato di Forgeyard
 
-Registrato il **22 settembre 2026** sul branch `refactor/forgia-personale-workspace`.
+Registrato il **23 settembre 2026** sul branch `refactor/forgia-personale-workspace`.
 Questo documento vale alla data indicata: il prodotto è in ristrutturazione, e va riletto
 insieme al registro dei commit. Per la tesi e i confini di progetto, vedere
 [la direzione](DIREZIONE.md).
@@ -146,6 +146,15 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
+- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 72 file
+  di test, 562 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+  provenienza rigenerabile senza differenze, audit di release passato e contenuto del
+  pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
+  riusabile per un'altra.
+- **Un quarto tetto era più stretto del lavoro che delimitava.** I test di `tests/roundtrip`
+  eseguono la CLI compilata su un progetto vero: `init --profile hackathon` costa 40,8 secondi
+  cronometrati, contro un tetto globale di 30 tarato sui test unitari. Quattro rossi erano il
+  tetto. È la quarta volta, e di nuovo la misura ha preceduto la diagnosi.
 - **Tre gruppi di test erano dichiarati «fallimenti ambientali»: non lo erano.** Una misura
   li ha smentiti tutti e tre, e sono stati corretti il 22 settembre 2026. L'helper Git di
   `discovery.test.ts` aveva un tetto di 10 secondi per un lavoro che ne richiede 23; la
