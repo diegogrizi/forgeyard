@@ -36,6 +36,14 @@ altri la importano.
 Corollario: **un controllo deve avere la granularità del contratto che protegge.** Verificare
 che un file esista non protegge da un controllo assente *dentro* quel file.
 
+Quando la duplicazione è **inevitabile**, la regola va fissata da un test, non da un commento.
+Il guard di scrittura non può importare il servizio, e ricevere l'identità del workspace da un
+file dentro il progetto la renderebbe falsificabile: quell'identità è quindi calcolata due
+volte per necessità. Le due sedi hanno usato due risolutori di percorso diversi, e il guard ha
+negato **ogni** scrittura finché un test non le ha legate. Una duplicazione necessaria non è
+un'eccezione alla regola: è la regola che richiede un controllo eseguibile al posto della
+disciplina.
+
 ### Un ingresso, nessuna sequenza da ricordare
 
 L'ingresso ordinario è `forgeyard`, senza argomenti. L'utente non deve scegliere profili,

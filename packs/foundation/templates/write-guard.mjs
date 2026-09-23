@@ -11,11 +11,17 @@ function sortObject(value) {
   return value;
 }
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+/* One spelling of one directory. The service resolves roots with fs/promises.realpath,
+   which expands a Windows 8.3 short component; the JS realpathSync keeps it, so the same
+   folder gets two spellings and two workspace identities. The lookup below then finds no
+   row and the guard denies every write instead of guarding, which reads as safety and is
+   not. Both sides must resolve paths the same way. */
+const realPath = (value) => realpathSync.native(value);
 
 async function nativeGuard(root) {
   /* Read-only bridge to HF's private state. A lease is cooperative: a native
      session name is not authenticated identity, and shell writes are not guarded. */
-  const realRoot = realpathSync(root);
+  const realRoot = realPath(root);
   const git = (args) => execFileSync("git", args, { cwd: realRoot, encoding: "utf8", timeout: 10000, maxBuffer: 1048576, stdio: ["ignore", "pipe", "pipe"] }).trim();
   const stateRoot = path.join(process.env.LOCALAPPDATA || (process.platform === "win32" ? path.join(os.homedir(), "AppData/Local") : path.join(os.homedir(), ".local/state")), "Forgeyard");
   const databasePath = path.join(stateRoot, "state.sqlite");
@@ -26,7 +32,7 @@ async function nativeGuard(root) {
   }
   const { DatabaseSync } = await import("node:sqlite");
   let commonDirectory;
-  try { commonDirectory = realpathSync(git(["rev-parse", "--path-format=absolute", "--git-common-dir"])); }
+  try { commonDirectory = realPath(git(["rev-parse", "--path-format=absolute", "--git-common-dir"])); }
   catch { return null; }
   const workspaceId = hash(canonical({ root: realRoot, commonDirectory }));
   const database = new DatabaseSync(databasePath, { readOnly: true, allowExtension: false, timeout: 1000 });
@@ -86,7 +92,7 @@ function nearestRealTarget(candidate) {
   while (true) {
     try {
       lstatSync(cursor);
-      return path.resolve(realpathSync(cursor), ...missing.reverse());
+      return path.resolve(realPath(cursor), ...missing.reverse());
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
       const parent = path.dirname(cursor);
@@ -129,7 +135,7 @@ try {
     deny("the requested file is outside the selected project");
     process.exit(0);
   }
-  const realRoot = realpathSync(lexicalRoot);
+  const realRoot = realPath(lexicalRoot);
   const realCandidate = nearestRealTarget(lexicalCandidate);
   const canonicalRelative = relativeInside(realRoot, realCandidate);
   if (canonicalRelative === undefined) {
