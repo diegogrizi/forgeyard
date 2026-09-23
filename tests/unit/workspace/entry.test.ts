@@ -159,6 +159,34 @@ test("una cartella vuota si prepara con una sola domanda e una sola conferma", a
   expect((await readdir(path.join(root, ".forgeyard"))).sort()).toEqual([".gitignore", "manifest.json", "workspace.json"]);
 }));
 
+// Un effetto non dichiarato prima del consenso vale come un verdetto non sostenuto: l'utente
+// conferma una volta sola, quindi ogni scrittura che esce da .forgeyard va nominata prima.
+test("l'anteprima nomina le scritture fuori dall'area personale prima di chiedere conferma",
+  async () => temporary(async (root) => {
+    await writeFile(path.join(root, "CLAUDE.md"), "# progetto");
+    const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
+      harness: harnessDouble(), native: nativeDouble() });
+
+    const summary = result.stdout.slice(result.stdout.indexOf("Verrà preparato:"),
+      result.stdout.indexOf("Preparazione annullata"));
+    expect(summary).toContain(".mcp.json");
+    // Il file di istruzioni esiste già: riceverà un blocco in coda, e può essere tracciato.
+    expect(summary).toContain("CLAUDE.md: un blocco delimitato in coda");
+    expect(summary).toContain("un'esclusione Git locale");
+    // La riga di chiusura non può più affermare che Git non viene toccato.
+    expect(summary).not.toContain("Git e repository figli non vengono modificati");
+  }));
+
+test("l'anteprima non annuncia un blocco in un file di istruzioni che non esiste", async () =>
+  temporary(async (root) => {
+    const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
+      harness: harnessDouble(), native: nativeDouble() });
+
+    // Senza un CLAUDE.md preesistente la forgia crea il proprio, che porta già il puntatore.
+    expect(result.stdout).not.toContain("CLAUDE.md: un blocco delimitato in coda");
+    expect(result.stdout).toContain(".mcp.json");
+  }));
+
 test("il brief dell'utente è l'unico ingresso di prodotto passato al servizio", async () => temporary(async (root) => {
   const harness = harnessDouble(); const native = nativeDouble();
   await entry(root, { outcome: "  Correggere il calcolo delle scadenze  ", confirm: true, harness, native });

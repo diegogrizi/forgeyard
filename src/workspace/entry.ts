@@ -126,6 +126,26 @@ function declaredCause(error: unknown): string {
   return paths.length === 0 ? code : `${code} (${paths.join(", ")})`;
 }
 
+/** True when the client's instruction file is already there, and so will be appended to. */
+async function instructionsPresent(root: string, client: HarnessId): Promise<boolean> {
+  try { return (await lstat(path.join(root, client === "codex" ? "AGENTS.md" : "CLAUDE.md"))).isFile(); }
+  catch { return false; }
+}
+
+/**
+ * What connecting the client writes outside the private area. The entry asks once, so every
+ * effect that leaves `.forgeyard` is named before that question instead of being found
+ * afterwards in `git status`. An instruction file the factory creates itself already carries
+ * the pointer, so only one that was already there gets a block appended.
+ */
+function connectionEffects(client: HarnessId, present: boolean): readonly string[] {
+  return [
+    client === "codex" ? ".codex/config.toml" : ".mcp.json",
+    ...(present ? [`${client === "codex" ? "AGENTS.md" : "CLAUDE.md"}: un blocco delimitato in coda`] : []),
+    "un'esclusione Git locale per la sola configurazione del client",
+  ];
+}
+
 function writeTopology(io: WorkspaceCliIo, preview: PersonalPreview): void {
   io.writeOut(`Repository rilevati: ${preview.discovery.repositories.length}. Progetti rilevati: ${preview.discovery.projects.length}.\n`);
   for (const project of preview.discovery.projects.slice(0, 12))
@@ -139,7 +159,8 @@ function writeState(io: WorkspaceCliIo, steps: EntrySteps, client: HarnessId | n
   io.writeOut(`Collegamento nativo: ${steps.connection ? "presente" : "da configurare"}.\n`);
 }
 
-function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null, client: HarnessId): void {
+function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null, client: HarnessId,
+  connection: readonly string[] | null): void {
   io.writeOut("Verrà preparato:\n");
   const translated = plan === null ? undefined : ADAPTER_REASON[plan.decision.adapterReason];
   io.writeOut(`  Client: ${CLIENT_LABEL[client]}${translated === undefined ? "" : ` — ${translated}`}\n`);
@@ -151,7 +172,9 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
     if (checks.length > 0) io.writeOut(`  Verifiche: ${checks.join(" · ")}\n`);
     io.writeOut(`  File dell'imbracatura da creare: ${plan.changes.created.length}\n`);
   }
-  io.writeOut("  I file privati restano in .forgeyard; codice, Git e repository figli non vengono modificati.\n");
+  if (connection !== null)
+    io.writeOut(`  Fuori da .forgeyard: ${connection.join("; ")}. Ogni scrittura è delimitata e reversibile.\n`);
+  io.writeOut("  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.\n");
 }
 
 function prepareInput(root: string, brief: string | null, apply: boolean,
@@ -224,7 +247,10 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
         // from the project's own inputs when they carry the outcome, and declared missing otherwise.
         try {
           const previewed = await (await harness()).prepare(prepareInput(preview.root, null, false, availability));
-          writePlanSummary(io, previewed, previewed.decision.adapter);
+          writePlanSummary(io, previewed, previewed.decision.adapter, steps.connection
+            ? null
+            : connectionEffects(previewed.decision.adapter,
+              await instructionsPresent(preview.root, previewed.decision.adapter)));
         } catch (error) {
           io.writeOut((error as { code?: unknown } | null)?.code === "FY_INTAKE_INCOMPLETE"
             ? "Il piano dell'imbracatura dipende dal risultato voluto: quella domanda richiede un terminale interattivo.\n"
@@ -255,7 +281,9 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
       }
     }
     const target = plan?.decision.adapter ?? client!;
-    writePlanSummary(io, plan, target);
+    writePlanSummary(io, plan, target, steps.connection
+      ? null
+      : connectionEffects(target, await instructionsPresent(preview.root, target)));
     if (!await prompts.confirm("workspace.prepare", "Confermi la preparazione di questa cartella?", false)) {
       io.writeOut("Preparazione annullata. Nessun file scritto.\n");
       return 0;

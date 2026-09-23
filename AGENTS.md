@@ -63,8 +63,13 @@ I comandi avanzati restano ispezionabili, ma **non sono il tutorial**.
 
 - Workspace, repository membri e directory privata della forgia restano separati.
 - Mai `git init` nella cartella padre per aggirare l'assenza di un repository.
-- La suite personale non va committata nei repository assistiti. Non modificare file già
-  tracciati per installarla; usare esclusioni Git locali soltanto per percorsi posseduti e non
+- La suite personale non va committata nei repository assistiti. **Nessun percorso di macchina
+  entra in un file già tracciato**: la configurazione del client viene rifiutata se lo è
+  (`FY_BINDING_TRACKED`). Un blocco portabile e delimitato può invece essere aggiunto in coda a
+  un file di istruzioni già presente, anche tracciato, perché è committabile senza danno ed è
+  reversibile — ma va **dichiarato nell'anteprima prima della conferma**, insieme a ogni altra
+  scrittura fuori da `.forgeyard`. Un effetto non dichiarato prima del consenso vale come un
+  verdetto non sostenuto. Usare esclusioni Git locali soltanto per percorsi posseduti e non
   tracciati. Mai `assume-unchanged` o `skip-worktree`.
 - Nessuna telemetria, nessun effetto esterno automatico, nessuna promessa di isolamento dal
   sistema operativo. Push, issue remote e deploy richiedono autorizzazione al punto d'azione.

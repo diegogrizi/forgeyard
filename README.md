@@ -18,7 +18,8 @@ Verrà preparato:
   Capacità selezionate: 6    escluse: 4
   Verifiche: npm test
   File dell'imbracatura da creare: 71
-  I file privati restano in .forgeyard; codice, Git e repository figli non vengono modificati.
+  Fuori da .forgeyard: .mcp.json; CLAUDE.md: un blocco delimitato in coda; un'esclusione Git locale per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
+  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.
 Confermi la preparazione di questa cartella? > sì
 
 Area personale creata.
@@ -28,7 +29,7 @@ Il collegamento non è stato provato con Claude Code: se il client chiede di abi
 Apri questa cartella in Claude Code e descrivi il lavoro: la forgia fa il resto.
 ```
 
-*Output reale, su un repository Git temporaneo, con il connettore nativo reale — solo il percorso è stato accorciato. Un comando, una domanda, una conferma: non ci sono skill da invocare per nome né un ordine da ricordare. Dopo, `git status` non vede `.forgeyard`.*
+*Output reale, su un repository Git temporaneo con un `CLAUDE.md` già tracciato, con il connettore nativo reale — solo il percorso è stato accorciato. Un comando, una domanda, una conferma: non ci sono skill da invocare per nome né un ordine da ricordare. Dopo, `git status` mostra esattamente le scritture annunciate e **non vede** `.forgeyard`.*
 
 > [!NOTE]
 > **Nessuna prova live con un account Claude Code o Codex è mai stata eseguita.** Tutto ciò che è verificato qui lo è da test strutturali. Lo [stato](docs/STATO.md) lo registra con la sua data, e tiene distinti tre livelli: implementato, sul percorso ordinario, provato live.
@@ -115,7 +116,7 @@ workspace/
 └── frontend/            repository Git
 ```
 
-La forgia scrive soltanto nella propria directory, e un'esclusione interna la tiene fuori dai normali commit anche se Git viene inizializzato dopo. File già tracciati, aree legacy e percorsi non sicuri non vengono adottati né sovrascritti in silenzio, e il `.gitignore` condiviso del software non viene modificato.
+La forgia scrive soltanto nella propria directory, e un'esclusione interna la tiene fuori dai normali commit anche se Git viene inizializzato dopo. File già tracciati, aree legacy e percorsi non sicuri non vengono adottati né sovrascritti, e il `.gitignore` condiviso del software non viene modificato. Il collegamento al client scrive fuori dall'area personale — la configurazione MCP, un'esclusione Git locale e, se un file di istruzioni esiste già, un blocco delimitato in coda — e **l'anteprima li elenca prima della conferma**: nessuna di quelle scritture porta percorsi di macchina in un file tracciato.
 
 ## Domande scomode
 
