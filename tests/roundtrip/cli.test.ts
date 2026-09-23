@@ -2,7 +2,14 @@ import { lstat, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+
+// Ogni prova di questo file esegue la CLI compilata su un progetto vero: composizione del
+// registro, rendering, applicazione transazionale e doctor. Misurato su questa macchina,
+// `init --profile hackathon` da solo costa 40,8 s, contro un tetto globale di 30 s tarato
+// sui test unitari. Un tetto piu' stretto del lavoro che delimita segnala un difetto che
+// non c'e'.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 import type {
   InitCommandResult,
