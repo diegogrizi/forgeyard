@@ -39,6 +39,11 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   quelle legate ad altri progetti, e l'anteprima le nomina prima della conferma. Un registro
   illeggibile resta `non osservato`, mai «zero plugin».
 
+- Il profilo curato obbedisce alle regole di capacità. Installava i quattro orchestratori che le
+  regole escludono come concorrenti di Forgeyard, perché le esclusioni vivevano solo nel
+  percorso composto. Da 22 a 15 capacità, da 339 a 249 file, e due controlli che lo tengono
+  fermo.
+
 ### Corretto
 
 - Le istruzioni sempre installate rimandavano a due seed che solo il pack `delivery`

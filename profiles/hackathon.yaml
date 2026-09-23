@@ -9,25 +9,18 @@ catalog:
   selection: curated
   plugins:
     - accessibility-compliance
-    - agent-orchestration
-    - agent-teams
     - application-performance
     - backend-development
-    - before-you-build
     - comprehensive-review
-    - conductor
     - database-design
     - debugging-toolkit
     - deployment-validation
     - developer-essentials
     - documentation-generation
     - frontend-mobile-development
-    - full-stack-orchestration
     - git-pr-workflows
     - llm-application-dev
-    - pptx-deck-creation
     - security-scanning
-    - startup-business-analyst
     - tdd-workflows
     - ui-design
 defaults:

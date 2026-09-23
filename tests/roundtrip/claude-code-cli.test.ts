@@ -67,8 +67,8 @@ describe("built Claude Code CLI adapter", () => {
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
-    expect(manifest.files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(52);
-    expect(skillCount + commandCount).toBe(118);
+    expect(manifest.files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(40);
+    expect(skillCount + commandCount).toBe(79);
   });
 
 });

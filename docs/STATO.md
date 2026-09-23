@@ -55,7 +55,7 @@ con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di b
 | P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
 | P4 | inventario e riuso dei componenti globali già presenti | inventario fatto; il riuso è un'altra cosa (sotto) |
 | P5 | esecuzione su più repository membri | da fare |
-| P6 | selezione unificata e profili pertinenti | da fare |
+| P6 | selezione unificata e profili pertinenti | la contraddizione fra le due sedi è chiusa (sotto); l'unificazione no |
 | P7 | percorso ordinario interamente italiano, rimozione dei percorsi legacy | in corso |
 
 Un solo comando, `forgeyard`, porta una cartella da vuota a preparata: ricognizione, una
@@ -72,6 +72,29 @@ di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichia
 di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 [Primo avvio](guide/primo-avvio.md).
 
+## Cosa la misura ha detto su P6
+
+«Selezione unificata» presupponeva che ce ne fosse una. Ce n'erano due: l'ingresso guidato
+compone il profilo `tailored` dalle regole in `sources/capabilities.yaml`, mentre
+`init --profile hackathon` leggeva un elenco di 22 plugin scritto a mano. Due sedi per la
+stessa domanda, e la più permissiva installava cinque volte tanto.
+
+La contraddizione non era teorica. Le regole **escludono** `agent-orchestration`,
+`agent-teams`, `conductor` e `full-stack-orchestration` con la motivazione «Forgeyard è l'unico
+flusso di consegna primario». Il profilo curato **li installava tutti e quattro**, perché le
+esclusioni erano applicate soltanto in `compose.ts` e `resolve.ts` non le consultava. Non una
+scelta: un'omissione, del tipo che «una regola, una sede» prevede esattamente.
+
+Altri tre — `before-you-build`, `pptx-deck-creation`, `startup-business-analyst` — erano nel
+profilo senza alcuna ragione registrata, mentre ogni scelta di `tailored` ne porta una.
+`pptx-deck-creation` serviva le slide, che non esistono più. Una capacità per cui nessuno ha
+scritto un perché è un'affermazione, non una selezione: sono stati tolti, e tornano scrivendo
+la ragione in `sources/capabilities.yaml`.
+
+Risultato misurato: il profilo curato passa da 22 a **15** capacità, e l'installazione da 339 a
+**249** file per Codex. Due controlli lo tengono fermo
+(`tests/unit/meta/profile-selection.test.ts`): nessun profilo installa ciò che le regole
+escludono, e nessuno seleziona ciò di cui non sa dire il perché.
 ## Cosa la misura ha detto su P4
 
 P4 era scritto come «inventario e **riuso** dei componenti globali». Il riuso, come lo
@@ -168,8 +191,8 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 71 file
-  di test, 569 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 72 file
+  di test, 571 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
   riusabile per un'altra.

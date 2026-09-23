@@ -94,7 +94,7 @@ describe("built Forgeyard CLI round trip", () => {
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output).toEqual(expect.objectContaining({ command: "init", applied: false, status: "preview" }));
-    expect(output.changes.created).toHaveLength(339);
+    expect(output.changes.created).toHaveLength(249);
     expect(output.changes.created).toContain(".forgeyard/capsule.json");
     expect(await exists(targetRoot)).toBe(false);
   });
@@ -145,11 +145,11 @@ describe("built Forgeyard CLI round trip", () => {
       ".forgeyard/catalog/ecosystem.json",
       ".forgeyard/licenses/wshobson-agents.LICENSE",
     ]));
-    expect(installedTree).toHaveLength(341);
+    expect(installedTree).toHaveLength(251);
     const manifest = await loadInstallManifest(targetRoot);
-    expect(manifest.files).toHaveLength(339);
-    expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
-    expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(118);
+    expect(manifest.files).toHaveLength(249);
+    expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(40);
+    expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(79);
 
     for (const relativePath of [
       "AGENTS.md",
