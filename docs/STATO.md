@@ -110,6 +110,28 @@ Vale registrarli: un controllo che non ha mai trovato nulla non è ancora un con
   riferimenti interni che quella composizione non installa — e **non respinge**
   l'installazione: quei byte sono conservati identici sotto la loro licenza e non sono
   nostri da riparare. È la differenza fra dichiarato e bloccante, misurata.
+- **Il guard di scrittura che negava tutto.** Il hook risolveva la radice del progetto con
+  `realpathSync`, il servizio con la `realpath` asincrona: su Windows la prima conserva la forma
+  breve 8.3 di un componente del percorso, la seconda la espande. Due grafie della stessa
+  cartella producono due identità di workspace, quindi il hook non trovava lo stato del
+  progetto e negava **ogni** scrittura. Un guard che nega tutto sembra un guard severo ed è un
+  guard che non ha mai girato: il difetto era invisibile a occhio e l'ha trovato il test di
+  integrazione del protocollo nativo. Ora entrambi i lati usano lo stesso risolutore, e un test
+  lega le due sedi invece di un commento.
+- **Il controllo di deriva che bocciava ogni installazione nuova.** Due volte lo stesso errore
+  di categoria, già commesso e corretto per i percorsi protetti: `harness-drift` smentiva una
+  **dichiarazione** con un'**osservazione** presa da un altro vocabolario.
+  I gate congelati li dichiara chi prepara, e possono invocare un programma che l'ispezione non
+  enumera: ogni cartella appena preparata risultava in deriva bloccante. Le radici scrivibili
+  sono una concessione e non un avvistamento: il profilo `minimal` concede `presentation` e non
+  installa il bundle, quindi ogni installazione `minimal` corretta risultava rotta. Il confronto
+  sui gate vale ora soltanto dove i due vocabolari si toccano, e le politiche di percorso —
+  protette o scrivibili — non si confrontano affatto. Entrambi i difetti li ha trovati la
+  verifica completa, non una rilettura del codice.
+- **Il lint dell'imbracatura, la seconda volta.** Correggendo quel guard ho lasciato in un
+  commento il percorso assoluto della macchina su cui stavo lavorando, nome utente compreso.
+  Il lint (**G6**) ha rifiutato l'installazione prima che il file venisse scritto: un template
+  che finisce in ogni progetto non porta con sé il percorso di chi l'ha scritto.
 - **Il confronto byte per byte dello SBOM.** Il generatore arricchiva il lock con le
   homepage dei pacchetti presenti in `node_modules`: i binding nativi opzionali
   installati su Linux e su Windows sono diversi, quindi l'artefatto non era

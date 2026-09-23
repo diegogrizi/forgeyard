@@ -283,6 +283,31 @@ Se dopo tutto questo il client continua a ignorare la forgia, non stai inseguend
 difetto noto: sei oltre il confine di ciò che è stato verificato. Vedi
 [Stato](../STATO.md).
 
+#### L'assistente dice che una modifica è stata negata da Forgeyard
+
+Nel client uno strumento di scrittura (`Edit`, `Write`, `NotebookEdit`) viene rifiutato con un
+messaggio che comincia con `Forgeyard denied this file tool because ...`.
+
+**Causa.** È il guard di scrittura, e quasi sempre **sta facendo il suo lavoro**: rifiuta
+prima che il file venga toccato, invece di accorgersene dopo. Il motivo è nella coda del
+messaggio.
+
+| La coda del messaggio | Cosa è successo | Cosa fare |
+|---|---|---|
+| `no current native work order defines a write scope for this project` | non c'è un ordine di lavoro corrente: il piano non è stato approvato, o la sessione non ha il ruolo di scrittore | fai approvare il piano nel client; l'approvazione umana non ha scorciatoie |
+| `the requested file is outside the claimed task write scopes` | il file è fuori dagli ambiti che l'attività corrente ha dichiarato | se serve davvero, si cambia il piano e lo si riapprova, non si aggira |
+| `the requested file is a protected project path` | il file sta in un percorso protetto (Git, l'area personale, le istruzioni, la configurazione dei client) | quei percorsi non si modificano dall'interno del lavoro assistito |
+| `the requested file is outside the selected project` | il percorso esce dal progetto | è il confine di scrittura |
+| `the requested file resolves through a link outside the selected project` | il percorso esce dal progetto **attraverso un collegamento** | il confine vale anche per i collegamenti: è controllato sul percorso risolto, non su quello scritto |
+| `the tool input does not contain a supported file path` | lo strumento non ha passato un percorso utilizzabile | non è una regola sul tuo progetto: il guard non rifiuta ciò che non riesce a leggere |
+| `the guard could not validate trusted task state` | il guard non ha potuto leggere lo stato di cui si fida, e in dubbio rifiuta | è l'unica riga che può indicare un difetto invece di una regola |
+
+**Se però sono negate *tutte* le scritture**, anche subito dopo un'approvazione valida, non
+è una regola: è un difetto. Un guard che nega tutto ha l'aspetto di un guard severo, ed è
+un guard che non ha mai girato. È già successo una volta — il guard e il servizio
+risolvevano lo stesso percorso in due grafie diverse, e le due identità non combaciavano —
+ed è corretto e coperto da un test. Se ricapita è da segnalare come bug, non da aggiustare
+cambiando configurazione.
 ## Verdetti e controlli
 
 #### Un verdetto di consegna è `blocked` con `evidence:unsupported-verdict`
@@ -327,17 +352,21 @@ conta: `Drift is reported without failing the installation verdict: a project th
 not a broken install.`
 
 **Causa. Non è un'installazione rotta.** È la garanzia G4: l'imbracatura ha congelato un
-profilo del progetto — tipo, linguaggi, framework, radici scrivibili, percorsi protetti,
-gate, file posseduti — e il progetto nel frattempo è cambiato. La documentazione che
-invecchia è un difetto rilevabile, e questo controllo è il rilevatore. Il controllo **non
-è richiesto**: nessun suo esito affonda il rapporto.
+profilo del progetto — tipo, linguaggi, framework, gate, file posseduti — e il progetto
+nel frattempo è cambiato. La documentazione che invecchia è un difetto
+rilevabile, e questo controllo è il rilevatore. Il controllo **non è richiesto**: nessun
+suo esito affonda il rapporto.
 
 Lo stesso controllo ha altri due esiti che non sono deriva. `unavailable` significa che
 non c'era una capsula congelata leggibile, oppure che il progetto non è stato ispezionabile
-in sola lettura: non è un giudizio sul progetto. `skipped` significa o che l'ispezione è
-stata parziale e quindi l'allineamento non è dichiarabile — non aver visto una cosa non
-prova che non ci sia — oppure che ci sono differenze **sotto** la severità bloccante,
-riportate senza emettere un verdetto.
+in sola lettura: non è un giudizio sul progetto. `skipped` copre tre casi, e il messaggio
+dice quale:
+
+| Il messaggio dice | Significa |
+|---|---|
+| `the project inspection stopped at its bounds (...)` | l'ispezione si è fermata su un limite dichiarato, quindi l'allineamento non è dichiarabile: non aver visto una cosa non prova che non ci sia |
+| `what the remaining differences rest on is not something this inspection observes` | il rilievo poggia su un'osservazione che l'ispezione non fa. È l'esito normale di una cartella appena preparata: il gate lo dichiara chi prepara, e può invocare un programma che l'ispezione non enumera |
+| `differs from the frozen harness without contradicting what it needs to operate` | ci sono differenze **sotto** la severità bloccante, riportate senza emettere un verdetto |
 
 **Cosa fare.** Leggi i rilievi e poi scegli, esplicitamente, una delle due strade che il
 controllo stesso indica come rimedio: aggiornare l'imbracatura, oppure ripristinare ciò che
