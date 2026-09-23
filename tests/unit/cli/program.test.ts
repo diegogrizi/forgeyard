@@ -93,7 +93,6 @@ const decision = {
   excluded: [{ id: "agent-orchestration", reason: "Forgeyard is the primary workflow." }],
   timeboxMinutes: 240,
   orchestration: { mode: "native" as const, maxConcurrency: 2 },
-  presentation: { enabled: false, audience: "Project stakeholders", durationMinutes: 7, offline: true as const },
   autonomy: { level: "balanced" as const, maxCostUsd: 20, stopOnAmbiguity: true as const, externalEffects: "ask" as const },
   analysisSha256: "f".repeat(64),
 };
@@ -216,7 +215,7 @@ describe("Forgeyard CLI boundary", () => {
     expect(await runCli([
       "prepare", "fixture-target", "--brief", "Add recovery", "--spec", "one.md", "--adapter", "codex",
       "--timebox", "240", "--max-concurrency", "8", "--budget-usd", "20.5", "--autonomy", "autonomous",
-      "--no-presentation", "--yes", "--dry-run", "--json",
+      "--yes", "--dry-run", "--json",
     ], deps, capture.io)).toBe(0);
     expect(deps.service.prepare).toHaveBeenCalledWith({
       targetRoot: "fixture-target",
@@ -227,7 +226,6 @@ describe("Forgeyard CLI boundary", () => {
       maxConcurrency: 8,
       maxCostUsd: 20.5,
       autonomy: "autonomous",
-      presentation: false,
       yes: true,
       dryRun: true,
       nonInteractive: true,

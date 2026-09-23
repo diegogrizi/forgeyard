@@ -24,12 +24,12 @@ function metadata(content: string): Record<string, unknown> {
 }
 
 describe("Claude Code adapter", () => {
-  test("maps foundation and presentation to project-native paths with safe settings", async () => {
+  test("maps the foundation slots to project-native paths with safe settings", async () => {
     const { files } = await fixture();
     const paths = files.map((file) => file.path);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
-    expect(paths.slice(0, 21)).toEqual([
+    expect(paths.slice(0, 15)).toEqual([
       "CLAUDE.md",
       ".claude/settings.json",
       ".claude/skills/forgeyard-workflow/SKILL.md",
@@ -45,12 +45,6 @@ describe("Claude Code adapter", () => {
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",
       ".forgeyard/usage/README.md",
-      ".claude/skills/forgeyard-showcase/SKILL.md",
-      "presentation/index.html",
-      "presentation/styles.css",
-      "presentation/app.js",
-      "presentation/README.md",
-      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(JSON.parse(byPath.get(".claude/settings.json")!)).toEqual(expect.objectContaining({
       disableSkillShellExecution: true,
@@ -116,7 +110,7 @@ describe("Claude Code adapter", () => {
     await adapter.validateOutput(files);
 
     expect(files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(203);
-    expect(files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(185);
+    expect(files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(184);
     expect(files.filter((file) => /^\.claude\/commands\/.*\.md$/.test(file.path))).toHaveLength(105);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
   }, 30_000);
@@ -127,6 +121,5 @@ describe("Claude Code adapter", () => {
     expect(files.filter((file) => file.path.startsWith(".claude/agents/"))).toHaveLength(1);
     expect(files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(1);
     expect(files.some((file) => file.componentId.startsWith("ecosystem."))).toBe(false);
-    expect(files.some((file) => file.path.startsWith("presentation/"))).toBe(false);
   });
 });

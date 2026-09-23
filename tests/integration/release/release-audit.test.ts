@@ -2,7 +2,13 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 9,8 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 import { runProcess } from "../../helpers/cli.js";
 
@@ -62,12 +68,9 @@ describe("non-leaking release audit", () => {
     expect(output).not.toContain(".git/ignored.txt");
   });
 
-  test("accepts an intentional source template token and a clean offline presentation", async () => {
+  test("accepts an intentional source template token without flagging it", async () => {
     const root = await freshRoot();
     await put(root, "packs/example/template.md.tpl", "Hello {{project.name}}.\n");
-    await put(root, "packs/presentation/templates/presentation/index.html.tpl", "<!doctype html><title>Local</title>\n");
-    await put(root, "packs/presentation/templates/presentation/styles.css", "body { color: black; }\n");
-    await put(root, "packs/presentation/templates/presentation/app.js", "document.body.dataset.ready = 'true';\n");
 
     const result = await audit(root);
 
@@ -157,11 +160,6 @@ describe("non-leaking release audit", () => {
     await put(root, "notes/unresolved.md", "Value: {{missing.value}}\n");
     await put(root, ".forgeyard/evidence/run.json", "{}\n");
     await put(root, "debug.log", "captured output\n");
-    await put(
-      root,
-      "packs/presentation/templates/presentation/index.html.tpl",
-      '<meta name="author" content="A team"><script src="https://example.invalid/app.js"></script>\n',
-    );
 
     const result = await audit(root);
     const output = `${result.stdout}\n${result.stderr}`;
@@ -171,8 +169,6 @@ describe("non-leaking release audit", () => {
       "release.unfinished-prose",
       "release.unresolved-template",
       "release.committed-output",
-      "release.presentation-remote",
-      "release.presentation-identity",
     ]) expect(output).toContain(rule);
   });
 

@@ -15,11 +15,6 @@ const expectedPaths = [
   ".forgeyard/tasks/T001.yaml",
   ".forgeyard/bin/write-guard.mjs",
   ".forgeyard/COMPOSITION.md",
-  ".agents/skills/forgeyard-showcase/SKILL.md",
-  "presentation/index.html",
-  "presentation/styles.css",
-  "presentation/app.js",
-  "presentation/README.md",
 ] as const;
 
 describe("Codex hackathon golden output", () => {
@@ -42,7 +37,7 @@ describe("Codex hackathon golden output", () => {
       expect(actual.get(relativePath), relativePath).toBe(expected.replaceAll("\r\n", "\n"));
     }
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
-    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(119);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(118);
     expect(actual.has(".forgeyard/catalog/ecosystem.json")).toBe(true);
   });
 });

@@ -34,14 +34,10 @@ describe("initialization wizard", () => {
       timeboxMinutes: 300,
       qualityCommandName: "test",
       qualityCommandArgv: '["npm","test"]',
-      mutableRoots: '["src","presentation"]',
+      mutableRoots: '["src"]',
       protectedPaths: '[".git",".env"]',
-      presentationPath: "presentation",
       orchestrationMode: "guided",
       maxConcurrency: 4,
-      presentationAudience: "Product reviewers",
-      presentationDurationMinutes: 7,
-      presentationOffline: true,
     });
 
     const request = await collectInitRequest(input, prompts);
@@ -86,14 +82,10 @@ describe("initialization wizard", () => {
         timeboxMinutes: 300,
         qualityCommandName: "test",
         qualityCommandArgv: '["npm","test"]',
-        mutableRoots: '["src","presentation"]',
+        mutableRoots: '["src"]',
         protectedPaths: '[".git",".env"]',
-        presentationPath: "presentation",
         orchestrationMode: "guided",
         maxConcurrency: 4,
-        presentationAudience: "Product reviewers",
-        presentationDurationMinutes: 7,
-        presentationOffline: true,
       }),
     );
 

@@ -24,17 +24,10 @@ function validConfig(): ForgeyardConfig {
     timeboxMinutes: 300,
     quality: { commands: [{ name: "test", argv: ["npm", "test"] }] },
     paths: {
-      mutableRoots: ["src", "presentation"],
+      mutableRoots: ["src"],
       protectedPaths: [".git", ".env"],
-      presentation: "presentation",
     },
     orchestration: { mode: "guided", maxConcurrency: 4 },
-    presentation: {
-      enabled: true,
-      audience: "Product reviewers",
-      durationMinutes: 7,
-      offline: true,
-    },
   };
 }
 
@@ -62,18 +55,11 @@ describe("Forgeyard configuration", () => {
     const candidate = validConfig() as unknown as Record<string, unknown>;
     delete candidate.timeboxMinutes;
     candidate.orchestration = {};
-    candidate.presentation = { audience: "Product reviewers" };
 
     const result = validateConfig(candidate);
 
     expect(result.timeboxMinutes).toBe(300);
     expect(result.orchestration).toEqual({ mode: "guided", maxConcurrency: 4 });
-    expect(result.presentation).toEqual({
-      enabled: true,
-      audience: "Product reviewers",
-      durationMinutes: 7,
-      offline: true,
-    });
     expect(result.catalog).toEqual({ selection: "curated", plugins: [] });
     expect(result.intake).toEqual({
       strategy: "manual",
@@ -88,7 +74,7 @@ describe("Forgeyard configuration", () => {
     });
     expect(result.composition).toEqual({
       strategy: "manual",
-      packs: ["delivery", "ecosystem", "foundation", "presentation"],
+      packs: ["delivery", "ecosystem", "foundation"],
       selected: [],
       excluded: [],
       analysisSha256: "0".repeat(64),
@@ -116,7 +102,6 @@ describe("Forgeyard configuration", () => {
       ...validConfig(),
       profile: "minimal",
       catalog: { selection: "none", plugins: [] },
-      presentation: { ...validConfig().presentation, enabled: false },
     }).profile).toBe("minimal");
     expect(validateConfig({
       ...validConfig(),
@@ -146,7 +131,6 @@ describe("Forgeyard configuration", () => {
         stopOnAmbiguity: true,
         externalEffects: "ask",
       },
-      presentation: { ...validConfig().presentation, enabled: false },
     }).profile).toBe("tailored");
   });
 
@@ -181,15 +165,13 @@ describe("Forgeyard configuration", () => {
     const normalized = validateConfig({
       ...validConfig(),
       paths: {
-        mutableRoots: ["src\\features", "presentation"],
+        mutableRoots: ["src\\features"],
         protectedPaths: [".git", ".env"],
-        presentation: "presentation\\deck",
       },
     });
     expect(normalized.paths).toEqual({
-      mutableRoots: ["src/features", "presentation"],
+      mutableRoots: ["src/features"],
       protectedPaths: [".git", ".env"],
-      presentation: "presentation/deck",
     });
 
     expect(() =>
@@ -198,7 +180,6 @@ describe("Forgeyard configuration", () => {
         paths: {
           mutableRoots: ["src"],
           protectedPaths: ["src/secrets"],
-          presentation: "src/presentation",
         },
       }),
     ).toThrowError(expect.objectContaining({ code: "FY_CONFIG_INVALID" }));

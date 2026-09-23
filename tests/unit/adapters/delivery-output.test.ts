@@ -42,10 +42,8 @@ function tailoredConfig(harness: HarnessId, existingInstruction?: string): Forge
     paths: {
       mutableRoots: ["app"],
       protectedPaths: [".git", ".env"],
-      presentation: "presentation",
     },
     orchestration: { mode: "native", maxConcurrency: 2 },
-    presentation: { enabled: false, audience: "Project stakeholders", durationMinutes: 7, offline: true },
     intake: {
       strategy: "automatic",
       request: "Add accessible checkout recovery.",
@@ -96,7 +94,6 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/tasks/T002.yaml",
       ".forgeyard/tasks/T003.yaml",
-      ".forgeyard/tasks/T004.yaml",
       ".forgeyard/knowledge/README.md",
       ".forgeyard/decisions/0000-template.md",
       ".forgeyard/handoffs/CURRENT.md",
@@ -104,12 +101,11 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
       ".forgeyard/usage/README.md",
     ]));
 
-    const tasks = ["T001", "T002", "T003", "T004"].map((id) =>
+    const tasks = ["T001", "T002", "T003"].map((id) =>
       parseYaml(byPath.get(`.forgeyard/tasks/${id}.yaml`)!) as Record<string, unknown>
     );
-    expect(tasks.map((task) => task.dependsOn)).toEqual([[], ["T001"], ["T002"], ["T003"]]);
+    expect(tasks.map((task) => task.dependsOn)).toEqual([[], ["T001"], ["T002"]]);
     expect(tasks[2]!.writeScopes).toEqual([]);
-    expect(tasks[3]!.writeScopes).toEqual(["presentation"]);
     expect(tasks.every((task) => task.evidence && task.integration)).toBe(true);
 
     expect(byPath.get("PROJECT.md")).toContain("Signal Garden");
@@ -129,7 +125,7 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
     expect(files.some((file) => file.path === ".forgeyard/reports/RUN_REPORT.md")).toBe(false);
   });
 
-  test("renders the stored decision and omits unselected presentation work", async () => {
+  test("renders the stored decision", async () => {
     const { files } = await renderTailored(harness, factory);
     const byPath = new Map(files.map((file) => [file.path, file.content]));
 
@@ -163,8 +159,6 @@ describe.each(adapters)("%s delivery workflow", (harness, factory) => {
     expect(tasks.reduce((sum, task) => sum + task.limits.maxCostUsd!, 0)).toBeCloseTo(20, 6);
     const instruction = files.find((file) => file.componentId === "foundation.project-instructions");
     expect(instruction?.content).toContain("Do not ask the user to choose catalog skills");
-    expect(byPath.has(".forgeyard/tasks/T004.yaml")).toBe(false);
-    expect(byPath.has("presentation/index.html")).toBe(false);
   });
 });
 

@@ -17,9 +17,8 @@ This is a new project initialized with a 300-minute delivery horizon.
 
 ## Scope
 
-- Mutable roots: src, presentation
+- Mutable roots: src
 - Protected paths: .git, .env
-- Presentation output: presentation
 - Never write outside the selected project root or modify protected paths.
 - External effects such as push, publish, deploy, messaging, or spending require explicit authorization at the point of action.
 

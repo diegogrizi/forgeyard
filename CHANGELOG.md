@@ -64,6 +64,10 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   `observability/`, `guard/` e i comandi `task`, `workspace`, `ledger`, `guard`. Due
   sistemi di attività significano zero autorità. Conservati il contratto di attività e le
   ricevute di verifica.
+- **Il pacchetto presentazione**: `packs/presentation/`, i due auditor, la skill
+  `forgeyard-showcase`, l'attività T004, la sezione `presentation` della configurazione, gli
+  undici slot nei due adapter e i golden. La sua unica garanzia utile sopravvive come regola
+  generale `content.remote-asset`: nessun file web generato chiama la rete, guard compreso.
 - Il ramo legacy del write-guard, che era il più permissivo dei due percorsi che
   proteggono la stessa cosa. Ora l'assenza di un work order nativo nega, non degrada.
 
@@ -71,8 +75,6 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 
 - La contabilità di misura e il registro a catena sono primitive verificate dai propri
   test, **non attraversate da nessun percorso del prodotto**.
-- Il ciclo di vita legacy (`orchestrator/`, `worktrees/`, i comandi `task`, `workspace` e
-  `ledger`) e il pacchetto presentazione sono ancora presenti.
 
 ## 0.1.0 - 2026-09-15
 

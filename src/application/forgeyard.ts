@@ -319,7 +319,6 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
         ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
         ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
-        ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
         ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
       }, registryRoot);
       return {
@@ -345,7 +344,6 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
         ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
         ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
-        ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
         ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
       }, registryRoot);
       if (analysis.inspection.request.trim().length === 0) {
@@ -367,7 +365,6 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
           ...(input.mutableRoots === undefined ? {} : { mutableRoots: input.mutableRoots }),
           ...(input.maxCostUsd === undefined ? {} : { maxCostUsd: input.maxCostUsd }),
           ...(input.autonomy === undefined ? {} : { autonomy: input.autonomy }),
-          ...(input.presentation === undefined ? {} : { presentation: input.presentation }),
           ...(input.harnessAvailability === undefined ? {} : { harnessAvailability: input.harnessAvailability }),
         }, registryRoot);
       }

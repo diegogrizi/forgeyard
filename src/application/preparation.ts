@@ -46,8 +46,7 @@ export async function analyzePreparation(
     }).sort();
     const focused = profile.intent === "maintenance";
     decision = { ...decision,
-      packs: ["ecosystem", "foundation", ...(!focused ? ["delivery"] : []),
-        ...(decision.presentation.enabled ? ["presentation", ...(focused ? ["delivery"] : [])] : [])].sort(),
+      packs: ["ecosystem", "foundation", ...(!focused ? ["delivery"] : [])].sort(),
       catalog: { selection: "curated", plugins },
       selected: plugins.map((id) => ({ id, reason: "Selected by admitted structured capability coverage, not prompt keywords." })),
       excluded: resolution.excluded.map((item) => ({ id: item.id, reason: item.reason })),
@@ -79,7 +78,6 @@ export function preparationConfig(
 ): ForgeyardConfig {
   if (inspection.request.trim().length === 0) throw intakeIncomplete();
   const mutableRoots = new Set(inspection.mutableRoots);
-  if (decision.presentation.enabled) mutableRoots.add("presentation");
 
   return validateConfig({
     schemaVersion: 1,
@@ -96,10 +94,8 @@ export function preparationConfig(
     paths: {
       mutableRoots: [...mutableRoots].sort((left, right) => left.localeCompare(right, "en")),
       protectedPaths: [".env", ".git"],
-      presentation: "presentation",
     },
     orchestration: decision.orchestration,
-    presentation: decision.presentation,
     intake: {
       strategy: "automatic",
       request: inspection.request,

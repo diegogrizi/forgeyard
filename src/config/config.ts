@@ -54,12 +54,6 @@ function withDefaults(value: unknown): unknown {
     if (copy.orchestration.maxConcurrency === undefined) copy.orchestration.maxConcurrency = 4;
   }
 
-  if (isRecord(copy.presentation)) {
-    if (copy.presentation.enabled === undefined) copy.presentation.enabled = copy.profile !== "minimal";
-    if (copy.presentation.durationMinutes === undefined) copy.presentation.durationMinutes = 7;
-    if (copy.presentation.offline === undefined) copy.presentation.offline = true;
-  }
-
   if (!isRecord(copy.intake)) {
     const project = isRecord(copy.project) ? copy.project : {};
     copy.intake = {
@@ -81,7 +75,7 @@ function withDefaults(value: unknown): unknown {
       ? ["foundation"]
       : profile === "tailored"
         ? ["foundation", "delivery", "ecosystem"]
-        : ["foundation", "delivery", "presentation", "ecosystem"];
+        : ["foundation", "delivery", "ecosystem"];
     copy.composition = {
       strategy: "manual",
       packs,
@@ -148,7 +142,6 @@ function overlaps(left: string, right: string): boolean {
 function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
   const mutableRoots = config.paths.mutableRoots.map(normalizedPath);
   const protectedPaths = config.paths.protectedPaths.map(normalizedPath);
-  const presentation = normalizedPath(config.paths.presentation);
 
   for (const mutable of mutableRoots) {
     for (const protectedPath of protectedPaths) {
@@ -156,13 +149,6 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
         throw configError("Mutable and protected paths overlap.", [mutable, protectedPath]);
       }
     }
-  }
-
-  if (
-    config.presentation.enabled &&
-    !mutableRoots.some((root) => overlaps(root, presentation) && !presentation.startsWith(`${root}/../`))
-  ) {
-    throw configError("The presentation path must be inside a mutable root.", [presentation]);
   }
 
   const duplicates = [...mutableRoots, ...protectedPaths].map(caseKey);
@@ -178,7 +164,7 @@ function normalizeAndCheckPaths(config: ForgeyardConfig): ForgeyardConfig {
       ...config.catalog,
       plugins: [...config.catalog.plugins].sort((left, right) => left.localeCompare(right, "en")),
     },
-    paths: { mutableRoots, protectedPaths, presentation },
+    paths: { mutableRoots, protectedPaths },
     ...(config.intake === undefined ? {} : {
       intake: {
         ...config.intake,

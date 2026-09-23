@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { beforeAll, test } from "vitest";
+import { beforeAll, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 8,1 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 import { buildCli, runBuiltCli } from "../helpers/cli.js";
 import { createPersonalWorkspace, inspectPersonalWorkspace } from "../../src/workspace/personal.js";
 

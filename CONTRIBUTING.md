@@ -21,9 +21,9 @@ Write a failing test before changing behavior. Keep domain functions independent
 - Run `npm run provenance:generate`, inspect both generated artifacts, and commit them with the dependency or pack change.
 - Do not translate, lightly rewrite, or rebrand unlicensed material.
 
-## Generated artifacts and presentation changes
+## Generated artifacts
 
-Update the canonical pack source first. Regenerate or deliberately update golden fixtures, then review the exact bytes and run the presentation content audit. Presentation contributions must remain offline and accessible and must not contain event-specific logos, organizer names, team identities, tracking, remote fonts, or unlicensed media.
+Update the canonical pack source first. Regenerate or deliberately update golden fixtures, then review the exact bytes: a golden fixture that is regenerated without being read is not a review. Generated output must not reach the network, must not carry machine paths, and must not contain organizer names, team identities, tracking, remote fonts, or unlicensed media.
 
 ## Pull-request checklist
 

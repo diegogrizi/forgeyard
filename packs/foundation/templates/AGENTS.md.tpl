@@ -19,7 +19,6 @@ This is a {{project.mode}} project initialized with a {{workflow.timeboxMinutes}
 
 - Mutable roots: {{paths.mutable}}
 - Protected paths: {{paths.protected}}
-- Presentation output: {{presentation.path}}
 - Never write outside the selected project root or modify protected paths.
 - External effects such as push, publish, deploy, messaging, or spending require explicit authorization at the point of action.
 

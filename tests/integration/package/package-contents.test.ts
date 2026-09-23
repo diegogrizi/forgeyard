@@ -1,6 +1,12 @@
 import path from "node:path";
 
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 10 ms.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 import { buildCli, runProcess } from "../../helpers/cli.js";
 
@@ -85,7 +91,6 @@ describe("public npm package contents", () => {
       "packs/foundation/templates/COMPOSITION.md.tpl",
       "packs/ecosystem/vendor/UPSTREAM.json",
       "packs/ecosystem/vendor/LICENSE",
-      "packs/presentation/pack.yaml",
       "sources/catalog.yaml",
       "sources/capabilities.yaml",
       "dist/native/service.d.ts",

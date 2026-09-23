@@ -70,7 +70,6 @@ export interface ComposeProjectOptions {
   maxConcurrency?: number;
   maxCostUsd?: number;
   autonomy?: "supervised" | "balanced" | "autonomous";
-  presentation?: boolean;
   harnessAvailability?: Partial<Record<HarnessId, boolean>>;
 }
 
@@ -105,12 +104,6 @@ export interface PreparationDecision {
   orchestration: {
     mode: "guided" | "native";
     maxConcurrency: number;
-  };
-  presentation: {
-    enabled: boolean;
-    audience: string;
-    durationMinutes: number;
-    offline: true;
   };
   autonomy: AutonomyConfig;
   analysisSha256: string;

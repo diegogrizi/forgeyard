@@ -72,12 +72,14 @@ di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichia
 di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 [Primo avvio](guide/primo-avvio.md).
 
-## In corso di rimozione
+## Rimozioni compiute
 
-Questi tagli sono **in corso**, non compiuti. Il checkout li contiene ancora, e i
-comandi corrispondenti rispondono ancora:
-
-- il pacchetto presentazione.
+Il **pacchetto presentazione è stato rimosso** il 23 settembre 2026: `packs/presentation/`,
+i due auditor, la skill `forgeyard-showcase`, l'attività T004, la sezione `presentation` della
+configurazione e i golden corrispondenti non esistono più. Un motore di slide non appartiene a
+una fabbrica di imbracature, e la sua sola garanzia — che i byte generati non chiamino la rete
+— sopravvive come regola generale `content.remote-asset`, che ora sorveglia ogni file web
+generato, incluso il guard di scrittura.
 
 Il **ciclo di vita legacy è stato rimosso** il 22 settembre 2026: `src/orchestrator/`,
 `src/worktrees/`, `src/observability/`, `src/guard/` e i comandi `task`, `workspace`,
@@ -123,8 +125,8 @@ Vale registrarli: un controllo che non ha mai trovato nulla non è ancora un con
   **dichiarazione** con un'**osservazione** presa da un altro vocabolario.
   I gate congelati li dichiara chi prepara, e possono invocare un programma che l'ispezione non
   enumera: ogni cartella appena preparata risultava in deriva bloccante. Le radici scrivibili
-  sono una concessione e non un avvistamento: il profilo `minimal` concede `presentation` e non
-  installa il bundle, quindi ogni installazione `minimal` corretta risultava rotta. Il confronto
+  sono una concessione e non un avvistamento: un profilo che concedeva una radice di cui non
+  installava il contenuto faceva risultare rotta ogni sua installazione corretta. Il confronto
   sui gate vale ora soltanto dove i due vocabolari si toccano, e le politiche di percorso —
   protette o scrivibili — non si confrontano affatto. Entrambi i difetti li ha trovati la
   verifica completa, non una rilettura del codice.
@@ -146,15 +148,21 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 72 file
-  di test, 562 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 71 file
+  di test, 565 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
   riusabile per un'altra.
-- **Un quarto tetto era più stretto del lavoro che delimitava.** I test di `tests/roundtrip`
-  eseguono la CLI compilata su un progetto vero: `init --profile hackathon` costa 40,8 secondi
-  cronometrati, contro un tetto globale di 30 tarato sui test unitari. Quattro rossi erano il
-  tetto. È la quarta volta, e di nuovo la misura ha preceduto la diagnosi.
+- **I tetti dei test sono stati misurati tutti, e la regola è diventata un controllo.** Le 110
+  prove di `tests/integration` e `tests/roundtrip` sono state cronometrate una per una, a
+  macchina ferma: vanno da 10 ms a 142,9 s. Quattro suite stavano sotto il tetto globale di
+  30 s tarato sui test unitari — `problem-first-preparation` da solo ne costa 40,9 — e
+  andavano in rosso a ogni carico. Ogni suite pesante dichiara ora il proprio tetto **con la
+  misura accanto**, e un test lo verifica (`tests/unit/meta/declared-timeouts.test.ts`):
+  la regola viveva in `AGENTS.md` come prosa, e quattro file se l'erano dimenticata.
+  Distinguere le due diagnosi conta: `problem-first-preparation` aveva un tetto **sotto** il
+  proprio lavoro, mentre `installer/update` ne misura 9,4 e aveva 3x di margine, consumato
+  dal carico. Solo la prima è un difetto del tetto.
 - **Tre gruppi di test erano dichiarati «fallimenti ambientali»: non lo erano.** Una misura
   li ha smentiti tutti e tre, e sono stati corretti il 22 settembre 2026. L'helper Git di
   `discovery.test.ts` aveva un tetto di 10 secondi per un lavoro che ne richiede 23; la

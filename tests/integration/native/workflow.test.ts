@@ -7,9 +7,9 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProjectService } from "../../../src/native/service.js";
 import { commitAll, nativeFixture, productPlan } from "../../helpers/native.js";
 // Ogni prova di questo file installa un'imbracatura reale: caricamento del registro,
-// rendering, applicazione transazionale e comandi Git veri. Il tetto globale di 30 secondi
-// è tarato sui test unitari, e un tetto più stretto del lavoro che delimita segnala un
-// difetto che non c'e'.
+// rendering, applicazione transazionale e comandi Git veri. Prova piu' lenta, cronometrata
+// su questa macchina a riposo: 42,5 s. Il tetto globale di 30 s e' tarato sui test unitari,
+// e un tetto piu' stretto del lavoro che delimita segnala un difetto che non c'e'.
 vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];

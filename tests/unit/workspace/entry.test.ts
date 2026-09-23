@@ -42,7 +42,6 @@ function prepareResult(root: string, adapter: HarnessId, created: readonly strin
     selected: Array.from({ length: 8 }, (_, index) => ({ id: `capacita-${index}`, reason: "inferita" })),
     excluded: Array.from({ length: 4 }, (_, index) => ({ id: `esclusa-${index}`, reason: "non pertinente" })),
     timeboxMinutes: 300, orchestration: { mode: "native", maxConcurrency: 2 },
-    presentation: { enabled: false, audience: "Project stakeholders", durationMinutes: 7, offline: true },
     autonomy: { level: "balanced", stopOnAmbiguity: true, externalEffects: "ask" },
     analysisSha256: "b".repeat(64),
   };

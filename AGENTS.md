@@ -146,3 +146,9 @@ stretto del lavoro che racchiude segnala un difetto che non c'è, e insegna a ig
 rossi — che è il danno peggiore.
 
 Se un test scade, rieseguilo isolato **e cronometra ciò che fa** prima di concludere.
+
+Questa regola non è più affidata alla memoria. Ogni suite in `tests/integration/` e
+`tests/roundtrip/` **dichiara il proprio tetto in testa al file, con la durata misurata
+della sua prova più lenta**, e un test lo verifica: `tests/unit/meta/declared-timeouts.test.ts`.
+Era prosa, e quattro suite se ne erano dimenticate — il difetto è emerso solo sotto carico.
+Il tetto dichiarato serve a cogliere un blocco, non a sorvegliare la durata.

@@ -22,8 +22,6 @@ Summarize elapsed time and explicit ledger observations. Unknown provider usage 
 
 Report findings first, then residual risks, skipped checks, and the next decision required.
 
-Presentation bundle: {{presentation.path}}
-
 Required quality commands:
 
 {{quality.commands}}

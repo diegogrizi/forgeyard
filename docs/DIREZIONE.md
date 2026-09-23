@@ -166,7 +166,7 @@ Il repository contiene tre motori sovrapposti. Ne sopravvive uno.
 | Rimosso | Peso | Motivo |
 |---|---|---|
 | Adapter Cursor | ~760 righe + riferimenti in 19 file | Il prodotto supporta Claude Code e Codex. Un terzo adapter descrittivo non enforceable diluisce le garanzie. |
-| Pacchetto presentazione | 2 auditor, 1 pack, fixture golden | Un motore di slide non appartiene a una fabbrica di imbracature. |
+| Pacchetto presentazione | 1 pack, 2 auditor, 1 attività, una sezione di configurazione, 11 slot in due adapter e i golden | Un motore di slide non appartiene a una fabbrica di imbracature. Rimosso il 23 settembre 2026; era intrecciato con il doppio rispetto a quanto questa riga stimava. |
 | Profilo `full` | 69 plugin vendored senza selettore | Installava tutto: è esattamente la libreria di intenzioni da cui ci distinguiamo. `hackathon` resta come selezione curata. |
 | Ciclo di vita legacy: `orchestrator/`, `worktrees/`, `observability/`, `guard/`, comandi `task`/`workspace`/`ledger`/`guard` | 4.715 righe | Duplicava il runtime nativo cooperativo. Due sistemi di task significano zero autorità. |
 | Superficie CLI legacy `init`/`inspect`/`prepare`/`update`/`rollback` come percorso ordinario | — | Un ingresso. Restano operazioni avanzate, non il tutorial. |

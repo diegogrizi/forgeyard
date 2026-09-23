@@ -24,7 +24,7 @@ const proposal = object({ intent: { enum: ["new-project", "change", "maintenance
 const inspectProperties = { brief: text(20000), specificationPaths: array(text(4096), 0, 128) };
 const constraints = object({ maxConcurrency: { type: "integer", minimum: 1, maximum: 16 },
   timeboxMinutes: { type: "integer", minimum: 30, maximum: 1440 }, maxCostUsd: { type: "number", exclusiveMinimum: 0, maximum: 1000000 },
-  autonomy: { enum: ["supervised", "balanced", "autonomous"] }, presentation: { type: "boolean" },
+  autonomy: { enum: ["supervised", "balanced", "autonomous"] },
   mutableRoots: array(text(260), 1, 64),
   qualityCommands: array(object({ name: text(80), argv: array(text(4096), 1, 128), cwd: text(260) }, ["name", "argv"]), 1, 32),
 }, []);

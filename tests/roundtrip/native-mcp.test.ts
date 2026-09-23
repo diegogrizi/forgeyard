@@ -3,7 +3,13 @@ import path from "node:path";
 import { execa } from "execa";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { afterEach, beforeAll, expect, test } from "vitest";
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 24,2 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 300_000, hookTimeout: 300_000 });
 import { buildCli } from "../helpers/cli.js";
 import { nativeFixture } from "../helpers/native.js";
 

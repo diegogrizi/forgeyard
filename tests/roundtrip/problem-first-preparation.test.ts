@@ -2,7 +2,13 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 40,9 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 300_000, hookTimeout: 300_000 });
 import { parse as parseYaml } from "yaml";
 
 import type { PrepareCommandResult, UpdateCommandResult } from "../../src/application/forgeyard.js";
@@ -75,7 +81,6 @@ describe("problem-first packaged preparation", () => {
         "agent-orchestration", "agent-teams", "conductor", "full-stack-orchestration",
       ]));
       expect(config.intake?.evidence.length).toBeGreaterThan(0);
-      expect(config.presentation.enabled).toBe(false);
     }
     expect(frontendConfig.intake?.evidence.map((item) => item.path)).toContain("package.json");
     expect(backendConfig.intake?.evidence.map((item) => item.path)).toContain("pyproject.toml");

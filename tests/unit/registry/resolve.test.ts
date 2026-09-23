@@ -64,12 +64,6 @@ function snapshot(packs: readonly LoadedPack[]): RegistrySnapshot {
     defaults: {
       timeboxMinutes: 300,
       orchestration: { mode: "guided", maxConcurrency: 4 },
-      presentation: {
-        enabled: true,
-        audience: "Reviewers",
-        durationMinutes: 7,
-        offline: true,
-      },
     },
   };
   return {
@@ -167,7 +161,7 @@ describe("profile resolver", () => {
     const resolved = resolveProfile(registry, "hackathon", adapter);
 
     expect(resolved.adapter).toBe(adapter);
-    expect(resolved.packIds).toEqual(expect.arrayContaining(["foundation", "presentation", "ecosystem"]));
+    expect(resolved.packIds).toEqual(expect.arrayContaining(["foundation", "delivery", "ecosystem"]));
   });
 
   test("resolves the minimal kernel and the curated hackathon selection", async () => {

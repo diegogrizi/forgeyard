@@ -11,7 +11,7 @@ export interface ContentAuditInput {
 }
 
 export interface ContentFinding {
-  ruleId: "content.deny-term" | "content.unresolved-template" | "content.unsafe-link" | "presentation.remote-asset";
+  ruleId: "content.deny-term" | "content.unresolved-template" | "content.unsafe-link" | "content.remote-asset";
   path: string;
 }
 
@@ -109,7 +109,7 @@ export async function scanGeneratedContent(input: ContentAuditInput): Promise<re
       findings.push({ ruleId: "content.unresolved-template", path: relative });
     }
     if (!imported && /\.(?:html|css|js|mjs|cjs)$/i.test(relative) && /(?:https?:)?\/\//i.test(source)) {
-      findings.push({ ruleId: "presentation.remote-asset", path: relative });
+      findings.push({ ruleId: "content.remote-asset", path: relative });
     }
   }
 

@@ -135,33 +135,17 @@ describe("project composition", () => {
     ]);
   });
 
-  test("includes presentation only when requested or explicitly overridden", async () => {
-    const rules = await loadCapabilityRules(path.resolve("."));
-    const ordinary = composeProject(inspection({ request: "Add a checkout endpoint." }), {}, rules);
-    const requested = composeProject(inspection({ request: "Prepare a live demo for reviewers." }), {}, rules);
-    const suppressed = composeProject(inspection({ request: "Prepare a live demo for reviewers." }), { presentation: false }, rules);
-
-    expect(ordinary.presentation.enabled).toBe(false);
-    expect(ordinary.packs).not.toContain("presentation");
-    expect(requested.presentation.enabled).toBe(true);
-    expect(requested.packs).toContain("presentation");
-    expect(suppressed.presentation.enabled).toBe(false);
-    expect(suppressed.packs).not.toContain("presentation");
-  });
-
   test("recommends proportional concurrency and honors a valid override", async () => {
     const rules = await loadCapabilityRules(path.resolve("."));
     const focused = composeProject(inspection({ request: "Fix the login bug." }), { timeboxMinutes: 120 }, rules);
     const frontend = composeProject(inspection({ kind: "frontend" }), {}, rules);
     const fullStack = composeProject(inspection({ kind: "full-stack" }), {}, rules);
-    const presentation = composeProject(inspection({ kind: "full-stack", request: "Build and demo the product." }), {}, rules);
     const overridden = composeProject(inspection({ kind: "frontend" }), { maxConcurrency: 12 }, rules);
 
     expect(focused.orchestration.maxConcurrency).toBe(1);
     expect(focused.packs).toEqual(["ecosystem", "foundation"]);
     expect(frontend.orchestration.maxConcurrency).toBe(2);
     expect(fullStack.orchestration.maxConcurrency).toBe(3);
-    expect(presentation.orchestration.maxConcurrency).toBe(4);
     expect(overridden.orchestration.maxConcurrency).toBe(12);
   });
 

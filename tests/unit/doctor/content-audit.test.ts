@@ -38,18 +38,18 @@ describe("generated content audit", () => {
     expect(JSON.stringify(findings).toLocaleLowerCase("en-US")).not.toContain("example sponsor");
   });
 
-  test("reports unresolved templates and remote presentation assets in stable order", async () => {
+  test("reports unresolved templates and remote assets in generated web files in stable order", async () => {
     const root = await freshRoot();
-    await mkdir(path.join(root, "presentation"));
+    await mkdir(path.join(root, "generated"));
     await writeFile(path.join(root, "z.md"), "Pending {{project.name}}\n", "utf8");
     await writeFile(
-      path.join(root, "presentation", "index.html"),
+      path.join(root, "generated", "index.html"),
       '<link href="https://cdn.example.invalid/style.css">\n',
       "utf8",
     );
 
-    await expect(scanGeneratedContent({ root, paths: ["z.md", "presentation"] })).resolves.toEqual([
-      { ruleId: "presentation.remote-asset", path: "presentation/index.html" },
+    await expect(scanGeneratedContent({ root, paths: ["z.md", "generated"] })).resolves.toEqual([
+      { ruleId: "content.remote-asset", path: "generated/index.html" },
       { ruleId: "content.unresolved-template", path: "z.md" },
     ]);
   });

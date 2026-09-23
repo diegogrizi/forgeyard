@@ -87,17 +87,10 @@ export interface ForgeyardConfig {
   paths: {
     mutableRoots: readonly string[];
     protectedPaths: readonly string[];
-    presentation: string;
   };
   orchestration: {
     mode: "native" | "guided";
     maxConcurrency: number;
-  };
-  presentation: {
-    enabled: boolean;
-    audience: string;
-    durationMinutes: number;
-    offline: true;
   };
   intake?: IntakeConfig;
   composition?: CompositionConfig;
@@ -170,7 +163,7 @@ export interface ProfileManifest {
   version: string;
   packs: readonly string[];
   catalog: CatalogSelection;
-  defaults: Pick<ForgeyardConfig, "timeboxMinutes" | "orchestration" | "presentation">;
+  defaults: Pick<ForgeyardConfig, "timeboxMinutes" | "orchestration">;
 }
 
 export interface SourceRecord {

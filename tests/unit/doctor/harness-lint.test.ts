@@ -249,7 +249,7 @@ describe("harness lint", () => {
     const files = [
       planned(".claude/skills/second/SKILL.md", doc("forgeyard-workflow", BODY)),
       planned(".claude/skills/first/SKILL.md", doc("forgeyard-workflow", BODY)),
-      planned(".claude/skills/third/SKILL.md", doc("forgeyard-showcase", BODY)),
+      planned(".claude/skills/third/SKILL.md", doc("third-party-skill", BODY)),
     ];
 
     const report = lintHarness(files);

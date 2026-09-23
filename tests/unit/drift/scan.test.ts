@@ -321,11 +321,11 @@ describe("drift scanner", () => {
   });
 
   // A write grant is policy too: the harness allows writes under a root so they are allowed if
-  // it is ever created. The 'minimal' profile grants 'presentation' and installs no bundle,
-  // so comparing the grant against the disk failed every correct install of that profile.
+  // it is ever created. A profile that grants a root whose bundle it does not install made
+  // every correct installation of that profile look broken.
   test("does not measure a frozen write grant against what the project shows", () => {
     expect(scanDrift(
-      frozenProfile({ mutableRoots: ["src", "presentation"] }),
+      frozenProfile({ mutableRoots: ["src", "docs"] }),
       currentProfile({ mutableRoots: [], presentPaths: ["AGENTS.md", ".git/config"] }),
     ).findings).toEqual([]);
   });

@@ -10,7 +10,6 @@ import type {
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
-import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderClaudeCodeCatalog } from "./claude-code-catalog.js";
 import {
   compositionVariables,
@@ -47,16 +46,7 @@ const DELIVERY_SLOT_ORDER = [
   "observability.usage",
 ] as const;
 
-const PRESENTATION_SLOT_ORDER = [
-  "presentation.skill",
-  "presentation.index",
-  "presentation.styles",
-  "presentation.script",
-  "presentation.readme",
-  "task.demo",
-] as const;
-
-const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
+const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER] as const;
 type ClaudeSlot = (typeof SLOT_ORDER)[number];
 
 function adapterError(message: string, paths?: readonly string[]): ForgeyardError {
@@ -91,10 +81,6 @@ function deliverySlots(bySlot: ReadonlyMap<string, ResolvedComponent>): readonly
   return selected;
 }
 
-function presentationPath(root: string, fileName: string): string {
-  const normalized = normalizePortablePath(root);
-  return normalizePortablePath(normalized === "." ? fileName : `${normalized}/${fileName}`);
-}
 
 function targetForSlot(slot: ClaudeSlot, config: ForgeyardConfig): string {
   switch (slot) {
@@ -116,8 +102,6 @@ function targetForSlot(slot: ClaudeSlot, config: ForgeyardConfig): string {
       return ".forgeyard/tasks/T002.yaml";
     case "task.review":
       return ".forgeyard/tasks/T003.yaml";
-    case "task.demo":
-      return ".forgeyard/tasks/T004.yaml";
     case "memory.knowledge":
       return ".forgeyard/knowledge/README.md";
     case "memory.decision-template":
@@ -128,53 +112,9 @@ function targetForSlot(slot: ClaudeSlot, config: ForgeyardConfig): string {
       return ".forgeyard/reports/RUN_REPORT.md";
     case "observability.usage":
       return ".forgeyard/usage/README.md";
-    case "presentation.skill":
-      return ".claude/skills/forgeyard-showcase/SKILL.md";
-    case "presentation.index":
-      return presentationPath(config.paths.presentation, "index.html");
-    case "presentation.styles":
-      return presentationPath(config.paths.presentation, "styles.css");
-    case "presentation.script":
-      return presentationPath(config.paths.presentation, "app.js");
-    case "presentation.readme":
-      return presentationPath(config.paths.presentation, "README.md");
   }
 }
 
-function htmlQualitySummary(config: ForgeyardConfig): string {
-  return escapeHtmlText(
-    config.quality.commands.map((command) => `${command.name}: ${JSON.stringify(command.argv)}`).join("; "),
-  );
-}
-
-function clockLabel(seconds: number): string {
-  const whole = Math.max(0, Math.round(seconds));
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
-function presentationTimeline(config: ForgeyardConfig): string {
-  const labels = ["Opening", "Problem", "Audience", "Insight", "Solution", "Demo", "Evidence", "Architecture", "Value", "Ask"];
-  const goals = [
-    "Frame the purpose.",
-    "Make the costly moment concrete.",
-    "Identify the first audience.",
-    "State the product insight.",
-    "Explain the visible promise.",
-    "Run the complete live path.",
-    "Show revision-bound proof.",
-    "Explain only outcome-critical structure.",
-    "Translate proof into value.",
-    "Ask for one next decision.",
-  ];
-  const weights = [0.08, 0.1, 0.08, 0.09, 0.12, 0.17, 0.13, 0.09, 0.07, 0.07];
-  const totalSeconds = config.presentation.durationMinutes * 60;
-  let elapsed = 0;
-  return labels.map((label, index) => {
-    const start = elapsed;
-    elapsed = index === labels.length - 1 ? totalSeconds : elapsed + totalSeconds * weights[index]!;
-    return `| ${clockLabel(start)}–${clockLabel(elapsed)} | ${label} | ${goals[index]} |`;
-  }).join("\n");
-}
 
 function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig, slots: ReadonlySet<string>): Readonly<Record<string, string>> {
   switch (slot) {
@@ -188,7 +128,6 @@ function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig, slots: Readonly
         "quality.commands": qualityMarkdown(config),
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         ...continuityVariables(slots),
       };
     case "workflow.primary":
@@ -241,42 +180,13 @@ function variablesFor(slot: ClaudeSlot, config: ForgeyardConfig, slots: Readonly
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.reviewMinutes": allocatedMinutes(config, 0.1),
       };
-    case "task.demo":
-      return {
-        ...taskContractVariables(config, "task.demo"),
-        "task.command": yamlSequence(config.quality.commands[0]!.argv),
-        "task.presentationScope": yamlSequence([config.paths.presentation]),
-        "task.demoMinutes": allocatedMinutes(config, 0.15),
-      };
     case "memory.handoff":
       return { "project.name": escapeMarkdownInline(config.project.name) };
     case "report.run":
       return {
         "project.name": escapeMarkdownInline(config.project.name),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         "quality.commands": qualityMarkdown(config),
       };
-    case "presentation.index":
-      return {
-        "project.name": escapeHtmlText(config.project.name),
-        "project.purpose": escapeHtmlText(config.project.purpose),
-        "presentation.audience": escapeHtmlText(config.presentation.audience),
-        "presentation.durationMinutes": String(config.presentation.durationMinutes),
-        "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "quality.summary": htmlQualitySummary(config),
-      };
-    case "presentation.readme":
-      return {
-        "project.name": escapeMarkdownInline(config.project.name),
-        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
-        "presentation.durationMinutes": String(config.presentation.durationMinutes),
-        "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "quality.commands": qualityMarkdown(config),
-        "presentation.timeline": presentationTimeline(config),
-      };
-    case "presentation.skill":
-    case "presentation.styles":
-    case "presentation.script":
     case "guard.file-tools":
     case "memory.knowledge":
     case "memory.decision-template":
@@ -360,7 +270,6 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
       const requiredSlots: readonly ClaudeSlot[] = [
         ...CORE_SLOT_ORDER,
         ...deliverySlots(bySlot),
-        ...(config.presentation.enabled ? PRESENTATION_SLOT_ORDER : []),
       ];
       for (const component of components) {
         if (component.kind === "catalog") {
@@ -430,14 +339,6 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         ".forgeyard/bin/write-guard.mjs",
         ".forgeyard/COMPOSITION.md",
       ];
-      const presentationRoot = files.find((file) => file.componentId === "presentation.index")?.path.replace(/\/index\.html$/, "");
-      if (presentationRoot !== undefined) required.push(
-        ".claude/skills/forgeyard-showcase/SKILL.md",
-        `${presentationRoot}/index.html`,
-        `${presentationRoot}/styles.css`,
-        `${presentationRoot}/app.js`,
-        `${presentationRoot}/README.md`,
-      );
       if (byPath.has("PROJECT.md")) required.push(
         "PROJECT.md",
         ".forgeyard/tasks/T002.yaml",
@@ -448,7 +349,6 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         ".forgeyard/reports/RUN_REPORT.md",
         ".forgeyard/usage/README.md",
       );
-      if (byPath.has("PROJECT.md") && presentationRoot !== undefined) required.push(".forgeyard/tasks/T004.yaml");
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Claude Code output '${filePath}' is missing.`, [filePath]);
       }
@@ -482,20 +382,9 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
           throw adapterError("Generated Claude Code skill or command metadata is invalid.", [file.path]);
         }
       }
-      for (const id of ["T001", "T002", "T003", "T004"]) {
+      for (const id of ["T001", "T002", "T003"]) {
         const filePath = `.forgeyard/tasks/${id}.yaml`;
         if (byPath.has(filePath)) validateTask(byPath.get(filePath)!, filePath, id);
-      }
-      if (presentationRoot !== undefined) {
-        const findings = auditPresentationSources({
-          directory: presentationRoot,
-          html: byPath.get(`${presentationRoot}/index.html`)!,
-          css: byPath.get(`${presentationRoot}/styles.css`)!,
-          javascript: byPath.get(`${presentationRoot}/app.js`)!,
-        });
-        if (findings.length > 0) {
-          throw adapterError("Generated presentation violates its offline or accessibility contract.", [...new Set(findings.map((finding) => finding.path))].sort());
-        }
       }
       if (projectInstructions.content.trim().length === 0) {
         throw adapterError("Generated Claude Code project instructions are empty.", [projectInstructions.path]);

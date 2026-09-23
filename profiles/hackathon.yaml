@@ -4,7 +4,6 @@ version: 1.0.0
 packs:
   - foundation
   - delivery
-  - presentation
   - ecosystem
 catalog:
   selection: curated
@@ -36,8 +35,3 @@ defaults:
   orchestration:
     mode: guided
     maxConcurrency: 4
-  presentation:
-    enabled: true
-    audience: Product reviewers
-    durationMinutes: 7
-    offline: true

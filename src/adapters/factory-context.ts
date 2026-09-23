@@ -95,15 +95,8 @@ export function projectContextVariables(config: ForgeyardConfig): Readonly<Recor
     "intake.frameworks": inlineList(intake?.frameworks ?? [], "None detected"),
     "intake.sources": bulletList(intake?.sources ?? [], "No specification source recorded"),
     "intake.questions": bulletList(intake?.questions ?? [], "No unresolved product question"),
-    "presentation.audience": config.presentation.enabled
-      ? escapeMarkdownInline(config.presentation.audience)
-      : "Not selected for this preparation",
-    "presentation.scope": config.presentation.enabled
-      ? escapeMarkdownInline(config.paths.presentation)
-      : "Disabled for this preparation",
-    "delivery.proofRequirement": config.presentation.enabled
-      ? "The offline presentation shows the same behavior and cites only captured evidence."
-      : "The delivered behavior is backed by revision-bound verification evidence.",
+    "delivery.proofRequirement":
+      "The delivered behavior is backed by revision-bound verification evidence.",
   };
 }
 
@@ -129,7 +122,6 @@ function activeTaskSlots(config: ForgeyardConfig): readonly ProjectTaskSlot[] {
   return [
     "task.initial" as const,
     ...(packs.has("delivery") ? ["task.implementation" as const, "task.review" as const] : []),
-    ...(packs.has("presentation") && config.presentation.enabled ? ["task.demo" as const] : []),
   ];
 }
 
@@ -154,7 +146,6 @@ function taskCapabilities(config: ForgeyardConfig, slot: ProjectTaskSlot): reado
   const selected = config.composition?.selected.map((choice) => choice.id) ?? [];
   if (selected.length > 0) return selected;
   if (slot === "task.review") return ["code-review", "risk-analysis"];
-  if (slot === "task.demo") return ["demo-rehearsal", "evidence-curation", "presentation"];
   return ["implementation", "testing"];
 }
 

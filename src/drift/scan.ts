@@ -353,8 +353,8 @@ export function scanDrift(frozen: FrozenProfile, current: CurrentProfile): Drift
 
   // Neither the frozen protected paths nor the frozen mutable roots are compared against what
   // the project shows. Both are policy, not observation: the harness refuses writes to '.env'
-  // so they are refused if it ever appears, and grants writes under 'presentation' so they are
-  // allowed if it is ever created. An absent path stops neither, and the capsule froze a rule
+  // so they are refused if it ever appears, and grants writes under a root so they are allowed
+  // if it is ever created. An absent path stops neither, and the capsule froze a rule
   // rather than a sighting, so a path that disappeared cannot be told from one that was never
   // there. Comparing them measured every correctly prepared project as drifted, which is a
   // check nobody reads.

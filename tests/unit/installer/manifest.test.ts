@@ -1,6 +1,12 @@
 import path from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+
+// Ogni prova di questo file compone l'intero catalogo vendored e rende centinaia di file.
+// Cronometrate su questa macchina a riposo costano 7,9 s e 9,3 s: sotto il tetto globale di
+// 30 s, ma con un margine di tre volte che si esaurisce su un runner piu' lento. Il tetto e'
+// dichiarato qui con la sua misura, invece di restare implicito.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 import { createCodexAdapter } from "../../../src/adapters/codex.js";
 import { loadConfig, serializeConfig } from "../../../src/config/config.js";
@@ -47,7 +53,7 @@ describe("install metadata", () => {
     const first = await makePlan("20260915T120000000Z-a1b2c3");
     const second = await makePlan("20260915T120001000Z-d4e5f6");
 
-    expect(first.plan.files.map((file) => file.path).slice(0, 23)).toEqual([
+    expect(first.plan.files.map((file) => file.path).slice(0, 17)).toEqual([
       "forgeyard.yaml",
       "forgeyard.lock",
       ".forgeyard/.gitignore",
@@ -65,12 +71,6 @@ describe("install metadata", () => {
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",
       ".forgeyard/usage/README.md",
-      ".agents/skills/forgeyard-showcase/SKILL.md",
-      "presentation/index.html",
-      "presentation/styles.css",
-      "presentation/app.js",
-      "presentation/README.md",
-      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(first.plan.files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
     expect(first.plan.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);

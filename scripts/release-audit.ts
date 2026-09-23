@@ -10,8 +10,6 @@ type RuleId =
   | "release.unfinished-prose"
   | "release.unresolved-template"
   | "release.committed-output"
-  | "release.presentation-remote"
-  | "release.presentation-identity";
 
 interface AuditOptions {
   root: string;
@@ -123,11 +121,6 @@ function recordedOutput(relativePath: string): boolean {
     || /(?:^|\/)(?:command-output|stdout|stderr)\.(?:txt|json)$/i.test(relativePath);
 }
 
-function presentationSource(relativePath: string): boolean {
-  return relativePath.startsWith("packs/presentation/")
-    && /\.(?:css|html|js)(?:\.tpl)?$/i.test(relativePath);
-}
-
 function addFinding(findings: Map<RuleId, Set<string>>, rule: RuleId, relativePath: string): void {
   const paths = findings.get(rule) ?? new Set<string>();
   paths.add(relativePath);
@@ -155,14 +148,6 @@ async function runAudit(options: AuditOptions): Promise<Map<RuleId, Set<string>>
     }
     if (!intentionalTokenContext(relativePath) && /\{\{[^}\r\n]+\}\}/.test(source)) {
       addFinding(findings, "release.unresolved-template", relativePath);
-    }
-    if (presentationSource(relativePath)) {
-      if (/(?:https?:|wss?:)?\/\//i.test(source)) addFinding(findings, "release.presentation-remote", relativePath);
-      if (
-        /<meta\b[^>]*\bname\s*=\s*["'](?:author|organization|organizer|event|team)(?:[-_ ]?(?:id|name))?["']/i.test(source)
-        || /^[ \t]*(?:author|organization|organizer|event|team)(?:Id|Name)?[ \t]*:/im.test(source)
-        || /["'](?:author|organization|organizer|event|team)(?:Id|Name)?["']\s*:/i.test(source)
-      ) addFinding(findings, "release.presentation-identity", relativePath);
     }
   }
   return findings;

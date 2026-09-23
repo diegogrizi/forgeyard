@@ -4,6 +4,12 @@ import path from "node:path";
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 16,8 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
+
 import { createForgeyardService } from "../../../src/application/forgeyard.js";
 import type { PromptDriver } from "../../../src/config/wizard.js";
 import type { DoctorReport } from "../../../src/core/contracts.js";

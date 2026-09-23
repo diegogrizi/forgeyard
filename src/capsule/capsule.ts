@@ -76,9 +76,10 @@ export function gateDefinitions(config: ForgeyardConfig): readonly GateDefinitio
   }));
 }
 
-function isProductArtifact(file: PlannedFile, presentationPath: string): boolean {
+/** Product output, not harness: the capsule freezes what governs the work, not what it produces. */
+function isProductArtifact(file: PlannedFile): boolean {
   return file.ownership === "seed" || file.path.startsWith(".forgeyard/tasks/") ||
-    file.path === ".forgeyard/COMPOSITION.md" || file.path === presentationPath || file.path.startsWith(`${presentationPath}/`);
+    file.path === ".forgeyard/COMPOSITION.md";
 }
 
 export function compileCapsule(
@@ -86,7 +87,7 @@ export function compileCapsule(
   files: readonly PlannedFile[],
   forgeyardVersion = "0.1.0",
 ): Capsule {
-  const inventory = files.filter((file) => !isProductArtifact(file, config.paths.presentation))
+  const inventory = files.filter((file) => !isProductArtifact(file))
     .map((file) => ({ path: normalizePortablePath(file.path), sha256: file.sha256, componentId: file.componentId }))
     .sort((a, b) => a.path.localeCompare(b.path, "en"));
   const payload: Capsule["payload"] = {

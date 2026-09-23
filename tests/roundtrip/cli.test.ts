@@ -66,7 +66,7 @@ beforeAll(async () => {
   await buildCli(repositoryRoot);
   sandboxRoot = await mkdtemp(path.join(os.tmpdir(), "forgeyard-cli-roundtrip-"));
   targetRoot = path.join(sandboxRoot, "generated-project");
-}, 60_000);
+});
 
 afterAll(async () => {
   if (sandboxRoot !== undefined) await rm(sandboxRoot, { recursive: true, force: true });
@@ -94,7 +94,7 @@ describe("built Forgeyard CLI round trip", () => {
 
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output).toEqual(expect.objectContaining({ command: "init", applied: false, status: "preview" }));
-    expect(output.changes.created).toHaveLength(345);
+    expect(output.changes.created).toHaveLength(339);
     expect(output.changes.created).toContain(".forgeyard/capsule.json");
     expect(await exists(targetRoot)).toBe(false);
   });
@@ -124,7 +124,6 @@ describe("built Forgeyard CLI round trip", () => {
     expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
     const installedTree = await fileTree(targetRoot);
     expect(installedTree).toEqual(expect.arrayContaining([
-      ".agents/skills/forgeyard-showcase/SKILL.md",
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
       ".forgeyard/.gitignore",
@@ -133,7 +132,6 @@ describe("built Forgeyard CLI round trip", () => {
       ".forgeyard/tasks/T001.yaml",
       ".forgeyard/tasks/T002.yaml",
       ".forgeyard/tasks/T003.yaml",
-      ".forgeyard/tasks/T004.yaml",
       ".forgeyard/COMPOSITION.md",
       ".forgeyard/knowledge/README.md",
       ".forgeyard/decisions/0000-template.md",
@@ -144,25 +142,17 @@ describe("built Forgeyard CLI round trip", () => {
       "PROJECT.md",
       "forgeyard.lock",
       "forgeyard.yaml",
-      "presentation/app.js",
-      "presentation/index.html",
-      "presentation/README.md",
-      "presentation/styles.css",
       ".forgeyard/catalog/ecosystem.json",
       ".forgeyard/licenses/wshobson-agents.LICENSE",
     ]));
-    expect(installedTree).toHaveLength(347);
+    expect(installedTree).toHaveLength(341);
     const manifest = await loadInstallManifest(targetRoot);
-    expect(manifest.files).toHaveLength(345);
+    expect(manifest.files).toHaveLength(339);
     expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(52);
-    expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(119);
+    expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(118);
 
     for (const relativePath of [
       "AGENTS.md",
-      "presentation/app.js",
-      "presentation/index.html",
-      "presentation/README.md",
-      "presentation/styles.css",
     ]) {
       expect(await readFile(path.join(targetRoot, ...relativePath.split("/")), "utf8")).toBe(
         await readFile(path.join(repositoryRoot, "fixtures", "golden", "codex-hackathon", ...relativePath.split("/")), "utf8"),
@@ -170,7 +160,7 @@ describe("built Forgeyard CLI round trip", () => {
     }
   });
 
-  test("minimal profile preserves the small kernel without catalog or presentation payloads", async () => {
+  test("minimal profile preserves the small kernel without catalog", async () => {
     const minimalTargetRoot = path.join(sandboxRoot, "minimal-project");
     const result = await runBuiltCli(
       repositoryRoot,
@@ -197,9 +187,8 @@ describe("built Forgeyard CLI round trip", () => {
     expect(manifest.files).toHaveLength(10);
     expect(manifest.files.filter((file) => file.path.startsWith(".codex/agents/"))).toHaveLength(1);
     expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(1);
-    expect(manifest.files.some((file) => file.path.startsWith("presentation/"))).toBe(false);
     expect(manifest.files.some((file) => file.componentId.startsWith("ecosystem."))).toBe(false);
-  }, 30_000);
+  });
 
   test("doctor reports the installed factory in plain and JSON modes", async () => {
     const plain = await runBuiltCli(repositoryRoot, ["doctor", targetRoot], sandboxRoot);

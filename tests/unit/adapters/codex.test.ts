@@ -20,10 +20,10 @@ async function renderedFoundation() {
 }
 
 describe("Codex adapter", () => {
-  test("maps the canonical foundation and presentation slots to project paths", async () => {
+  test("maps the canonical foundation slots to project paths", async () => {
     const { files } = await renderedFoundation();
 
-    expect(files.map((file) => file.path).slice(0, 20)).toEqual([
+    expect(files.map((file) => file.path).slice(0, 14)).toEqual([
       "AGENTS.md",
       ".agents/skills/forgeyard-workflow/SKILL.md",
       ".codex/agents/reviewer.toml",
@@ -38,12 +38,6 @@ describe("Codex adapter", () => {
       ".forgeyard/handoffs/CURRENT.md",
       ".forgeyard/reports/RUN_REPORT.md",
       ".forgeyard/usage/README.md",
-      ".agents/skills/forgeyard-showcase/SKILL.md",
-      "presentation/index.html",
-      "presentation/styles.css",
-      "presentation/app.js",
-      "presentation/README.md",
-      ".forgeyard/tasks/T004.yaml",
     ]);
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
@@ -100,7 +94,7 @@ describe("Codex adapter", () => {
     const files = await adapter.render(resolved.components, config);
 
     expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(203);
-    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(290);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(289);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
     await adapter.validateOutput(files);
   }, 30_000);

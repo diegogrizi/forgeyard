@@ -11,8 +11,3 @@ defaults:
   orchestration:
     mode: guided
     maxConcurrency: 4
-  presentation:
-    enabled: false
-    audience: Not installed
-    durationMinutes: 7
-    offline: true

@@ -9,7 +9,6 @@ acceptanceCriteria:
 dependsOn: []
 writeScopes:
   - "src"
-  - "presentation"
 role: "software-implementer"
 capabilities:
   - "implementation"

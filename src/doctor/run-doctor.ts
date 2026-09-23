@@ -16,7 +16,6 @@ import { sha256Text } from "../core/hash.js";
 import { normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
 import { loadInstallManifest, type InstallManifest } from "../installer/manifest.js";
 import { scanGeneratedContent } from "./content-audit.js";
-import { auditPresentationBundle } from "./presentation-audit.js";
 import { readCapsule, readRegularProjectFile, type Capsule } from "../capsule/capsule.js";
 import {
   currentProfileFromInspection,
@@ -134,7 +133,6 @@ async function checkHarnessOutput(root: string, manifest: InstallManifest): Prom
     const adapterFiles = manifest.files.filter(
       (record) =>
         record.componentId.startsWith("foundation.") ||
-        record.componentId.startsWith("presentation.") ||
         record.componentId.startsWith("ecosystem."),
     );
     const files: PlannedFile[] = await Promise.all(
@@ -150,28 +148,9 @@ async function checkHarnessOutput(root: string, manifest: InstallManifest): Prom
       }),
     );
     await createHarnessAdapter(manifest.adapter).validateOutput(files);
-    return passed(`${manifest.adapter}-output`, `${label} instructions, capabilities, task, and presentation are structurally valid.`);
+    return passed(`${manifest.adapter}-output`, `${label} instructions, capabilities and task are structurally valid.`);
   } catch (error) {
     return failed(`${manifest.adapter}-output`, `${label} generated output is missing or structurally invalid.`, errorPaths(error));
-  }
-}
-
-async function checkPresentationOutput(
-  root: string,
-  directory: string,
-  denyTerms: readonly string[],
-): Promise<CheckResult> {
-  try {
-    const findings = await auditPresentationBundle({ root, directory, denyTerms });
-    return findings.length === 0
-      ? passed("presentation-output", "Presentation output is offline, accessible, responsive, and identity-neutral.")
-      : failed(
-          "presentation-output",
-          "Presentation output violates one or more bundle rules.",
-          [...new Set(findings.map((finding) => finding.path))].sort(),
-        );
-  } catch {
-    return failed("presentation-output", "Presentation output could not be audited safely.", [directory]);
   }
 }
 
@@ -400,18 +379,6 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
       message: "Legacy installation has no native capsule; its task receipts are not native certificates." });
     checks.push(await checkManagedFiles(root, manifest, lock));
     checks.push(await checkHarnessOutput(root, manifest));
-    checks.push(
-      config === undefined
-        ? failed("presentation-output", "Presentation output cannot be located because configuration is invalid.")
-        : config.presentation.enabled
-          ? await checkPresentationOutput(root, config.paths.presentation, input.denyTerms ?? [])
-          : {
-              id: "presentation-output",
-              status: "skipped",
-              required: false,
-              message: "The selected profile does not install a presentation bundle.",
-            },
-    );
     const importedPaths = manifest.files
       .filter((record) => record.componentId.startsWith("ecosystem."))
       .map((record) => record.path);
@@ -434,7 +401,6 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     checks.push(failed("managed-files", "Managed payload cannot be checked because install metadata is invalid."));
     const adapterId = manifest?.adapter ?? lock?.adapter ?? config?.harnesses[0] ?? "codex";
     checks.push(failed(`${adapterId}-output`, "Harness output cannot be checked because install metadata is invalid."));
-    checks.push(failed("presentation-output", "Presentation output cannot be audited because install metadata is invalid."));
     checks.push(failed("content-audit", "Generated content cannot be audited because install metadata is invalid."));
   }
 

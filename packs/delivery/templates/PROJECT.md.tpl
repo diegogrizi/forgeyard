@@ -6,8 +6,6 @@ Purpose: {{project.purpose}}
 
 Mode: {{project.mode}}
 
-Audience: {{presentation.audience}}
-
 Requested outcome: {{intake.request}}
 
 Detected project class: {{intake.kind}}
@@ -41,7 +39,6 @@ Describe one journey a real user can complete from entry to observable result. K
 
 - Mutable roots: {{paths.mutable}}
 - Protected paths: {{paths.protected}}
-- Presentation bundle: {{presentation.scope}}
 - Maximum concurrent claims: {{workflow.maxConcurrency}}
 
 ## Required verification

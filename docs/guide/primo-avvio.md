@@ -120,7 +120,8 @@ Verrà preparato:
   Capacità selezionate: 6    escluse: 4
   Verifiche: git diff --check
   File dell'imbracatura da creare: 80
-  I file privati restano in .forgeyard; codice, Git e repository figli non vengono modificati.
+  Fuori da .forgeyard: .codex/config.toml; un'esclusione Git locale per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
+  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.
 Confermi la preparazione di questa cartella?
 ```
 
@@ -185,7 +186,13 @@ nessuno, la riga non compare.
 **`  File dell'imbracatura da creare: 80`** — quanti file verrebbero scritti. Il numero è
 del piano, e il resoconto dopo la conferma può differire: vedere §4.
 
-**L'ultima riga del riepilogo** — `I file privati restano in .forgeyard; codice, Git e
+**`  Fuori da .forgeyard: ...`** — le scritture che escono dall'area personale, elencate
+prima della domanda e non scoperte dopo in `git status`: la configurazione MCP del client,
+un'esclusione Git locale per quella sola configurazione e, **soltanto se un file di
+istruzioni esiste già**, un blocco delimitato aggiunto in coda. Se la forgia crea da sé quel
+file, il puntatore è già dentro e non viene annunciato niente.
+
+**L'ultima riga del riepilogo** — `I file privati restano in .forgeyard; il codice e i
 repository figli non vengono modificati.` — è il confine di scrittura, ripetuto dove
 serve: appena prima di chiedere il permesso.
 

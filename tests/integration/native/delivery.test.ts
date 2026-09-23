@@ -1,15 +1,16 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 142,9 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
 import { sha256Text } from "../../../src/core/hash.js";
 import { createProjectService, type ProjectService } from "../../../src/native/service.js";
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
 import { commitAll, nativeFixture, productPlan } from "../../helpers/native.js";
-// Ogni prova di questo file installa un'imbracatura reale: caricamento del registro,
-// rendering, applicazione transazionale e comandi Git veri. Il tetto globale di 30 secondi
-// è tarato sui test unitari, e un tetto più stretto del lavoro che delimita segnala un
-// difetto che non c'e'.
-vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];
 const services: ProjectService[] = [];

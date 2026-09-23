@@ -111,12 +111,12 @@ progetto. Il rapporto porta l'impronta dei due profili confrontati, così può e
 
 **Le politiche di percorso non sono confrontate**, ed è una scelta. Né i percorsi protetti
 né le radici scrivibili: sono regole, non osservazioni. L'imbracatura protegge `.env` perché
-le scritture vengano rifiutate *se* mai comparisse, e concede `presentation/` perché vengano
+le scritture vengano rifiutate *se* mai comparisse, e concede una radice perché vengano
 permesse *se* mai venisse creata. In entrambi i casi l'assenza del percorso non impedisce
 all'imbracatura di operare, e la capsula ha congelato una regola e non un avvistamento:
 un percorso scomparso non si distingue da uno che non c'è mai stato. Confrontarli misurava
-come derivata ogni installazione corretta — il profilo `minimal` concede `presentation` e
-non installa il bundle — cioè un controllo che nessuno legge.
+come derivata ogni installazione corretta di un profilo che concedeva una radice di cui non
+installava il contenuto: cioè un controllo che nessuno legge.
 
 Una conclusione vale quanto l'osservazione che la sostiene, e due cose la rendono
 **inconclusiva**. La prima: una scansione limitata dichiara ciò che non ha visitato, e non

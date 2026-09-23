@@ -19,8 +19,3 @@ defaults:
   orchestration:
     mode: guided
     maxConcurrency: 2
-  presentation:
-    enabled: false
-    audience: Project stakeholders
-    durationMinutes: 7
-    offline: true

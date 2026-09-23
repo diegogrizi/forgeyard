@@ -4,7 +4,13 @@ import { mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } f
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { test } from "vitest";
+import { test, vi } from "vitest";
+
+// Queste prove eseguono Git vero: init, clone, worktree e `git submodule add`.
+// Cronometrato su questa macchina a riposo, il caso submodule costa 28,9 s contro un tetto
+// globale di 30 s tarato sui test unitari: il 96% del tetto, quindi rosso a ogni minimo
+// carico. Un tetto che coincide con il lavoro che delimita non delimita niente.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 import { discoverWorkspace } from "../../../src/workspace/discovery.js";
 
 const execute = promisify(execFile);

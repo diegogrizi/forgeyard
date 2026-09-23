@@ -162,14 +162,13 @@ export async function collectInitRequest(
     },
     paths: {
       mutableRoots: parseStringArray(
-        await prompts.input("mutableRoots", "Mutable roots as a JSON string array", '["src","presentation"]'),
+        await prompts.input("mutableRoots", "Mutable roots as a JSON string array", '["src"]'),
         "Mutable roots",
       ),
       protectedPaths: parseStringArray(
         await prompts.input("protectedPaths", "Protected paths as a JSON string array", '[".git",".env"]'),
         "Protected paths",
       ),
-      presentation: await prompts.input("presentationPath", "Presentation output path", "presentation"),
     },
     orchestration: {
       mode: (await prompts.select(
@@ -179,20 +178,6 @@ export async function collectInitRequest(
         "guided",
       )) as "guided" | "native",
       maxConcurrency: await prompts.number("maxConcurrency", "Maximum active work items", 4),
-    },
-    presentation: {
-      enabled: profileId !== "minimal",
-      audience: await prompts.input("presentationAudience", "Presentation audience"),
-      durationMinutes: await prompts.number(
-        "presentationDurationMinutes",
-        "Presentation duration in minutes",
-        7,
-      ),
-      offline: (await prompts.confirm(
-        "presentationOffline",
-        "Keep the presentation fully offline",
-        true,
-      )) as true,
     },
   };
 

@@ -35,12 +35,6 @@ async function registryFixture(options: { unknownPackKey?: boolean; provenanceMo
       defaults: {
         timeboxMinutes: 300,
         orchestration: { mode: "guided", maxConcurrency: 4 },
-        presentation: {
-          enabled: true,
-          audience: "Reviewers",
-          durationMinutes: 7,
-          offline: true,
-        },
       },
     }),
     "utf8",

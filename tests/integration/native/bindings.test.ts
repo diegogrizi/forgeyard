@@ -4,9 +4,9 @@ import { afterEach, expect, test, vi } from "vitest";
 import { connectNativeClient, disconnectNativeClient } from "../../../src/native/bindings.js";
 import { nativeFixture } from "../../helpers/native.js";
 // Ogni prova di questo file installa un'imbracatura reale: caricamento del registro,
-// rendering, applicazione transazionale e comandi Git veri. Il tetto globale di 30 secondi
-// è tarato sui test unitari, e un tetto più stretto del lavoro che delimita segnala un
-// difetto che non c'e'.
+// rendering, applicazione transazionale e comandi Git veri. Prova piu' lenta, cronometrata
+// su questa macchina a riposo: 11,4 s. Il tetto globale di 30 s e' tarato sui test unitari,
+// e un tetto piu' stretto del lavoro che delimita segnala un difetto che non c'e'.
 vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];
 afterEach(async () => { for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true }); });

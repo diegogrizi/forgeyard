@@ -2,7 +2,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 11,1 s.
+// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
+// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
+// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 import type { InitCommandResult } from "../../src/application/forgeyard.js";
 import { loadInstallManifest } from "../../src/installer/manifest.js";
@@ -14,7 +20,7 @@ let sandboxRoot: string;
 beforeAll(async () => {
   await buildCli(repositoryRoot);
   sandboxRoot = await mkdtemp(path.join(os.tmpdir(), "forgeyard-claude-roundtrip-"));
-}, 60_000);
+});
 
 afterAll(async () => {
   if (sandboxRoot !== undefined) await rm(sandboxRoot, { recursive: true, force: true });
@@ -52,7 +58,7 @@ describe("built Claude Code CLI adapter", () => {
     expect(manifest.files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(1);
     expect(manifest.files.some((file) => file.path === "CLAUDE.md")).toBe(true);
     expect(manifest.files.some((file) => file.path === ".claude/settings.json")).toBe(true);
-  }, 30_000);
+  });
 
   test("installs the curated native idea-to-demo library", async () => {
     const { result, output, manifest } = await install("hackathon");
@@ -62,8 +68,7 @@ describe("built Claude Code CLI adapter", () => {
     expect(result).toEqual(expect.objectContaining({ exitCode: 0, stderr: "" }));
     expect(output.doctor).toEqual(expect.objectContaining({ failed: 0 }));
     expect(manifest.files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(52);
-    expect(skillCount + commandCount).toBe(119);
-    expect(manifest.files.some((file) => file.path === "presentation/index.html")).toBe(true);
-  }, 60_000);
+    expect(skillCount + commandCount).toBe(118);
+  });
 
 });

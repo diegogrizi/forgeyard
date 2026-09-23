@@ -214,8 +214,6 @@ Le conferme umane native non hanno --yes.
     .option("--max-concurrency <count>", "maximum active work items", numericOption("Maximum concurrency", 1, 16, true))
     .option("--budget-usd <amount>", "maximum recorded model cost", numericOption("Budget", 0.01, 1_000_000, false))
     .option("--autonomy <level>", "supervised, balanced, or autonomous", autonomyOption)
-    .option("--presentation", "include an offline presentation workflow")
-    .option("--no-presentation", "exclude presentation work")
     .option("--yes", "apply without an interactive confirmation")
     .option("--dry-run", "validate and show the plan without writing")
     .option("--json", "emit machine-readable output")
@@ -226,7 +224,6 @@ Le conferme umane native non hanno --yes.
       const maxConcurrency = numberOption(options, "maxConcurrency");
       const maxCostUsd = numberOption(options, "budgetUsd");
       const autonomy = stringOption(options, "autonomy") as "supervised" | "balanced" | "autonomous" | undefined;
-      const presentation = optionalBooleanOption(options, "presentation");
       const json = booleanOption(options, "json");
       const result = await dependencies.service.prepare({
         targetRoot: target,
@@ -237,7 +234,6 @@ Le conferme umane native non hanno --yes.
         ...(maxConcurrency === undefined ? {} : { maxConcurrency }),
         ...(maxCostUsd === undefined ? {} : { maxCostUsd }),
         ...(autonomy === undefined ? {} : { autonomy }),
-        ...(presentation === undefined ? {} : { presentation }),
         yes: booleanOption(options, "yes"),
         dryRun: booleanOption(options, "dryRun"),
         nonInteractive: !dependencies.interactive || json,

@@ -44,18 +44,12 @@ function selectAdapter(
   return { adapter: "codex", reason: "Codex project layout is the portable format fallback; runtime availability is unverified." };
 }
 
-function requestedPresentation(inspection: ProjectInspection, override: boolean | undefined): boolean {
-  if (override !== undefined) return override;
-  return /\b(demo|demonstration|hackathon|pitch|presentation|showcase)\b/iu.test(inspection.request);
-}
-
 function isFocusedMaintenance(inspection: ProjectInspection, timeboxMinutes: number): boolean {
   return inspection.mode === "existing" && timeboxMinutes <= 180 && /\b(bug|correct|fix|maintain|maintenance|patch|refactor|repair)\b/iu.test(inspection.request);
 }
 
-function inferredConcurrency(inspection: ProjectInspection, timeboxMinutes: number, presentation: boolean): number {
+function inferredConcurrency(inspection: ProjectInspection, timeboxMinutes: number): number {
   if (isFocusedMaintenance(inspection, timeboxMinutes)) return 1;
-  if (presentation && inspection.kind === "full-stack") return 4;
   if (inspection.kind === "full-stack") return 3;
   return 2;
 }
@@ -93,14 +87,12 @@ export function composeProject(
   for (const exclusion of rules.exclusions) selected.delete(exclusion.id);
   const selectedChoices = [...selected.values()].sort((left, right) => left.id.localeCompare(right.id, "en"));
   const excluded = [...rules.exclusions].sort((left, right) => left.id.localeCompare(right.id, "en"));
-  const presentationEnabled = requestedPresentation(inspection, options.presentation);
   const focused = isFocusedMaintenance(inspection, limits.timeboxMinutes);
   const packs = new Set(["foundation", "ecosystem"]);
-  if (!focused || presentationEnabled) packs.add("delivery");
-  if (presentationEnabled) packs.add("presentation");
+  if (!focused) packs.add("delivery");
   const adapter = selectAdapter(inspection, options);
   const autonomyLevel = options.autonomy ?? "balanced";
-  const maxConcurrency = limits.maxConcurrency ?? inferredConcurrency(inspection, limits.timeboxMinutes, presentationEnabled);
+  const maxConcurrency = limits.maxConcurrency ?? inferredConcurrency(inspection, limits.timeboxMinutes);
 
   return {
     schemaVersion: 1,
@@ -115,12 +107,6 @@ export function composeProject(
     orchestration: {
       mode: autonomyLevel === "supervised" ? "guided" : "native",
       maxConcurrency,
-    },
-    presentation: {
-      enabled: presentationEnabled,
-      audience: "Project stakeholders",
-      durationMinutes: 7,
-      offline: true,
     },
     autonomy: {
       level: autonomyLevel,

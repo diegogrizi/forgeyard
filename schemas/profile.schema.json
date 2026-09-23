@@ -43,7 +43,7 @@
     "defaults": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["timeboxMinutes", "orchestration", "presentation"],
+      "required": ["timeboxMinutes", "orchestration"],
       "properties": {
         "timeboxMinutes": { "type": "integer", "minimum": 30, "maximum": 1440 },
         "orchestration": {
@@ -54,17 +54,6 @@
             "mode": { "enum": ["native", "guided"] },
             "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 16 }
           }
-        },
-        "presentation": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["enabled", "audience", "durationMinutes", "offline"],
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "audience": { "type": "string", "minLength": 1, "maxLength": 200 },
-            "durationMinutes": { "type": "integer", "minimum": 1, "maximum": 60 },
-            "offline": { "const": true }
-          }
         }
       }
     }
@@ -74,13 +63,7 @@
       "if": { "properties": { "id": { "const": "minimal" } }, "required": ["id"] },
       "then": {
         "properties": {
-          "catalog": { "type": "object", "properties": { "selection": { "const": "none" } } },
-          "defaults": {
-            "type": "object",
-            "properties": {
-              "presentation": { "type": "object", "properties": { "enabled": { "const": false } } }
-            }
-          }
+          "catalog": { "type": "object", "properties": { "selection": { "const": "none" } } }
         }
       }
     },

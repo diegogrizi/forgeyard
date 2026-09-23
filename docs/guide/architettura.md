@@ -36,7 +36,7 @@ Il secondo ciclo di vita è stato rimosso il 22 settembre 2026: `src/orchestrato
 `src/worktrees/`, `src/observability/` e `src/guard/` non esistono più, con i comandi
 `task`, `workspace`, `ledger` e `guard`. Restano nel checkout, come percorsi avanzati e
 non come tutorial, i comandi `inspect`, `prepare`, `init`, `doctor`, `verify`, `update` e
-`rollback`, più il pacchetto presentazione. Vedere
+`rollback`. Vedere
 [Percorsi legacy](../percorsi-legacy.md) e [Stato](../STATO.md).
 
 ## I confini

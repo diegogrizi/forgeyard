@@ -9,7 +9,6 @@ import type {
 } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
-import { auditPresentationSources } from "../doctor/presentation-audit.js";
 import { renderCodexCatalog } from "./codex-catalog.js";
 import {
   compositionVariables,
@@ -46,16 +45,7 @@ const DELIVERY_SLOT_ORDER = [
   "observability.usage",
 ] as const;
 
-const PRESENTATION_SLOT_ORDER = [
-  "presentation.skill",
-  "presentation.index",
-  "presentation.styles",
-  "presentation.script",
-  "presentation.readme",
-  "task.demo",
-] as const;
-
-const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER, ...PRESENTATION_SLOT_ORDER] as const;
+const SLOT_ORDER = [...CORE_SLOT_ORDER, ...DELIVERY_SLOT_ORDER] as const;
 
 type CodexSlot = (typeof SLOT_ORDER)[number];
 
@@ -69,17 +59,11 @@ const FOUNDATION_TARGET_BY_SLOT: Readonly<Record<(typeof SLOT_ORDER)[number], st
   "project.brief": "PROJECT.md",
   "task.implementation": ".forgeyard/tasks/T002.yaml",
   "task.review": ".forgeyard/tasks/T003.yaml",
-  "task.demo": ".forgeyard/tasks/T004.yaml",
   "memory.knowledge": ".forgeyard/knowledge/README.md",
   "memory.decision-template": ".forgeyard/decisions/0000-template.md",
   "memory.handoff": ".forgeyard/handoffs/CURRENT.md",
   "report.run": ".forgeyard/reports/RUN_REPORT.md",
   "observability.usage": ".forgeyard/usage/README.md",
-  "presentation.skill": ".agents/skills/forgeyard-showcase/SKILL.md",
-  "presentation.index": undefined,
-  "presentation.styles": undefined,
-  "presentation.script": undefined,
-  "presentation.readme": undefined,
 };
 
 function adapterError(message: string, paths?: readonly string[]): ForgeyardError {
@@ -114,27 +98,11 @@ function deliverySlots(bySlot: ReadonlyMap<string, ResolvedComponent>): readonly
   return selected;
 }
 
-function presentationPath(root: string, fileName: string): string {
-  const normalized = normalizePortablePath(root);
-  return normalizePortablePath(normalized === "." ? fileName : `${normalized}/${fileName}`);
-}
-
 function targetForSlot(slot: CodexSlot, config: ForgeyardConfig): string {
   if (slot === "project.instructions") return instructionTarget(config, "AGENTS.md");
   const foundation = FOUNDATION_TARGET_BY_SLOT[slot];
   if (foundation !== undefined) return foundation;
-  switch (slot) {
-    case "presentation.index":
-      return presentationPath(config.paths.presentation, "index.html");
-    case "presentation.styles":
-      return presentationPath(config.paths.presentation, "styles.css");
-    case "presentation.script":
-      return presentationPath(config.paths.presentation, "app.js");
-    case "presentation.readme":
-      return presentationPath(config.paths.presentation, "README.md");
-    default:
-      throw adapterError(`Codex has no target for component slot '${slot}'.`);
-  }
+  throw adapterError(`Codex has no target for component slot '${slot}'.`);
 }
 
 function htmlQualitySummary(config: ForgeyardConfig): string {
@@ -143,35 +111,6 @@ function htmlQualitySummary(config: ForgeyardConfig): string {
       .map((command) => `${command.name}: ${JSON.stringify(command.argv)}`)
       .join("; "),
   );
-}
-
-function clockLabel(seconds: number): string {
-  const whole = Math.max(0, Math.round(seconds));
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
-function presentationTimeline(config: ForgeyardConfig): string {
-  const labels = ["Opening", "Problem", "Audience", "Insight", "Solution", "Demo", "Evidence", "Architecture", "Value", "Ask"];
-  const goals = [
-    "Frame the purpose.",
-    "Make the costly moment concrete.",
-    "Identify the first audience.",
-    "State the product insight.",
-    "Explain the visible promise.",
-    "Run the complete live path.",
-    "Show revision-bound proof.",
-    "Explain only outcome-critical structure.",
-    "Translate proof into value.",
-    "Ask for one next decision.",
-  ];
-  const weights = [0.08, 0.1, 0.08, 0.09, 0.12, 0.17, 0.13, 0.09, 0.07, 0.07];
-  const totalSeconds = config.presentation.durationMinutes * 60;
-  let elapsed = 0;
-  return labels.map((label, index) => {
-    const start = elapsed;
-    elapsed = index === labels.length - 1 ? totalSeconds : elapsed + totalSeconds * weights[index]!;
-    return `| ${clockLabel(start)}–${clockLabel(elapsed)} | ${label} | ${goals[index]} |`;
-  }).join("\n");
 }
 
 function variablesFor(slot: string, config: ForgeyardConfig, slots: ReadonlySet<string>): Readonly<Record<string, string>> {
@@ -186,7 +125,6 @@ function variablesFor(slot: string, config: ForgeyardConfig, slots: ReadonlySet<
         "quality.commands": qualityMarkdown(config),
         "workflow.maxConcurrency": String(config.orchestration.maxConcurrency),
         "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         ...continuityVariables(slots),
       };
     case "workflow.primary":
@@ -239,42 +177,13 @@ function variablesFor(slot: string, config: ForgeyardConfig, slots: ReadonlySet<
         "task.command": yamlSequence(config.quality.commands[0]!.argv),
         "task.reviewMinutes": allocatedMinutes(config, 0.1),
       };
-    case "task.demo":
-      return {
-        ...taskContractVariables(config, "task.demo"),
-        "task.command": yamlSequence(config.quality.commands[0]!.argv),
-        "task.presentationScope": yamlSequence([config.paths.presentation]),
-        "task.demoMinutes": allocatedMinutes(config, 0.15),
-      };
     case "memory.handoff":
       return { "project.name": escapeMarkdownInline(config.project.name) };
     case "report.run":
       return {
         "project.name": escapeMarkdownInline(config.project.name),
-        "presentation.path": escapeMarkdownInline(config.paths.presentation),
         "quality.commands": qualityMarkdown(config),
       };
-    case "presentation.index":
-      return {
-        "project.name": escapeHtmlText(config.project.name),
-        "project.purpose": escapeHtmlText(config.project.purpose),
-        "presentation.audience": escapeHtmlText(config.presentation.audience),
-        "presentation.durationMinutes": String(config.presentation.durationMinutes),
-        "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "quality.summary": htmlQualitySummary(config),
-      };
-    case "presentation.readme":
-      return {
-        "project.name": escapeMarkdownInline(config.project.name),
-        "presentation.audience": escapeMarkdownInline(config.presentation.audience),
-        "presentation.durationMinutes": String(config.presentation.durationMinutes),
-        "workflow.timeboxMinutes": String(config.timeboxMinutes),
-        "quality.commands": qualityMarkdown(config),
-        "presentation.timeline": presentationTimeline(config),
-      };
-    case "presentation.skill":
-    case "presentation.styles":
-    case "presentation.script":
     case "guard.file-tools":
     case "memory.knowledge":
     case "memory.decision-template":
@@ -360,7 +269,6 @@ export function createCodexAdapter(): HarnessAdapter {
       const requiredSlots: readonly CodexSlot[] = [
         ...CORE_SLOT_ORDER,
         ...deliverySlots(bySlot),
-        ...(config.presentation.enabled ? PRESENTATION_SLOT_ORDER : []),
       ];
       for (const component of components) {
         if (component.kind === "catalog") {
@@ -405,18 +313,6 @@ export function createCodexAdapter(): HarnessAdapter {
         ".forgeyard/bin/write-guard.mjs",
         ".forgeyard/COMPOSITION.md",
       ];
-      const presentationRoot = files
-        .find((file) => file.componentId === "presentation.index")
-        ?.path.replace(/\/index\.html$/, "");
-      if (presentationRoot !== undefined) {
-        required.push(
-          ".agents/skills/forgeyard-showcase/SKILL.md",
-          `${presentationRoot}/index.html`,
-          `${presentationRoot}/styles.css`,
-          `${presentationRoot}/app.js`,
-          `${presentationRoot}/README.md`,
-        );
-      }
       if (byPath.has("PROJECT.md")) {
         required.push(
           "PROJECT.md",
@@ -428,7 +324,6 @@ export function createCodexAdapter(): HarnessAdapter {
           ".forgeyard/reports/RUN_REPORT.md",
           ".forgeyard/usage/README.md",
         );
-        if (presentationRoot !== undefined) required.push(".forgeyard/tasks/T004.yaml");
       }
       for (const filePath of required) {
         if (!byPath.has(filePath)) throw adapterError(`Required Codex output '${filePath}' is missing.`, [filePath]);
@@ -438,11 +333,8 @@ export function createCodexAdapter(): HarnessAdapter {
         throw adapterError("Generated Codex output contains an unresolved template expression.");
       }
       validateSkill(byPath.get(".agents/skills/forgeyard-workflow/SKILL.md")!, ".agents/skills/forgeyard-workflow/SKILL.md", "forgeyard-workflow");
-      if (presentationRoot !== undefined) {
-        validateSkill(byPath.get(".agents/skills/forgeyard-showcase/SKILL.md")!, ".agents/skills/forgeyard-showcase/SKILL.md", "forgeyard-showcase");
-      }
       validateReviewer(byPath.get(".codex/agents/reviewer.toml")!, ".codex/agents/reviewer.toml");
-      for (const id of ["T001", "T002", "T003", "T004"]) {
+      for (const id of ["T001", "T002", "T003"]) {
         const filePath = `.forgeyard/tasks/${id}.yaml`;
         if (byPath.has(filePath)) validateTask(byPath.get(filePath)!, filePath, id);
       }
@@ -474,20 +366,6 @@ export function createCodexAdapter(): HarnessAdapter {
           Buffer.byteLength(file.content, "utf8") > 8_192
         ) {
           throw adapterError("Generated catalog skill is invalid or exceeds the 8 KB limit.", [file.path]);
-        }
-      }
-      if (presentationRoot !== undefined) {
-        const presentationFindings = auditPresentationSources({
-          directory: presentationRoot,
-          html: byPath.get(`${presentationRoot}/index.html`)!,
-          css: byPath.get(`${presentationRoot}/styles.css`)!,
-          javascript: byPath.get(`${presentationRoot}/app.js`)!,
-        });
-        if (presentationFindings.length > 0) {
-          throw adapterError(
-            "Generated presentation output violates the offline or accessibility contract.",
-            [...new Set(presentationFindings.map((finding) => finding.path))].sort(),
-          );
         }
       }
       if (projectInstructions.content.trim().length === 0) {
