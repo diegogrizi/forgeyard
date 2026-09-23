@@ -182,15 +182,13 @@ const DRIFT_FINDINGS_IN_MESSAGE = 3;
 const DRIFT_PATH_SUBJECTS: ReadonlySet<DriftKind> = new Set<DriftKind>([
   "harness-file-changed",
   "harness-file-unreadable",
-  "mutable-root-missing",
 ]);
 
 /**
  * Root-confined presence probe that refuses to traverse a symbolic link, exactly like the capsule
- * reader. The bounded inspection never walks `.git`, `node_modules` or `vendor`, which are exactly
- * the paths a capsule protects, so protected paths and mutable roots need their own confirmation or
- * every capsule would report a missing protected path. A path that cannot be confirmed is left out:
- * presence is never invented for the scan.
+ * reader. The bounded inspection stops at its own limits, so a gate's working directory needs its
+ * own confirmation before the scan can call it missing. A path that cannot be confirmed is left
+ * out: presence is never invented for the scan.
  */
 export async function presentHarnessPaths(root: string, candidates: readonly string[]): Promise<readonly string[]> {
   const present: string[] = [];
@@ -264,8 +262,9 @@ async function compareHarnessDrift(
     const walked = (inspection.evidenceRecords ?? [])
       .filter((record) => record.signal === "file:observed")
       .map((record) => record.path);
-    const confirmed = await presentHarnessPaths(root, [...frozen.protectedPaths, ...frozen.mutableRoots,
-      ...frozen.gates.flatMap((gate) => (gate.cwd === undefined ? [] : [gate.cwd]))]);
+    // Only a gate's working directory is compared against presence, so only it is probed.
+    const confirmed = await presentHarnessPaths(root,
+      frozen.gates.flatMap((gate) => (gate.cwd === undefined ? [] : [gate.cwd])));
     const current = currentProfileFromInspection(
       inspection,
       await harnessFileDigests(root, frozen.files),
@@ -307,13 +306,20 @@ async function checkHarnessDrift(root: string, capsule: Capsule | undefined): Pr
   }
   if (report.status === "inconclusive") {
     const unconfirmed = report.findings.filter((finding) => finding.inconclusive).length;
+    // Why alignment is withheld is itself a claim. An inspection that completed but cannot
+    // observe what a finding rests on is not a truncated one, and naming a bound it never hit
+    // would invent the reason: the two causes are reported apart.
+    const cause = limitations.length > 0
+      ? `the project inspection stopped at its bounds (${limitations.join(", ")})`
+      : "what the remaining differences rest on is not something this inspection observes";
     return {
       id: DRIFT_CHECK_ID,
       status: "skipped",
       required: false,
-      message: `The bounded project inspection was partial (${limitations.join(", ") || "undeclared bounds"}), ` +
-        "so alignment with the frozen harness cannot be declared" +
-        (unconfirmed === 0 ? "." : `; ${unconfirmed} finding(s) could not be confirmed within those bounds.`),
+      message: `Alignment with the frozen harness cannot be declared: ${cause}` +
+        (unconfirmed === 0
+          ? "."
+          : `; ${unconfirmed} difference(s) could not be confirmed, and are reported without a verdict.`),
     };
   }
   const paths = driftPaths(report);

@@ -144,6 +144,38 @@ describe("drift scanner", () => {
     expect(report.findings[0]?.summary).toContain("G001");
   });
 
+  test("cannot conclude a gate command is gone when it never saw that program run", () => {
+    // A freshly installed scaffold: the gate was declared by the operator, and the only command
+    // the inspection can discover is the fallback it offers in any repository. The two share no
+    // program, so the absence of the gate's command is ignorance rather than a contradiction.
+    const report = scanDrift(
+      frozenProfile({ gates: [{ id: "G001", name: "test", argv: ["node", "-e", "process.exit(0)"] }] }),
+      currentProfile({ qualityCommands: [{ name: "diff-check", argv: ["git", "diff", "--check"] }] }),
+    );
+
+    expect(report.findings).toEqual([expect.objectContaining({
+      kind: "gate-command-missing",
+      subject: "G001",
+      inconclusive: true,
+    })]);
+    // The sentence itself has to carry the qualification: whoever reads the finding without
+    // the flag must not be handed an absence of evidence phrased as evidence of absence.
+    expect(report.findings[0]?.summary).toContain("could not confirm it");
+    // The frozen assertion keeps its severity; what is missing is the observation that would
+    // contradict it, so the report refuses to conclude instead of failing a correct install.
+    expect(report.counts).toEqual({ blocking: 1, important: 0, informational: 0 });
+    expect(report.status).toBe("inconclusive");
+  });
+
+  test("still concludes a gate command is gone when the same program runs other commands", () => {
+    const report = scanDrift(
+      frozenProfile(),
+      currentProfile({ qualityCommands: [{ name: "test", argv: ["npm", "run", "test:unit"] }] }),
+    );
+
+    expect(report.findings[0]).toMatchObject({ kind: "gate-command-missing", inconclusive: false });
+    expect(report.status).toBe("drifted");
+  });
   test("accepts a renamed gate whose argv is unchanged", () => {
     const report = scanDrift(
       frozenProfile(),
@@ -219,7 +251,7 @@ describe("drift scanner", () => {
       }),
     );
 
-    expect(report.findings.map((finding) => finding.kind)).toEqual(["mutable-root-missing", "framework-disappeared"]);
+    expect(report.findings.map((finding) => finding.kind)).toEqual(["framework-disappeared"]);
     expect(report.findings.every((finding) => finding.inconclusive)).toBe(true);
     expect(report.status).toBe("inconclusive");
   });
@@ -288,17 +320,13 @@ describe("drift scanner", () => {
     expect(bounded.status).toBe("inconclusive");
   });
 
-  test("accepts a declared writable root the inspection still reports without listing its files", () => {
+  // A write grant is policy too: the harness allows writes under a root so they are allowed if
+  // it is ever created. The 'minimal' profile grants 'presentation' and installs no bundle,
+  // so comparing the grant against the disk failed every correct install of that profile.
+  test("does not measure a frozen write grant against what the project shows", () => {
     expect(scanDrift(
-      frozenProfile({ mutableRoots: ["packages"] }),
-      currentProfile({ mutableRoots: ["packages"], presentPaths: ["AGENTS.md", ".git/config"] }),
-    ).findings).toEqual([]);
-  });
-
-  test("accepts a writable root proven by a file inside it", () => {
-    expect(scanDrift(
-      frozenProfile(),
-      currentProfile({ mutableRoots: [], presentPaths: ["AGENTS.md", ".git/config", "src/server.ts"] }),
+      frozenProfile({ mutableRoots: ["src", "presentation"] }),
+      currentProfile({ mutableRoots: [], presentPaths: ["AGENTS.md", ".git/config"] }),
     ).findings).toEqual([]);
   });
 
@@ -335,13 +363,12 @@ describe("drift scanner", () => {
     expect(report.findings.map((finding) => `${finding.kind}:${finding.subject}`)).toEqual([
       "gate-command-missing:G001",
       "harness-file-unreadable:AGENTS.md",
-      "mutable-root-missing:lib",
       "framework-disappeared:vue",
       "kind-changed:kind",
       "language-disappeared:go",
       "language-appeared:python",
     ]);
-    expect(report.counts).toEqual({ blocking: 3, important: 3, informational: 1 });
+    expect(report.counts).toEqual({ blocking: 2, important: 3, informational: 1 });
     expect(report.status).toBe("drifted");
   });
 

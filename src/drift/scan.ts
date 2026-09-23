@@ -36,7 +36,6 @@ export type DriftKind =
   | "gate-cwd-missing"
   | "harness-file-changed"
   | "harness-file-unreadable"
-  | "mutable-root-missing"
   | "framework-appeared"
   | "framework-disappeared"
   | "language-appeared"
@@ -69,7 +68,6 @@ const SEVERITIES: Readonly<Record<DriftKind, DriftSeverity>> = {
   "gate-cwd-missing": "blocking",
   "harness-file-changed": "blocking",
   "harness-file-unreadable": "blocking",
-  "mutable-root-missing": "blocking",
   "framework-disappeared": "important",
   "language-disappeared": "important",
   "kind-changed": "important",
@@ -81,6 +79,8 @@ const SEVERITY_RANKS: Readonly<Record<DriftSeverity, number>> = { blocking: 0, i
 
 /**
  * Findings a bounded scan cannot confirm: not having seen a thing does not prove its absence.
+ * The same holds for an observation drawn from a vocabulary the inspection does not share with
+ * the frozen declaration it is being compared against.
  * A changed digest and an appeared capability rest on what was observed, so they stay conclusive.
  * An unreadable harness file rests on the supplied digest map, not on the bounded walk, so it
  * stays conclusive too.
@@ -88,7 +88,6 @@ const SEVERITY_RANKS: Readonly<Record<DriftSeverity, number>> = { blocking: 0, i
 const BOUNDED_BY_SCAN: ReadonlySet<DriftKind> = new Set<DriftKind>([
   "gate-command-missing",
   "gate-cwd-missing",
-  "mutable-root-missing",
   "framework-disappeared",
   "language-disappeared",
   "kind-changed",
@@ -235,16 +234,21 @@ function finding(
   subject: string,
   summary: string,
   values: { frozen?: string; current?: string },
-  partialScan: boolean,
+  /** True when the observation that would have contradicted this finding was never made. */
+  unobserved: boolean,
 ): DriftFinding {
+  const inconclusive = unobserved && BOUNDED_BY_SCAN.has(kind);
   return {
     kind,
     severity: SEVERITIES[kind],
-    summary,
+    // A finding the scan could not confirm says so in its own sentence. The `inconclusive`
+    // flag is for a caller; whoever reads the summary alone must not be handed an absence of
+    // evidence phrased as evidence of absence.
+    summary: inconclusive ? `${summary} This inspection could not confirm it.` : summary,
     subject,
     ...(values.frozen === undefined ? {} : { frozen: values.frozen }),
     ...(values.current === undefined ? {} : { current: values.current }),
-    inconclusive: partialScan && BOUNDED_BY_SCAN.has(kind),
+    inconclusive,
   };
 }
 
@@ -290,18 +294,27 @@ export function scanDrift(frozen: FrozenProfile, current: CurrentProfile): Drift
   const partialScan = shown.partialScan;
   const observed = observedPaths(shown.presentPaths);
   const offeredCommands = new Set(shown.qualityCommands.map((command) => argvKey(command.argv)));
-  const declaredRoots = new Set(shown.mutableRoots.map(pathKey));
+  // A frozen gate is a declaration; the inspection's command list is a discovery. A gate may
+  // legitimately run a program the inspection never enumerates, so the two are comparable only
+  // where they share a vocabulary, and the program is the observable proxy for one. Found no
+  // command invoking the gate's program, the silence is ignorance rather than absence; found
+  // others invoking it, the exact command's disappearance is a real contradiction.
+  const offeredPrograms = new Set(shown.qualityCommands.flatMap((command) => {
+    const program = command.argv[0];
+    return program === undefined ? [] : [labelKey(program)];
+  }));
   const measuredDigests = new Map(Object.entries(shown.harnessDigests).map(([key, digest]) => [pathKey(key), digest]));
   const findings: DriftFinding[] = [];
 
   for (const gate of asserted.gates) {
+    const gateProgram = gate.argv[0];
     if (!offeredCommands.has(argvKey(gate.argv))) {
       findings.push(finding(
         "gate-command-missing",
         gate.id,
         `Frozen gate '${gate.id}' verifies '${argvText(gate.argv)}', a command the project no longer offers.`,
         { frozen: argvText(gate.argv) },
-        partialScan,
+        partialScan || gateProgram === undefined || !offeredPrograms.has(labelKey(gateProgram)),
       ));
     }
     if (gate.cwd !== undefined && !observed.has(pathKey(gate.cwd))) {
@@ -338,22 +351,13 @@ export function scanDrift(frozen: FrozenProfile, current: CurrentProfile): Drift
     }
   }
 
-  for (const root of asserted.mutableRoots) {
-    const key = pathKey(root);
-    if (observed.has(key) || declaredRoots.has(key)) continue;
-    findings.push(finding(
-      "mutable-root-missing",
-      root,
-      `The frozen policy grants writes under '${root}', a root the project no longer shows.`,
-      { frozen: root },
-      partialScan,
-    ));
-  }
-
-  // The frozen protected paths are deliberately not compared against what the project shows.
-  // A protection is a policy, not an observation: the harness protects '.env' so that writes
-  // are refused if it ever appears, and a project that never had one is not in drift. Comparing
-  // them measured every correctly prepared project as drifted, which is a check nobody reads.
+  // Neither the frozen protected paths nor the frozen mutable roots are compared against what
+  // the project shows. Both are policy, not observation: the harness refuses writes to '.env'
+  // so they are refused if it ever appears, and grants writes under 'presentation' so they are
+  // allowed if it is ever created. An absent path stops neither, and the capsule froze a rule
+  // rather than a sighting, so a path that disappeared cannot be told from one that was never
+  // there. Comparing them measured every correctly prepared project as drifted, which is a
+  // check nobody reads.
 
   findings.push(...compareLabels("framework", asserted.frameworks, shown.frameworks, partialScan));
   findings.push(...compareLabels("language", asserted.languages, shown.languages, partialScan));

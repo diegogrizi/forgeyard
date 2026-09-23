@@ -100,20 +100,34 @@ l'affermazione fosse corretta quando è stata scritta.
 cambia. La documentazione che invecchia è un difetto rilevabile, non un fatto della vita.
 
 **Il meccanismo.** Una scansione confronta il profilo congelato nella capsula — tipo,
-linguaggi, framework, radici scrivibili, percorsi protetti, gate, file posseduti — con
-un'ispezione fresca e limitata dello stesso progetto. Il rapporto porta l'impronta dei
-due profili confrontati, così può essere citato.
+linguaggi, framework, gate, file posseduti — con un'ispezione fresca e limitata dello stesso
+progetto. Il rapporto porta l'impronta dei due profili confrontati, così può essere citato.
 
 | Severità | Esempi |
 |---|---|
-| bloccante | il comando di un gate non esiste più, la sua directory è scomparsa, un file dell'imbracatura è cambiato o illeggibile, una radice scrivibile è assente |
-| importante | un percorso protetto è scomparso, un framework o un linguaggio dichiarato non si vede più, il tipo di progetto è cambiato |
+| bloccante | il comando di un gate non esiste più, la sua directory è scomparsa, un file dell'imbracatura è cambiato o illeggibile |
+| importante | un framework o un linguaggio dichiarato non si vede più, il tipo di progetto è cambiato |
 | informativa | un framework o un linguaggio è comparso |
 
-Una scansione limitata dichiara ciò che non ha visitato, e le conclusioni che dipendono
-da quella visita sono marcate **inconclusive**: non avere visto una cosa non prova che
-non ci sia. Un'impronta cambiata e una capacità comparsa poggiano su ciò che è stato
-osservato, quindi restano conclusive.
+**Le politiche di percorso non sono confrontate**, ed è una scelta. Né i percorsi protetti
+né le radici scrivibili: sono regole, non osservazioni. L'imbracatura protegge `.env` perché
+le scritture vengano rifiutate *se* mai comparisse, e concede `presentation/` perché vengano
+permesse *se* mai venisse creata. In entrambi i casi l'assenza del percorso non impedisce
+all'imbracatura di operare, e la capsula ha congelato una regola e non un avvistamento:
+un percorso scomparso non si distingue da uno che non c'è mai stato. Confrontarli misurava
+come derivata ogni installazione corretta — il profilo `minimal` concede `presentation` e
+non installa il bundle — cioè un controllo che nessuno legge.
+
+Una conclusione vale quanto l'osservazione che la sostiene, e due cose la rendono
+**inconclusiva**. La prima: una scansione limitata dichiara ciò che non ha visitato, e non
+avere visto una cosa non prova che non ci sia. La seconda: l'osservazione appartiene a un
+vocabolario diverso da quello della dichiarazione congelata. Un gate è dichiarato da chi
+prepara e può invocare un programma che l'ispezione non enumera; il suo comando risulta
+assente dall'elenco scoperto anche quando è perfettamente presente sul disco. Il confronto
+vale quindi soltanto dove i due vocabolari si toccano — l'ispezione ha visto altri comandi
+di quello stesso programma — e altrove il rilievo è dichiarato senza concludere, nella sua
+stessa frase e non solo in un campo. Un'impronta cambiata e una capacità comparsa poggiano
+su ciò che è stato osservato, quindi restano conclusive.
 
 **Cosa la fa fallire.** Un input malformato è `FY_DRIFT_INVALID`.
 
