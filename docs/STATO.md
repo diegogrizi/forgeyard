@@ -54,7 +54,7 @@ con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di b
 | P2b | installazione della suite nell'area personale | implementato |
 | P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
 | P4 | inventario e riuso dei componenti globali già presenti | inventario fatto; il riuso è un'altra cosa (sotto) |
-| P5 | esecuzione su più repository membri | da fare |
+| P5 | esecuzione su più repository membri | il limite è ora dichiarato (sotto); l'esecuzione no |
 | P6 | selezione unificata e profili pertinenti | la contraddizione fra le due sedi è chiusa (sotto); l'unificazione no |
 | P7 | percorso ordinario interamente italiano, rimozione dei percorsi legacy | in corso |
 
@@ -72,6 +72,27 @@ di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichia
 di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 [Primo avvio](guide/primo-avvio.md).
 
+## Cosa la misura ha detto su P5
+
+Misurato su un workspace con due repository membri: l'ingresso guidato lo riconosce
+correttamente (`multi-repository`, 2 repository, 2 progetti) e **installa l'imbracatura
+senza obiezioni**, 79 file. Poi il primo `fy_attach` risponde `FY_GIT_REQUIRED`: il runtime
+lega un lavoro a un solo albero Git e a un solo HEAD, e alla radice di quel workspace non
+ce n'è nessuno.
+
+Quindi il prodotto **preparava volentieri una cartella in cui si sarebbe poi rifiutato di
+lavorare**, e non lo diceva prima della conferma. Un'imbracatura installata e inerte non è
+una funzione mancante: è un effetto non dichiarato travestito da limite tecnico. Ora
+l'anteprima lo dice, con il motivo e con cosa fare:
+
+```text
+  Lavoro nativo: non parte in questa cartella perché contiene 2 repository, e il runtime ne richiede uno solo.
+  L'imbracatura viene installata lo stesso e resta utile; per lavorare apri un singolo repository.
+```
+
+**L'esecuzione vera su più repository resta da fare**, e non è un pomello: un lavoro lega
+le proprie evidenze a una revisione, e con N repository ci sono N HEAD. Significa cambiare
+il legame fra evidenza e revisione nella capsula e nel protocollo, non aggiungere un'opzione.
 ## Cosa la misura ha detto su P6
 
 «Selezione unificata» presupponeva che ce ne fosse una. Ce n'erano due: l'ingresso guidato
@@ -192,7 +213,7 @@ Alla data di questo documento, e su questa macchina:
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
 - **Il 24 settembre 2026 `npm run verify` è passato interamente su questa macchina in 879-1047 s**: 71 file
-  di test, 546 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+  di test, 548 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
   riusabile per un'altra.

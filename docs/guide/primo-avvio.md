@@ -120,7 +120,7 @@ Verrà preparato:
   Capacità selezionate: 6    escluse: 4
   Verifiche: git diff --check
   File dell'imbracatura da creare: 80
-  Fuori da .forgeyard: .codex/config.toml; un'esclusione Git locale per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
+  Fuori da .forgeyard: .codex/config.toml; una regola in .gitignore per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
   I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.
 Confermi la preparazione di questa cartella?
 ```
@@ -195,7 +195,8 @@ finge che tu non abbia niente. Per Codex la riga non compare: non ha un registro
 
 **`  Fuori da .forgeyard: ...`** — le scritture che escono dall'area personale, elencate
 prima della domanda e non scoperte dopo in `git status`: la configurazione MCP del client,
-un'esclusione Git locale per quella sola configurazione e, **soltanto se un file di
+un'esclusione in `.git/info/exclude` per quella sola configurazione — o una regola in
+`.gitignore` se la cartella non è un repository, perché lì quel file non esiste — e, **soltanto se un file di
 istruzioni esiste già**, un blocco delimitato aggiunto in coda. Se la forgia crea da sé quel
 file, il puntatore è già dentro e non viene annunciato niente.
 

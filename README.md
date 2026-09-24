@@ -18,7 +18,7 @@ Verrà preparato:
   Capacità selezionate: 6    escluse: 4
   Verifiche: npm test
   File dell'imbracatura da creare: 71
-  Fuori da .forgeyard: .mcp.json; CLAUDE.md: un blocco delimitato in coda; un'esclusione Git locale per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
+  Fuori da .forgeyard: .mcp.json; CLAUDE.md: un blocco delimitato in coda; un'esclusione in .git/info/exclude per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
   I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.
 Confermi la preparazione di questa cartella? > sì
 
@@ -116,7 +116,7 @@ workspace/
 └── frontend/            repository Git
 ```
 
-La forgia scrive soltanto nella propria directory, e un'esclusione interna la tiene fuori dai normali commit anche se Git viene inizializzato dopo. File già tracciati, aree legacy e percorsi non sicuri non vengono adottati né sovrascritti, e il `.gitignore` condiviso del software non viene modificato. Il collegamento al client scrive fuori dall'area personale — la configurazione MCP, un'esclusione Git locale e, se un file di istruzioni esiste già, un blocco delimitato in coda — e **l'anteprima li elenca prima della conferma**: nessuna di quelle scritture porta percorsi di macchina in un file tracciato.
+La forgia scrive soltanto nella propria directory, e un'esclusione interna la tiene fuori dai normali commit anche se Git viene inizializzato dopo. File già tracciati, aree legacy e percorsi non sicuri non vengono adottati né sovrascritti, e il `.gitignore` condiviso del software non viene modificato. Il collegamento al client scrive fuori dall'area personale — la configurazione MCP, un'esclusione in `.git/info/exclude` — o una regola in `.gitignore` se la cartella non è un repository — e, se un file di istruzioni esiste già, un blocco delimitato in coda — e **l'anteprima li elenca prima della conferma**: nessuna di quelle scritture porta percorsi di macchina in un file tracciato.
 
 ## Domande scomode
 

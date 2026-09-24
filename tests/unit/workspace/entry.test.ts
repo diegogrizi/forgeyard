@@ -186,7 +186,9 @@ test("l'anteprima nomina le scritture fuori dall'area personale prima di chieder
     expect(summary).toContain(".mcp.json");
     // Il file di istruzioni esiste già: riceverà un blocco in coda, e può essere tracciato.
     expect(summary).toContain("CLAUDE.md: un blocco delimitato in coda");
-    expect(summary).toContain("un'esclusione Git locale");
+    // Fuori da un repository la regola finisce in un `.gitignore`, non in
+    // `.git/info/exclude`: la fixture di questa prova non e' un repository.
+    expect(summary).toContain("una regola in .gitignore");
     // La riga di chiusura non può più affermare che Git non viene toccato.
     expect(summary).not.toContain("Git e repository figli non vengono modificati");
   }));
@@ -194,6 +196,33 @@ test("l'anteprima nomina le scritture fuori dall'area personale prima di chieder
 // Un agente che riceve la nostra imbracatura sopra i plugin che il client già fornisce si
 // ritrova due autorità sulla stessa cosa. Dirlo prima della conferma non lo impedisce, ma
 // smette di nasconderlo.
+// Il lavoro nativo richiede un albero di lavoro Git unico con un HEAD. Su un workspace che
+// contiene piu' repository l'imbracatura si installa benissimo e poi `fy_attach` risponde
+// FY_GIT_REQUIRED: preparare una cartella in cui ci si rifiutera' di lavorare, senza dirlo
+// prima della conferma, e' un effetto non dichiarato travestito da limite tecnico.
+test("l'anteprima avverte quando il lavoro nativo non potra' partire in questa cartella",
+  async () => temporary(async (root) => {
+    await mkdir(path.join(root, "servizio"));
+    await git(path.join(root, "servizio"), "init", "-b", "main");
+    await mkdir(path.join(root, "frontend"));
+    await git(path.join(root, "frontend"), "init", "-b", "main");
+
+    const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
+      harness: harnessDouble(), native: nativeDouble() });
+
+    expect(result.stdout).toContain("Lavoro nativo: non parte in questa cartella");
+    expect(result.stdout).toContain("2 repository");
+  }));
+
+test("non avverte quando la cartella e' un solo repository", async () => temporary(async (root) => {
+  await git(root, "init", "-b", "main");
+
+  const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
+    harness: harnessDouble(), native: nativeDouble() });
+
+  expect(result.stdout).not.toContain("Lavoro nativo: non parte");
+}));
+
 test("l'anteprima dice quali plugin il client fornisce già per questa cartella", async () =>
   temporary(async (root) => {
     const result = await entry(root, {

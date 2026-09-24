@@ -164,6 +164,26 @@ async function instructionsPresent(root: string, client: HarnessId): Promise<boo
  * one of ours, so the overlap is declared and left to the reader rather than resolved by a
  * guess. `null` means the registry could not be read, which is not the same as no plugins.
  */
+/**
+ * Why a native run cannot start here, or null when it can. The runtime binds a run to one
+ * Git working tree and one HEAD, so a folder holding several repositories — or none — gets
+ * a harness that installs perfectly and then refuses every `fy_attach`. Preparing a folder
+ * nobody will be able to work in, without saying so first, is an undeclared effect wearing
+ * a technical limit as a costume.
+ */
+function nativeWorkBlocker(discovery: PersonalPreview["discovery"]): string | null {
+  if (discovery.kind === "repository") return null;
+  return discovery.repositories.length > 1
+    ? `contiene ${discovery.repositories.length} repository, e il runtime ne richiede uno solo`
+    : "non è un repository Git, e il runtime ne richiede uno con almeno un commit";
+}
+
+function writeNativeWorkBlocker(io: WorkspaceCliIo, reason: string | null): void {
+  if (reason === null) return;
+  io.writeOut(`  Lavoro nativo: non parte in questa cartella perché ${reason}.\n`);
+  io.writeOut("  L'imbracatura viene installata lo stesso e resta utile; per lavorare apri un singolo repository.\n");
+}
+
 function writeProvidedByClient(io: WorkspaceCliIo, provided: readonly string[] | null | undefined): void {
   if (provided === undefined) return;
   if (provided === null) {
@@ -175,11 +195,16 @@ function writeProvidedByClient(io: WorkspaceCliIo, provided: readonly string[] |
     : `  Il client fornisce già: ${provided.join(", ")}. Le capacità qui sopra si aggiungono a quelle.\n`);
 }
 
-function connectionEffects(client: HarnessId, present: boolean): readonly string[] {
+function connectionEffects(client: HarnessId, present: boolean, insideRepository: boolean): readonly string[] {
   return [
     client === "codex" ? ".codex/config.toml" : ".mcp.json",
     ...(present ? [`${client === "codex" ? "AGENTS.md" : "CLAUDE.md"}: un blocco delimitato in coda`] : []),
-    "un'esclusione Git locale per la sola configurazione del client",
+    // Fuori da un repository non esiste `.git/info/exclude`: la regola finisce in un
+    // `.gitignore`, che è un file diverso e visibile. Chiamarli con lo stesso nome
+    // farebbe cercare all'utente un file che non c'è.
+    insideRepository
+      ? "un'esclusione in .git/info/exclude per la sola configurazione del client"
+      : "una regola in .gitignore per la sola configurazione del client",
   ];
 }
 
@@ -197,7 +222,8 @@ function writeState(io: WorkspaceCliIo, steps: EntrySteps, client: HarnessId | n
 }
 
 function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null, client: HarnessId,
-  connection: readonly string[] | null, provided: readonly string[] | null | undefined): void {
+  connection: readonly string[] | null, provided: readonly string[] | null | undefined,
+  nativeBlocker: string | null): void {
   io.writeOut("Verrà preparato:\n");
   const translated = plan === null ? undefined : ADAPTER_REASON[plan.decision.adapterReason];
   io.writeOut(`  Client: ${CLIENT_LABEL[client]}${translated === undefined ? "" : ` — ${translated}`}\n`);
@@ -209,6 +235,7 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
     if (checks.length > 0) io.writeOut(`  Verifiche: ${checks.join(" · ")}\n`);
     io.writeOut(`  File dell'imbracatura da creare: ${plan.changes.created.length}\n`);
   }
+  writeNativeWorkBlocker(io, nativeBlocker);
   writeProvidedByClient(io, provided);
   if (connection !== null)
     io.writeOut(`  Fuori da .forgeyard: ${connection.join("; ")}. Ogni scrittura è delimitata e reversibile.\n`);
@@ -289,8 +316,10 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
           writePlanSummary(io, previewed, previewed.decision.adapter, steps.connection
             ? null
             : connectionEffects(previewed.decision.adapter,
-              await instructionsPresent(preview.root, previewed.decision.adapter)),
-            await providedByClient(previewed.decision.adapter, preview.root, inventoryOf));
+              await instructionsPresent(preview.root, previewed.decision.adapter),
+              preview.discovery.kind === "repository"),
+            await providedByClient(previewed.decision.adapter, preview.root, inventoryOf),
+            nativeWorkBlocker(preview.discovery));
         } catch (error) {
           io.writeOut((error as { code?: unknown } | null)?.code === "FY_INTAKE_INCOMPLETE"
             ? "Il piano dell'imbracatura dipende dal risultato voluto: quella domanda richiede un terminale interattivo.\n"
@@ -323,8 +352,9 @@ export async function runPersonalEntry(root = process.cwd(), options: PersonalEn
     const target = plan?.decision.adapter ?? client!;
     writePlanSummary(io, plan, target, steps.connection
       ? null
-      : connectionEffects(target, await instructionsPresent(preview.root, target)),
-      await providedByClient(target, preview.root, inventoryOf));
+      : connectionEffects(target, await instructionsPresent(preview.root, target),
+        preview.discovery.kind === "repository"),
+      await providedByClient(target, preview.root, inventoryOf), nativeWorkBlocker(preview.discovery));
     if (!await prompts.confirm("workspace.prepare", "Confermi la preparazione di questa cartella?", false)) {
       io.writeOut("Preparazione annullata. Nessun file scritto.\n");
       return 0;
