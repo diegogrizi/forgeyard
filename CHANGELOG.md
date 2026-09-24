@@ -11,10 +11,9 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 
 ### Aggiunto
 
-- Sei garanzie meccaniche come moduli con i propri test: scala dell'evidenza e citazioni
+- Le garanzie meccaniche come moduli con i propri test: scala dell'evidenza e citazioni
   vive (`src/evidence/`), scansione della deriva (`src/drift/`), contabilità dichiarata
-  (`src/measure/`), coerenza dell'imbracatura generata (`src/doctor/harness-lint.ts`) e un
-  registro append-only con catena di impronte (`src/ledger/`).
+  (`src/measure/`) e coerenza dell'imbracatura generata (`src/doctor/harness-lint.ts`).
 - Il lint dell'imbracatura come gate su `buildInstallPlan`: ogni percorso di installazione
   lo attraversa, e un'imbracatura incoerente viene rifiutata prima di essere scritta. I
   byte di terze parti sono dichiarati ma non respingono l'installazione.
@@ -78,13 +77,15 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   `forgeyard-showcase`, l'attività T004, la sezione `presentation` della configurazione, gli
   undici slot nei due adapter e i golden. La sua unica garanzia utile sopravvive come regola
   generale `content.remote-asset`: nessun file web generato chiama la rete, guard compreso.
+- **Il registro a catena** (`src/ledger/`, 1.065 righe con i suoi test). Era elencato fra i
+  moduli e verificato dai propri test, ma nessun percorso del prodotto lo attraversava e non
+  era una delle sei garanzie: un «registro di eventi verificabile» che nessuno scrive è
+  esattamente la raccolta di intenzioni da cui questo prodotto dice di distinguersi. La tesi
+  del registro contabile resta, ed è realizzata dalla scala dell'evidenza e dalla contabilità,
+  che invece sono sul percorso.
+- `src/adapters/adapter.ts`: un alias di tipo che nessuno importava.
 - Il ramo legacy del write-guard, che era il più permissivo dei due percorsi che
   proteggono la stessa cosa. Ora l'assenza di un work order nativo nega, non degrada.
-
-### Non ancora collegato
-
-- La contabilità di misura e il registro a catena sono primitive verificate dai propri
-  test, **non attraversate da nessun percorso del prodotto**.
 
 ## 0.1.0 - 2026-09-15
 

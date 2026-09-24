@@ -111,8 +111,7 @@ describe("non-leaking release audit", () => {
     expect(result.stdout).toContain("202 agents");
     expect(result.stdout).toContain("183 skills");
     expect(result.stdout).toContain("105 commands");
-  }, 30_000);
-
+  });
   test("keeps public documentation aligned with the attested catalog counts", async () => {
     const [readme, architectureGuide, sourceGuide] = await Promise.all([
       readFile(path.join(repositoryRoot, "README.md"), "utf8"),

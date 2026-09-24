@@ -37,6 +37,29 @@ describe("heavy suites declare their own timeout", () => {
     expect(missing).toEqual([]);
   });
 
+  test("is not quietly undercut by a per-test cap below it", async () => {
+    const shadowed: string[] = [];
+    for (const directory of HEAVY_DIRECTORIES) {
+      for (const file of await testFiles(directory)) {
+        const source = await readFile(file, "utf8");
+        const declared = /vi\.setConfig\(\{\s*testTimeout:\s*([\d_]+)/.exec(source);
+        if (declared === null) continue;
+        const cap = Number(declared[1]!.replaceAll("_", ""));
+        for (const match of source.matchAll(/^\s*\}\)?,\s*([\d_]+)\s*\);\s*$/gm)) {
+          const perTest = Number(match[1]!.replaceAll("_", ""));
+          if (perTest < cap) {
+            shadowed.push(`${file}: ${perTest} < ${cap}`);
+          }
+        }
+      }
+    }
+
+    // A cap declared at the top of the file and undercut three screens below is a cap that
+    // does not hold: nine of them silently overrode their own file, and only running the
+    // suite in parallel — where every test gets slower — made them visible.
+    expect(shadowed).toEqual([]);
+  });
+
   test("a declared cap is stated with the measurement that justifies it", async () => {
     const unexplained: string[] = [];
     for (const directory of HEAVY_DIRECTORIES) {

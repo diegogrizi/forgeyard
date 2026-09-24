@@ -22,8 +22,7 @@ let sandboxRoot: string;
 beforeAll(async () => {
   await buildCli(repositoryRoot);
   sandboxRoot = await mkdtemp(path.join(os.tmpdir(), "forgeyard-problem-first-"));
-}, 60_000);
-
+});
 afterAll(async () => {
   if (sandboxRoot !== undefined) await rm(sandboxRoot, { recursive: true, force: true });
 });
@@ -97,5 +96,5 @@ describe("problem-first packaged preparation", () => {
     expect(update.status).toBe("no-op");
     expect(update.changes.updated).toEqual([]);
     expect(update.changes.removed).toEqual([]);
-  }, 120_000);
+  });
 });

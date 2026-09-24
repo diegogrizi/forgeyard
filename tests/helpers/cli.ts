@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { open, rm, stat } from "node:fs/promises";
+import { open, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,9 +40,45 @@ async function acquireBuildLock(repositoryRoot: string) {
   }
 }
 
+/**
+ * Newest modification time across the inputs a build depends on. Cheap: about seventy files.
+ */
+async function newestInputMtime(repositoryRoot: string): Promise<number> {
+  let newest = 0;
+  const visit = async (target: string): Promise<void> => {
+    const entries = await readdir(target, { withFileTypes: true }).catch(() => []);
+    await Promise.all(entries.map(async (entry) => {
+      const candidate = path.join(target, entry.name);
+      if (entry.isDirectory()) return visit(candidate);
+      const info = await stat(candidate).catch(() => undefined);
+      if (info && info.mtimeMs > newest) newest = info.mtimeMs;
+    }));
+  };
+  await visit(path.join(repositoryRoot, "src"));
+  for (const file of ["package.json", "tsup.config.ts", "tsconfig.json"]) {
+    const info = await stat(path.join(repositoryRoot, file)).catch(() => undefined);
+    if (info && info.mtimeMs > newest) newest = info.mtimeMs;
+  }
+  return newest;
+}
+
+async function builtOutputIsCurrent(repositoryRoot: string): Promise<boolean> {
+  const built = await stat(path.join(repositoryRoot, "dist", "cli", "main.js")).catch(() => undefined);
+  return built !== undefined && built.mtimeMs >= await newestInputMtime(repositoryRoot);
+}
+
+/**
+ * Build once for the whole run, not once per test file. Seven files call this, and `tsup`
+ * cleans its output folder first: with parallel files, one rebuild wiped `dist/` while another
+ * file was executing the binary inside it. The lock alone did not help — it serialised the
+ * builds, not the use of what they produced. Skipping a build that is already current removes
+ * the clobbering entirely, and the second check under the lock covers the race to be first.
+ */
 export async function buildCli(repositoryRoot: string): Promise<void> {
+  if (await builtOutputIsCurrent(repositoryRoot)) return;
   const lock = await acquireBuildLock(repositoryRoot);
   try {
+    if (await builtOutputIsCurrent(repositoryRoot)) return;
     const result = await execa("npm", ["run", "build"], {
       cwd: repositoryRoot,
       shell: false,

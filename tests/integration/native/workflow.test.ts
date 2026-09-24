@@ -2,7 +2,7 @@ import { readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
 
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 
 import { createProjectService } from "../../../src/native/service.js";
 import { commitAll, nativeFixture, productPlan } from "../../helpers/native.js";
@@ -38,13 +38,13 @@ async function planAndConsent(fixture: Awaited<ReturnType<typeof setup>>, risk: 
   return { ...fixture, revision: consent.revision, planRevision: result.revision };
 }
 
-afterEach(async () => {
+afterAll(async () => {
   for (const service of services.splice(0)) await service.close();
   for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
 });
 
 describe("native project protocol", () => {
-  test("Claude file hook follows native consent, current work scope and pause rather than requiring a legacy claim", async () => {
+  test.concurrent("Claude file hook follows native consent, current work scope and pause rather than requiring a legacy claim", async () => {
     const fixture = await nativeFixture(); fixtures.push(fixture);
     const service = await createProjectService({ ...fixture, stateDirectory: path.join(fixture.stateDirectory, "Forgeyard"),
       confirmation: async () => ({ accepted: true, channel: "test-fixture" }) }); services.push(service);
@@ -66,7 +66,7 @@ describe("native project protocol", () => {
     expect((await hook("src/feature.txt")).stdout).toContain('"permissionDecision":"deny"');
     expect(planned.result.action).toBe("awaiting-approval");
   });
-  test("rejects a second writer for the same real working tree", async () => {
+  test.concurrent("rejects a second writer for the same real working tree", async () => {
     const fixture = await setup();
     const second = await createProjectService(fixture);
     services.push(second);
@@ -76,7 +76,7 @@ describe("native project protocol", () => {
     expect(read.result).toMatchObject({ mode: "read" });
   });
 
-  test("validates payloads, revisions and idempotency without effect replay", async () => {
+  test.concurrent("validates payloads, revisions and idempotency without effect replay", async () => {
     const fixture = await setup();
     await expect(call(fixture.service, "fy_approve", { accepted: true })).rejects.toMatchObject({ code: "FY_PROTOCOL_INVALID" });
     await expect(call(fixture.service, "fy_plan", { sessionId: "session-a", expectedRevision: 0, plan: productPlan() }))
@@ -90,7 +90,7 @@ describe("native project protocol", () => {
       .rejects.toMatchObject({ code: "FY_IDEMPOTENCY_CONFLICT" });
   });
 
-  test("requires a real consent channel and a valid requirement/task graph", async () => {
+  test.concurrent("requires a real consent channel and a valid requirement/task graph", async () => {
     const fixture = await setup();
     const invalid = productPlan();
     invalid.tasks[0]!.dependsOn = ["T1"];
@@ -104,14 +104,14 @@ describe("native project protocol", () => {
       .rejects.toMatchObject({ code: "FY_PROTOCOL_INVALID" });
   });
 
-  test("does not certify completion without all gates and criterion evidence", async () => {
+  test.concurrent("does not certify completion without all gates and criterion evidence", async () => {
     const fixture = await planAndConsent(await setup());
     const result = await call(fixture.service, "fy_finalize", { runId: "filter-orders", sessionId: "session-a", expectedRevision: fixture.revision });
     expect(result.result).toMatchObject({ verdict: "blocked" });
     expect(JSON.stringify(result.result)).toContain("G002");
   });
 
-  test("retains new-feature plans while keeping the same capsule", async () => {
+  test.concurrent("retains new-feature plans while keeping the same capsule", async () => {
     const fixture = await planAndConsent(await setup());
     const context = await call(fixture.service, "fy_context", {});
     expect(context.result).toMatchObject({ runs: [expect.objectContaining({ id: "filter-orders" })] });
@@ -122,7 +122,7 @@ describe("native project protocol", () => {
     expect(context.result).toMatchObject({ capsuleId: JSON.parse(capsule).id });
   });
 
-  test("detects policy drift before a run can advance", async () => {
+  test.concurrent("detects policy drift before a run can advance", async () => {
     const fixture = await planAndConsent(await setup());
     const configPath = path.join(fixture.root, "forgeyard.yaml");
     const config = await readFile(configPath, "utf8");

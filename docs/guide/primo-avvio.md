@@ -174,7 +174,7 @@ l'eseguibile per decidere.
 
 Se hai già un `CLAUDE.md` o un `AGENTS.md` nella cartella e vuoi l'altro client, la scelta
 si forza soltanto dai comandi avanzati descritti in
-[Percorsi legacy](../percorsi-legacy.md), non dall'ingresso.
+[Comandi avanzati](../percorsi-legacy.md), non dall'ingresso.
 
 **`  Capacità selezionate: 6    escluse: 4`** — quante capacità del catalogo entrerebbero
 nell'imbracatura e quante sono state escluse. Non devi sceglierle né conoscerle per nome.

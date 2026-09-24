@@ -104,7 +104,7 @@ export function buildInstallPlan(input: BuildInstallPlanInput): InstallPlan {
     // is not harness identity — and out of the doctor's managed-hash comparison.
     plannedFile(
       ".forgeyard/.gitignore",
-      "evidence/\nledger/\nreports/\nbindings.json\nstate/staging/\nstate/backups/\n",
+      "evidence/\nreports/\nbindings.json\nstate/staging/\nstate/backups/\n",
       "forgeyard.runtime-ignore",
       "seed",
     ),

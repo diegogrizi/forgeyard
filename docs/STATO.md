@@ -131,7 +131,7 @@ ricevute di verifica, e il guard di scrittura è diventato nativo soltanto. Il p
 manuale `full` è stato rimosso; resta `hackathon` come selezione curata.
 
 Ciò che resta di essi è descritto, per la sola manutenzione, in
-[Percorsi legacy](percorsi-legacy.md). Non è la guida di ingresso, e non va ampliato.
+[Comandi avanzati](percorsi-legacy.md). Non è la guida di ingresso, e non va ampliato.
 
 Già dismesso: l'**adapter Cursor**. Il prodotto rende un'imbracatura per Claude Code e
 per Codex, e `HARNESS_IDS` ha due valori, quindi un terzo adapter è un errore di tipo
@@ -191,8 +191,8 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 23 settembre 2026 `npm run verify` è passato interamente su questa macchina**: 72 file
-  di test, 571 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
+- **Il 24 settembre 2026 `npm run verify` è passato interamente su questa macchina in 879 s**: 71 file
+  di test, 546 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
   riusabile per un'altra.

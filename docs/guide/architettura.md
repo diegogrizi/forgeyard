@@ -37,7 +37,7 @@ Il secondo ciclo di vita è stato rimosso il 22 settembre 2026: `src/orchestrato
 `task`, `workspace`, `ledger` e `guard`. Restano nel checkout, come percorsi avanzati e
 non come tutorial, i comandi `inspect`, `prepare`, `init`, `doctor`, `verify`, `update` e
 `rollback`. Vedere
-[Percorsi legacy](../percorsi-legacy.md) e [Stato](../STATO.md).
+[Comandi avanzati](../percorsi-legacy.md) e [Stato](../STATO.md).
 
 `src/inventory/` legge ciò che il client dichiara di avere già installato. È sola lettura, e la
 sua unica decisione è quale installazione vale per *questa* cartella: il registro distingue

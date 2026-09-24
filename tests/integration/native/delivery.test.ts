@@ -1,6 +1,6 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterAll, expect, test, vi } from "vitest";
 
 // Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 142,9 s.
 // Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
@@ -39,23 +39,27 @@ async function setup(risk: "low" | "medium" = "low", gateRunner?: NativeGateRunn
     evidence: [{ path: "src/feature.test.mjs", sha256: sha256Text(await readFile(path.join(fixture.root, "src/feature.test.mjs"), "utf8")) }] } });
   return { ...fixture, service, reviewRef: { path: "src/review.md", sha256: sha256Text(review) } };
 }
-async function gates(service: ProjectService) {
+// La fixture arriva per argomento, non dall'array condiviso: `fixtures.at(-1)` legava
+// questa prova all'ordine di esecuzione, e con prove concorrenti leggeva il registro di
+// un'altra. In serie coincideva sempre, quindi il difetto non si vedeva.
+async function gates(fixture: { service: ProjectService; stateDirectory: string }) {
+  const { service } = fixture;
   for (const gateId of ["G001", "G002"]) {
     const started = await mutation(service, "fy_verify", { taskId: "T1", gateId });
     await service.waitForOperations();
     const result = await call(service, "fy_operation", { action: "status", operationId: started.result.operationId });
-    const log = await readFile(path.join(fixtures.at(-1)!.stateDirectory, "gate-logs", `${started.result.operationId}.json`), "utf8");
+    const log = await readFile(path.join(fixture.stateDirectory, "gate-logs", `${started.result.operationId}.json`), "utf8");
     expect(result.result.operation, log).toMatchObject({ status: "passed", exitCode: 0 });
   }
 }
-afterEach(async () => {
+afterAll(async () => {
   for (const service of services.splice(0)) await service.close();
   for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
 });
 
-test("real finite gates certify a clean revision; the report does not invalidate that revision", async () => {
+test.concurrent("real finite gates certify a clean revision; the report does not invalidate that revision", async () => {
   const fixture = await setup();
-  await gates(fixture.service);
+  await gates(fixture);
   await mutation(fixture.service, "fy_review", { origin: "same-session", artifact: fixture.reviewRef, findings: [] });
   const first = await mutation(fixture.service, "fy_finalize", {});
   expect(first.result).toMatchObject({ verdict: "delivered", gaps: [] });
@@ -65,7 +69,7 @@ test("real finite gates certify a clean revision; the report does not invalidate
   expect(second.result).toMatchObject({ verdict: "delivered", gaps: [] });
 });
 
-test("zero tests cannot become passed evidence even with exit zero", async () => {
+test.concurrent("zero tests cannot become passed evidence even with exit zero", async () => {
   const fixture = await setup("low", async () => ({ exitCode: 0, stdout: "# tests 0\n# pass 0\n", stderr: "" }));
   const started = await mutation(fixture.service, "fy_verify", { taskId: "T1", gateId: "G001" });
   await fixture.service.waitForOperations();
@@ -73,9 +77,9 @@ test("zero tests cannot become passed evidence even with exit zero", async () =>
   expect(result.result.operation).toMatchObject({ status: "failed", failure: "zero-tests", testsDiscovered: 0 });
 });
 
-test("a claimed native subagent does not certify independent medium-risk review", async () => {
+test.concurrent("a claimed native subagent does not certify independent medium-risk review", async () => {
   const fixture = await setup("medium");
-  await gates(fixture.service);
+  await gates(fixture);
   await mutation(fixture.service, "fy_review", { origin: "native-subagent", artifact: fixture.reviewRef, findings: [] });
   const result = await mutation(fixture.service, "fy_finalize", {});
   expect(result.result).toMatchObject({ verdict: "blocked", gaps: ["review:independent-provenance-required"] });
@@ -84,7 +88,7 @@ test("a claimed native subagent does not certify independent medium-risk review"
   expect((await mutation(fixture.service, "fy_finalize", {})).result).toMatchObject({ verdict: "delivered", gaps: [] });
 });
 
-test("pause retains ownership and explicit local reconciliation resumes the same capsule", async () => {
+test.concurrent("pause retains ownership and explicit local reconciliation resumes the same capsule", async () => {
   const fixture = await setup();
   await mutation(fixture.service, "fy_pause", { note: "Pause at the user's request" });
   await expect(mutation(fixture.service, "fy_next", {})).rejects.toMatchObject({ code: "FY_RECONCILIATION_REQUIRED" });
@@ -93,7 +97,7 @@ test("pause retains ownership and explicit local reconciliation resumes the same
   expect((await mutation(fixture.service, "fy_next", {})).result).toMatchObject({ action: "work" });
 });
 
-test("retrying a gate does not spawn it twice, and a later failed attempt supersedes an old pass", async () => {
+test.concurrent("retrying a gate does not spawn it twice, and a later failed attempt supersedes an old pass", async () => {
   let invocations = 0;
   const fixture = await setup("low", async () => ({ exitCode: ++invocations === 1 ? 0 : 1,
     stdout: "# tests 1\n# pass 1\n# fail 0", stderr: "" }));
@@ -109,7 +113,7 @@ test("retrying a gate does not spawn it twice, and a later failed attempt supers
   expect(finalized.result.gaps).toContain("gate:T1/G001");
 });
 
-test("a running gate is canceled by pause without releasing the writer; it can resume after termination", async () => {
+test.concurrent("a running gate is canceled by pause without releasing the writer; it can resume after termination", async () => {
   const fixture = await setup("low", async ({ signal }) => new Promise((resolve) => {
     signal.addEventListener("abort", () => resolve({ exitCode: 130, stdout: "", stderr: "", canceled: true }), { once: true });
   }));
@@ -122,7 +126,7 @@ test("a running gate is canceled by pause without releasing the writer; it can r
   expect((await fixture.service.reconcile("filter-orders", "writer")).result).toMatchObject({ status: "implementing" });
 });
 
-test("changes made by a nominally passing gate invalidate its evidence", async () => {
+test.concurrent("changes made by a nominally passing gate invalidate its evidence", async () => {
   const fixture = await setup("low", async ({ cwd }) => {
     await writeFile(path.join(cwd, "src/feature.txt"), "changed during verification\n");
     return { exitCode: 0, stdout: "# tests 1\n# pass 1", stderr: "" };
@@ -133,8 +137,8 @@ test("changes made by a nominally passing gate invalidate its evidence", async (
     .toMatchObject({ status: "failed", failure: "stale-inputs" });
 });
 
-test("a delivered task is reopened when its criterion evidence or tested revision changes", async () => {
-  const fixture = await setup(); await gates(fixture.service);
+test.concurrent("a delivered task is reopened when its criterion evidence or tested revision changes", async () => {
+  const fixture = await setup(); await gates(fixture);
   await mutation(fixture.service, "fy_review", { origin: "same-session", artifact: fixture.reviewRef, findings: [] });
   expect((await mutation(fixture.service, "fy_finalize", {})).result.verdict).toBe("delivered");
   await writeFile(path.join(fixture.root, "src/feature.test.mjs"), "// changed evidence\n"); await commitAll(fixture.root);

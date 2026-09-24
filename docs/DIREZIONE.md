@@ -193,7 +193,6 @@ src/
   evidence/    ricevute + scala epistemica + citazioni       [G2, G3]
   drift/       scansione imbracatura ↔ codice               [G4]
   measure/     contabilità costo/tempo con linea di base    [G5]
-  ledger/      catena di eventi verificabile
   doctor/      controlli strutturali + lint dell'imbracatura [G6]
   registry/    caricamento dei pack
   provenance/  SBOM e notices

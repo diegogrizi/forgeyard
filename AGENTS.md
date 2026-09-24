@@ -89,7 +89,10 @@ all'ambiente di sviluppo: se cambiano, rigenerare anche provenienza e avvisi.
 Sopravvive il runtime nativo cooperativo. Non creare un secondo motore parallelo.
 
 **Dismessi, non reintrodurre**: l'adapter Cursor e il profilo `full`. I percorsi legacy ancora
-presenti sono elencati in [percorsi-legacy](docs/percorsi-legacy.md); non ampliarli.
+presenti sono elencati in [comandi avanzati](docs/percorsi-legacy.md), che distingue i quattro
+in dismissione — `inspect`, `prepare`, `init`, `verify` — dai tre pienamente supportati:
+`doctor` regge G4 e G6, `update` è l'unica via di aggiornamento, `rollback` la via d'uscita.
+I primi non vanno ampliati.
 
 Le sei garanzie e i moduli che le realizzano sono in
 [architettura](docs/guide/architettura.md) e [garanzie](docs/guide/garanzie.md). Ogni garanzia

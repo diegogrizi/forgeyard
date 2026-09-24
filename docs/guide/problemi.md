@@ -446,4 +446,4 @@ costituiscono una prova di integrazione live con Claude Code o Codex.**
 | cosa promette ogni meccanismo e cosa lo fa fallire | [Garanzie](garanzie.md) |
 | quali moduli esistono e quali confini rispettano | [Architettura](architettura.md) |
 | cosa è implementato, cosa no, cosa non è mai stato provato live | [Stato](../STATO.md) |
-| i comandi avanzati ancora presenti nel checkout | [Percorsi legacy](../percorsi-legacy.md) |
+| i comandi oltre l'ingresso, e quali sono in dismissione | [Comandi avanzati](../percorsi-legacy.md) |

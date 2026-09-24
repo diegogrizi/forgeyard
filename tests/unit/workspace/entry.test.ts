@@ -24,7 +24,7 @@ async function temporary(run: (root: string) => Promise<void>): Promise<void> {
   try { await run(root); } finally { await rm(root, { recursive: true, force: true }); }
 }
 async function git(root: string, ...args: string[]): Promise<string> {
-  return (await execute("git", ["-C", root, ...args], { timeout: 10000 })).stdout.trim();
+  return (await execute("git", ["-C", root, ...args], { timeout: 120_000 })).stdout.trim();
 }
 
 /** Un doppio: l'installazione reale non è il soggetto di questi test e supera la scadenza su questa macchina. */

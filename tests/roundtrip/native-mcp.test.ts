@@ -39,7 +39,9 @@ test("real packaged stdio speaks only MCP and shares the strict JSON CLI contrac
   } finally { await client.close(); }
   const json = await execa(process.execPath, [cli, "tool", "--root", fixture.root, "--json"], {
     cwd: fixture.root, env: { LOCALAPPDATA: fixture.stateDirectory }, input: JSON.stringify({ protocolVersion: "0.2", requestId: "cli-context", tool: "fy_context", payload: {} }),
-    shell: false, reject: false, timeout: 10000 });
+    // Cronometrato: questa invocazione costa 16,3 s a freddo e ~4,4 a caldo. Il tetto era
+    // 10 s, cioe' sotto il lavoro anche in serie: passava solo perche' la CLI era gia' calda.
+    shell: false, reject: false, timeout: 120_000 });
   expect(json.exitCode, json.stderr).toBe(0);
   expect(JSON.parse(json.stdout)).toMatchObject({ ok: true, protocolVersion: "0.2" });
 });

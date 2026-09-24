@@ -161,7 +161,7 @@ In quest'ordine: **Primo avvio → Uso → Garanzie → Direzione → Stato.** A
 | [Problemi](docs/guide/problemi.md) | sintomo, causa, cosa fare |
 | [Manifesto](docs/MANIFESTO.md) | il testo fondativo, in inglese |
 | [Provenienza del catalogo](docs/provenance/catalog-sources.md) | origine, licenza e integrità dei byte di terzi |
-| [Percorsi legacy](docs/percorsi-legacy.md) | riferimento di manutenzione dei percorsi in dismissione |
+| [Comandi avanzati](docs/percorsi-legacy.md) | i sette comandi oltre l'ingresso: quali sono supportati e quali in dismissione |
 
 ## Licenza e provenienza
 

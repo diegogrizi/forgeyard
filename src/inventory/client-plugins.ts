@@ -135,8 +135,8 @@ export function partitionForProject(inventory: ClientInventory, projectRoot: str
   return { available, boundElsewhere };
 }
 
-/** Where Claude Code keeps the registry. Injectable so a test never reads the real machine. */
-export function claudePluginRegistryPath(home = os.homedir()): string {
+/** Where Claude Code keeps the registry. The home is injectable so a test never reads this machine. */
+function claudePluginRegistryPath(home = os.homedir()): string {
   return path.join(home, ".claude", "plugins", "installed_plugins.json");
 }
 

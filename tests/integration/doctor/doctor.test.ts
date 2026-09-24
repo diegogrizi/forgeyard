@@ -102,8 +102,7 @@ describe("Forgeyard doctor", () => {
       ]),
     );
     expect(report.checks.filter((check) => check.required).every((check) => check.status === "passed")).toBe(true);
-  }, 60_000);
-
+  });
   test("allows human edits to the seed configuration", async () => {
     const root = await installedRoot();
     const configPath = path.join(root, "forgeyard.yaml");
@@ -113,8 +112,7 @@ describe("Forgeyard doctor", () => {
 
     expect(report.ok).toBe(true);
     expect(report.checks.find((check) => check.id === "managed-files")?.status).toBe("passed");
-  }, 60_000);
-
+  });
   test("validates a Claude Code install and probes the correct executable name", async () => {
     const root = await installedRoot("claude-code");
     const lookedUp: string[] = [];
@@ -134,8 +132,7 @@ describe("Forgeyard doctor", () => {
       expect.objectContaining({ id: "claude-code-executable", status: "unavailable", required: false }),
       expect.objectContaining({ id: "claude-code-roundtrip", status: "skipped", required: false }),
     ]));
-  }, 60_000);
-
+  });
   test("reports managed drift as a required failure", async () => {
     const root = await installedRoot();
     await writeFile(path.join(root, "AGENTS.md"), "changed\n", "utf8");
@@ -146,8 +143,7 @@ describe("Forgeyard doctor", () => {
     expect(report.checks.find((check) => check.id === "managed-files")).toEqual(
       expect.objectContaining({ status: "failed", required: true, paths: ["AGENTS.md"] }),
     );
-  }, 60_000);
-
+  });
   test("does not echo caller-supplied deny terms in plain report data", async () => {
     const root = await installedRoot();
     await writeFile(path.join(root, "AGENTS.md"), "Example Sponsor\n", "utf8");
@@ -163,8 +159,7 @@ describe("Forgeyard doctor", () => {
       expect.objectContaining({ status: "failed", paths: ["AGENTS.md"] }),
     );
     expect(JSON.stringify(report).toLocaleLowerCase("en-US")).not.toContain("example sponsor");
-  }, 60_000);
-
+  });
   test("cannot compare harness drift in a project without an installed harness", async () => {
     const root = await temporaryRoot();
 
@@ -264,5 +259,5 @@ describe("Forgeyard doctor", () => {
     expect(report.ok).toBe(false);
     expect(report.checks.find((check) => check.id === "manifest")?.status).toBe("failed");
     expect(report.checks.filter((check) => check.required).every((check) => check.status !== "skipped")).toBe(true);
-  }, 60_000);
+  });
 });
