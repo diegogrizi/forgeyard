@@ -4,13 +4,26 @@ import { mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } f
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { test, vi } from "vitest";
+import { afterEach, test, vi } from "vitest";
 
 // Queste prove eseguono Git vero: init, clone, worktree e `git submodule add`.
 // Cronometrato su questa macchina a riposo, il caso submodule costa 28,9 s contro un tetto
 // globale di 30 s tarato sui test unitari: il 96% del tetto, quindi rosso a ogni minimo
 // carico. Un tetto che coincide con il lavoro che delimita non delimita niente.
 vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
+
+// Due prove qui manipolano l'ambiente del processo per simulare Git assente o ereditato,
+// e lo ripristinano in un `finally`. Ma un `finally` non gira se la prova **scade**: vitest
+// la interrompe e la funzione resta sospesa. Sotto carico e' successo, e ogni prova
+// successiva dello stesso file ha perso Git — dieci rossi in cascata da mezzo secondo
+// l'uno, che sembravano una gara da parallelismo ed erano un file che si avvelena da solo.
+// Questo ripristino gira comunque, anche dopo un timeout.
+const PRISTINE_ENV = { GIT_DIR: process.env.GIT_DIR, GIT_WORK_TREE: process.env.GIT_WORK_TREE, PATH: process.env.PATH };
+afterEach(() => {
+  for (const [name, value] of Object.entries(PRISTINE_ENV)) {
+    if (value === undefined) delete process.env[name]; else process.env[name] = value;
+  }
+});
 import { discoverWorkspace } from "../../../src/workspace/discovery.js";
 
 const execute = promisify(execFile);

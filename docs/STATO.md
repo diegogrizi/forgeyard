@@ -191,7 +191,7 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 24 settembre 2026 `npm run verify` è passato interamente su questa macchina in 879 s**: 71 file
+- **Il 24 settembre 2026 `npm run verify` è passato interamente su questa macchina in 879-1047 s**: 71 file
   di test, 546 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
   provenienza rigenerabile senza differenze, audit di release passato e contenuto del
   pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione

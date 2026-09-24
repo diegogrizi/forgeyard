@@ -14,6 +14,9 @@ export default defineConfig({
     // Con dodici core, undici worker piu' le prove concorrenti dentro i file arrivavano a
     // oltre cinquanta processi fra Git e Node: i rossi comparivano in file che non avevano
     // colpa, cioe' sovrasaturazione e non gare. Il tetto tiene la concorrenza sotto controllo.
+    // Quattro, misurato. A undici comparivano rossi in file che non avevano colpa; a sei
+    // ancora due. Quattro ha due corse pulite consecutive alle spalle. La soglia dipende da
+    // quanti processi Git e Node genera ogni prova, non dal numero di core.
     maxWorkers: 4,
     // Le prove dentro un file restano in sequenza: condividono le loro fixture.
     sequence: { concurrent: false },
