@@ -219,8 +219,11 @@ export class ProjectService {
     // or cancels a recorded operation: exempting the first by name left the second demanding a
     // HEAD from the placeholder member ".", and the workspace root of a multi-repository project
     // is not a working tree — so polling a gate was refused there, on the first run of this whole
-    // path over two real repositories. `fy_plan` still demands a commit, per touched member, and
-    // every tool that reaches the run branch below carries a `runId` by schema.
+    // path over two real repositories. `fy_plan` still demands a commit, per touched member.
+    //
+    // The default is "binds nothing", so it is safe only while every tool that reaches the run
+    // branch below is forced by schema to carry a `runId`. That is not left to this comment:
+    // `tests/unit/native/protocol-run-binding.test.ts` asserts it over `NATIVE_TOOL_SCHEMAS`.
     if (bindsToRevision) {
       // The map is built from sorted members, so the names come out sorted already.
       const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
