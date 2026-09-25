@@ -165,17 +165,17 @@ async function instructionsPresent(root: string, client: HarnessId): Promise<boo
  * guess. `null` means the registry could not be read, which is not the same as no plugins.
  */
 /**
- * Why a native run cannot start here, or null when it can. The runtime binds a run to one
- * Git working tree and one HEAD, so a folder holding several repositories — or none — gets
- * a harness that installs perfectly and then refuses every `fy_attach`. Preparing a folder
- * nobody will be able to work in, without saying so first, is an undeclared effect wearing
- * a technical limit as a costume.
+ * Why a native run cannot start here, or null when it can. The runtime binds a run to a Git
+ * working tree with at least one commit — the workspace root itself, or any of its member
+ * repositories — so a native run now spans several member repositories: evidence binds to
+ * the HEADs of only the members a task actually touches. Only a folder with no Git anywhere,
+ * neither at the root nor in a member, gets a harness that installs perfectly and then has
+ * nothing to attach to. Preparing a folder nobody will be able to work in, without saying so
+ * first, is an undeclared effect wearing a technical limit as a costume.
  */
 function nativeWorkBlocker(discovery: PersonalPreview["discovery"]): string | null {
-  if (discovery.kind === "repository") return null;
-  return discovery.repositories.length > 1
-    ? `contiene ${discovery.repositories.length} repository, e il runtime ne richiede uno solo`
-    : "non è un repository Git, e il runtime ne richiede uno con almeno un commit";
+  if (discovery.kind === "repository" || discovery.repositories.length > 0) return null;
+  return "non è un repository Git e non contiene repository membri, e il runtime ne richiede almeno uno con un commit";
 }
 
 function writeNativeWorkBlocker(io: WorkspaceCliIo, reason: string | null): void {

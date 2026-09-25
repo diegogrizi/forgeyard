@@ -196,11 +196,11 @@ test("l'anteprima nomina le scritture fuori dall'area personale prima di chieder
 // Un agente che riceve la nostra imbracatura sopra i plugin che il client già fornisce si
 // ritrova due autorità sulla stessa cosa. Dirlo prima della conferma non lo impedisce, ma
 // smette di nasconderlo.
-// Il lavoro nativo richiede un albero di lavoro Git unico con un HEAD. Su un workspace che
-// contiene piu' repository l'imbracatura si installa benissimo e poi `fy_attach` risponde
-// FY_GIT_REQUIRED: preparare una cartella in cui ci si rifiutera' di lavorare, senza dirlo
-// prima della conferma, e' un effetto non dichiarato travestito da limite tecnico.
-test("l'anteprima avverte quando il lavoro nativo non potra' partire in questa cartella",
+// Il lavoro nativo ora lega un'attività all'albero Git del membro che la possiede, non più a
+// un solo Git alla radice: un workspace con due repository membri parte, e non deve più
+// ricevere l'avvertimento che il lavoro nativo non potra' partire. La prova resta rossa se
+// quell'avvertimento viene reintrodotto per un workspace multi-repository.
+test("un workspace con due repository membri non riceve piu' l'avvertimento sul lavoro nativo",
   async () => temporary(async (root) => {
     await mkdir(path.join(root, "servizio"));
     await git(path.join(root, "servizio"), "init", "-b", "main");
@@ -210,8 +210,7 @@ test("l'anteprima avverte quando il lavoro nativo non potra' partire in questa c
     const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
       harness: harnessDouble(), native: nativeDouble() });
 
-    expect(result.stdout).toContain("Lavoro nativo: non parte in questa cartella");
-    expect(result.stdout).toContain("2 repository");
+    expect(result.stdout).not.toContain("Lavoro nativo: non parte in questa cartella");
   }));
 
 test("non avverte quando la cartella e' un solo repository", async () => temporary(async (root) => {

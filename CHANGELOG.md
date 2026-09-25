@@ -50,6 +50,11 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 - La stessa riga nomina ora il file giusto: `.git/info/exclude` dentro un repository, una
   regola in `.gitignore` fuori. Erano due file diversi chiamati con un nome solo.
 
+- **Un lavoro nativo attraversa più repository membri di uno stesso workspace.** Le prove si
+  legano agli HEAD dei soli membri toccati, quindi un commit in un membro estraneo non
+  invalida nulla e due lavori paralleli convivono. Un'attività resta confinata a un membro,
+  perché il suo gate gira una volta e in un albero di lavoro solo.
+
 ### Corretto
 
 - Le istruzioni sempre installate rimandavano a due seed che solo il pack `delivery`

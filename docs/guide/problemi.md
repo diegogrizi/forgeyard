@@ -308,6 +308,22 @@ un guard che non ha mai girato. È già successo una volta — il guard e il ser
 risolvevano lo stesso percorso in due grafie diverse, e le due identità non combaciavano —
 ed è corretto e coperto da un test. Se ricapita è da segnalare come bug, non da aggiustare
 cambiando configurazione.
+
+#### Il programma si ferma dicendo che lo stato privato precede un cambiamento incompatibile
+
+Uno strumento nativo (`fy_attach`, `fy_context`, o qualunque altro del protocollo) risponde
+con il codice `FY_STATE_INCOMPATIBLE`, e il messaggio dichiara due numeri di schema: quello
+che lo stato registrato porta e quello che questa versione di Forgeyard scrive.
+
+**Causa.** Lo stato privato del lavoro nativo — non un file del progetto, ma una directory
+fuori dall'albero di lavoro dove il runtime tiene revisione, attività e operazioni — è stato
+scritto da una versione di Forgeyard precedente a un cambiamento della sua forma, e non
+esiste una migrazione fra le due. Leggerlo come se fosse quello di oggi comparirebbe come un
+errore generico su un campo assente: il controllo lo dichiara invece, con i due numeri di
+schema.
+
+**Cosa fare.** Rimuovi quella directory di stato privata e ricomincia un lavoro: nessun file
+del progetto viene toccato, perché quello stato non ha mai vissuto nel repository.
 ## Verdetti e controlli
 
 #### Un verdetto di consegna è `blocked` con `evidence:unsupported-verdict`

@@ -3,3 +3,7 @@ node_modules/
 dist/
 coverage/
 *.tgz
+
+# Stato operativo dell'esecuzione assistita dei piani: ledger, brief e pacchetti di
+# review. E' stato personale e non va committato (AGENTS.md).
+/.superpowers/

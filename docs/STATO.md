@@ -54,7 +54,7 @@ con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di b
 | P2b | installazione della suite nell'area personale | implementato |
 | P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
 | P4 | inventario e riuso dei componenti globali già presenti | inventario fatto; il riuso è un'altra cosa (sotto) |
-| P5 | esecuzione su più repository membri | il limite è ora dichiarato (sotto); l'esecuzione no |
+| P5 | esecuzione su più repository membri | implementato, **mai provato live** |
 | P6 | selezione unificata e profili pertinenti | la contraddizione fra le due sedi è chiusa (sotto); l'unificazione no |
 | P7 | percorso ordinario interamente italiano, rimozione dei percorsi legacy | in corso |
 
@@ -74,25 +74,31 @@ di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 
 ## Cosa la misura ha detto su P5
 
-Misurato su un workspace con due repository membri: l'ingresso guidato lo riconosce
-correttamente (`multi-repository`, 2 repository, 2 progetti) e **installa l'imbracatura
-senza obiezioni**, 79 file. Poi il primo `fy_attach` risponde `FY_GIT_REQUIRED`: il runtime
-lega un lavoro a un solo albero Git e a un solo HEAD, e alla radice di quel workspace non
-ce n'è nessuno.
+Misurata all'inizio di questo lavoro, su un workspace con due repository membri: l'ingresso
+guidato lo riconosceva correttamente (`multi-repository`, 2 repository, 2 progetti) e
+**installava l'imbracatura senza obiezioni**, 79 file. Poi il primo `fy_attach` rispondeva
+`FY_GIT_REQUIRED`: il runtime legava un lavoro a un solo albero Git e a un solo HEAD, e alla
+radice di quel workspace non ce n'era nessuno.
 
-Quindi il prodotto **preparava volentieri una cartella in cui si sarebbe poi rifiutato di
-lavorare**, e non lo diceva prima della conferma. Un'imbracatura installata e inerte non è
-una funzione mancante: è un effetto non dichiarato travestito da limite tecnico. Ora
-l'anteprima lo dice, con il motivo e con cosa fare:
+Il prodotto **preparava volentieri una cartella in cui si sarebbe poi rifiutato di
+lavorare**, senza dirlo prima della conferma. Un'imbracatura installata e inerte non era una
+funzione mancante: era un effetto non dichiarato travestito da limite tecnico.
 
-```text
-  Lavoro nativo: non parte in questa cartella perché contiene 2 repository, e il runtime ne richiede uno solo.
-  L'imbracatura viene installata lo stesso e resta utile; per lavorare apri un singolo repository.
-```
+Quel legame è cambiato, non soltanto l'avvertimento che lo dichiarava: un lavoro nativo
+attraversa ora più repository membri di uno stesso workspace. Le prove si legano agli HEAD
+dei **soli membri toccati**; un'attività non può mescolare membri, e un piano che lo fa
+viene rifiutato prima che qualunque lavoro parta (`FY_PLAN_INVALID`); un gate gira dentro il
+membro che possiede la sua attività, non alla radice del workspace. L'anteprima non stampa
+più l'avvertimento su questo caso: il limite dichiarato ora vale soltanto per una cartella
+senza alcun repository, dove resta vero.
 
-**L'esecuzione vera su più repository resta da fare**, e non è un pomello: un lavoro lega
-le proprie evidenze a una revisione, e con N repository ci sono N HEAD. Significa cambiare
-il legame fra evidenza e revisione nella capsula e nel protocollo, non aggiungere un'opzione.
+Due cose restano scoperte, e per due ragioni diverse. La **prova live** manca per lo stesso
+motivo di P3: queste sono prove strutturali su fixture con Git vero, e nessuno ha ancora
+aperto un workspace a due repository in un Claude Code o in un Codex autenticato — una prova
+strutturale non è una prova live con un client. La **consegna parziale** — finalizzare un
+lavoro che ha consegnato in un membro e non nell'altro — manca per scelta di design, non per
+limite tecnico: «il frontend è rilasciabile senza il backend?» è una domanda di prodotto, e
+non ha una risposta tecnica che questo programma possa dare al posto di chi lo usa.
 ## Cosa la misura ha detto su P6
 
 «Selezione unificata» presupponeva che ce ne fosse una. Ce n'erano due: l'ingresso guidato
