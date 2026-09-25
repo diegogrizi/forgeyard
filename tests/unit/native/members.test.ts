@@ -69,6 +69,14 @@ describe("da un ambito di scrittura al suo repository membro", () => {
     });
   });
 
+  test("un ambito che risale oltre la radice e' rifiutato", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-membri-"));
+    roots.push(root);
+    // Il confinamento e' una garanzia, non un effetto collaterale dell'helper: questa prova
+    // se ne accorgerebbe se resolveInsideRoot diventasse un path.resolve senza controllo.
+    await expect(memberForScope(root, "../fuori")).rejects.toMatchObject({ code: "FY_PATH_UNSAFE" });
+  });
+
   test("l'insieme dei membri toccati e' ordinato e deduplicato", async () => {
     const root = await workspace();
     expect(await touchedMembers(root, ["frontend/src", "servizio-ordini/src", "frontend/test"]))
