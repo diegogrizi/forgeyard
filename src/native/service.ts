@@ -583,6 +583,14 @@ export class ProjectService {
     const capsule = await this.capsule(); const before = this.store.read();
     if (before.runs.length > 0) throw nativeError("FY_RECONCILIATION_REQUIRED", "A product run exists. Reconcile that exact run rather than transferring an idle writer.");
     const snapshot = await workspaceSnapshot(this.identity.root);
+    // This route has no run to take members from, so it photographs the default member ".".
+    // Over a workspace root that is no working tree every such snapshot is the same empty
+    // constant, and the staleness comparison below would then compare a constant with itself:
+    // `FY_APPROVAL_STALE` could never fire, and a human would be asked to confirm against a
+    // check that cannot fail. It was unreachable in this shape while `fy_attach` demanded a
+    // root HEAD; removing that demand is what made it reachable, so refuse rather than simulate.
+    if (snapshot.members.get(".")?.head == null) throw nativeError("FY_GIT_REQUIRED",
+      "This workspace root is not a Git working tree, so this route cannot tell whether the project changed while the confirmation was open, and it does not pretend to check. No product run exists here and nothing is bound to a revision: remove this workspace's private execution state directory and start again. No project file is touched.");
     const plan: ProductPlan = { id: "reconcile-writer", request: "Recover an idle cooperative writer; no product run is approved", risk: "medium",
       requirements: [{ id: "R1", description: "Only the previous writer lease is transferred" }], tasks: [{ id: "T1", role: "factory",
         title: "Recover idle writer", objective: "Transfer cooperative ownership without approving product writes", requirementIds: ["R1"], dependsOn: [],

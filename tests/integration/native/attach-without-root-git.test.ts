@@ -75,3 +75,23 @@ test("fy_attach riesce senza un repository alla radice, e fy_plan rifiuta ancora
   await expect(call(service, "fy_plan", { sessionId: "writer", expectedRevision: context.revision, plan }))
     .rejects.toMatchObject({ code: "FY_GIT_REQUIRED", message: expect.stringContaining(fixture.memberRelative) });
 });
+
+test("reconcile-writer rifiuta su una radice che non e' un albero di lavoro, invece di simulare un controllo", async () => {
+  const fixture = await noGitRootFixture();
+  registerFixture(fixture);
+  let confirmations = 0;
+  const service = await createProjectService({ ...fixture, confirmation: async () => {
+    confirmations += 1; return { accepted: true, channel: "test-fixture" }; } });
+  registerService(service);
+
+  // Quel percorso fotografa col membro predefinito ".", e su una radice che non e' un albero
+  // di lavoro l'aggregato e' una costante: il confronto di stantiezza che segue la conferma
+  // confronterebbe una costante con se stessa, e FY_APPROVAL_STALE non potrebbe mai scattare.
+  // Prima era irraggiungibile in questa forma, perche' `fy_attach` pretendeva un HEAD alla
+  // radice; questo piano ha tolto quella pretesa.
+  await expect(service.reconcileWriter("nuovo")).rejects.toMatchObject({ code: "FY_GIT_REQUIRED" });
+
+  // E il rifiuto arriva PRIMA della finestra: chiedere a una persona di confermare cio' che
+  // nessun controllo potra' poi verificare e' esattamente la simulazione da non fare.
+  expect(confirmations).toBe(0);
+});
