@@ -2,22 +2,25 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, vi } from "vitest";
 
-// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 142,9 s.
-// Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
-// si esegue Git e la CLI compilata. Il tetto dichiarato serve a cogliere un blocco, non a
-// sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
-vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 142,9 s; dentro la
+// suite nativa completa e' stata misurata tre volte — 511,9 s, 540,5 s, 568,0 s — e vale il
+// peggiore dei tre. Il tetto globale di 30 s e' tarato sui test unitari; qui si installano
+// imbracature vere, si esegue Git e la CLI compilata, e `membri.test.ts` contende gli stessi
+// processi. Il tetto dichiarato serve a cogliere un blocco, non a sorvegliare la durata: a
+// 600 s questo file girava al 95% del proprio tetto, cioe' a una corsa sfortunata da un rosso
+// che non c'e'. Se scade, cronometra prima di dare la colpa alla macchina.
+vi.setConfig({ testTimeout: 1_800_000, hookTimeout: 1_800_000 });
 import { sha256Text } from "../../../src/core/hash.js";
 import { createProjectService, type ProjectService } from "../../../src/native/service.js";
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
 import { commitAll, nativeFixture, nativeHarness, productPlan } from "../../helpers/native.js";
 
-const { fixtures, services, call, mutation } = nativeHarness({ requestPrefix: "delivery", runId: "filter-orders" });
+const { register, call, mutation } = nativeHarness({ requestPrefix: "delivery", runId: "filter-orders" });
 async function setup(risk: "low" | "medium" = "low", gateRunner?: NativeGateRunner) {
-  const fixture = await nativeFixture(); fixtures.push(fixture);
+  const fixture = await nativeFixture();
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), ...(gateRunner ? { gateRunner } : {}) });
-  services.push(service);
+  register(fixture, service);
   await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
   await mutation(service, "fy_plan", { plan: productPlan(risk) });
   await service.consent("filter-orders", "writer");
