@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterAll, describe, expect, test } from "vitest";
 
 import { assertTaskMembers } from "../../../src/native/runs.js";
-import type { ProductPlan } from "../../../src/native/contracts.js";
+import type { NativeRun, ProductPlan } from "../../../src/native/contracts.js";
 
 const roots: string[] = [];
 afterAll(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -69,5 +69,16 @@ describe("un lavoro attraversa i membri, un'attivita' no", () => {
     // Le attivita' di sola revisione esistono: non scrivono niente, quindi non
     // appartengono a nessun albero.
     expect(await assertTaskMembers(root, plan([[]]))).toEqual({});
+  });
+});
+
+describe("la baseline di un lavoro", () => {
+  test("porta un commit per ogni membro toccato", () => {
+    // La forma e' il contratto: `baselineHead: string` non puo' rappresentare due membri,
+    // e un campo che ne rappresenta uno solo mentirebbe sul secondo.
+    const run: Pick<NativeRun, "baselineHeads"> = {
+      baselineHeads: { frontend: "a".repeat(40), "servizio-ordini": "b".repeat(40) },
+    };
+    expect(Object.keys(run.baselineHeads)).toEqual(["frontend", "servizio-ordini"]);
   });
 });

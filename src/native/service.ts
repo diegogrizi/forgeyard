@@ -22,7 +22,8 @@ import { projectContext } from "./context.js";
 import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
-import { assertWriter, budgetGaps, contains, deliveryAccounting, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
+import { assertTaskMembers, assertWriter, budgetGaps, contains, deliveryAccounting, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
+import { scopesInMember } from "./members.js";
 import { validateHumanBaseline, type HumanBaseline } from "../measure/accounting.js";
 import { NativeStore, nativeError } from "./store.js";
 import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
@@ -165,8 +166,10 @@ export class ProjectService {
       const capsule = this.store.read().installation ? null : await this.optionalCapsule();
       const current = this.store.read();
       if (capsule) {
-        const snapshot = await workspaceSnapshot(this.identity.root);
         for (const run of current.runs) {
+          // One snapshot per run, over that run's own members: two runs on disjoint members
+          // must not invalidate each other's evidence.
+          const snapshot = await workspaceSnapshot(this.identity.root, Object.keys(run.baselineHeads));
           const invalid = await this.invalidEvidence(run, snapshot.sha256);
           run.completedTaskIds = this.currentCompletion(current, run, capsule, snapshot.sha256, invalid);
           if (run.status === "delivered" && evidenceGaps(current, run, capsule, snapshot.sha256, invalid).length > 0)
@@ -176,8 +179,26 @@ export class ProjectService {
       return this.response(envelope, { ...projectContext(current, capsule), configuredClient: this.client ?? null });
     }
     const capsule = await this.capsule();
-    const snapshot = await workspaceSnapshot(this.identity.root);
-    if (snapshot.head === null) throw nativeError("FY_GIT_REQUIRED", "Native runs require a real Git HEAD. Inspection/bootstrap can be used before initializing Git.");
+    // The snapshot is taken per member, so the member list has to exist before it. Both
+    // sources are I/O and the transaction below is synchronous, so both are read here: an
+    // existing run already carries its members, and a new plan's are observed from its scopes.
+    let members: readonly string[] = ["."];
+    if (typeof payload.runId === "string") {
+      members = Object.keys(findRun(this.store.read(), payload.runId).baselineHeads);
+    } else if (envelope.tool === "fy_plan") {
+      const plan = payload.plan as unknown as ProductPlan;
+      // Validated before the walk: the scopes are model-supplied strings, and this is what
+      // confines them to this project before anything reads the filesystem with them.
+      validateProductPlan(plan, capsule);
+      const touched = [...new Set(Object.values(await assertTaskMembers(this.identity.root, plan)))];
+      // A plan that writes nowhere touches no member. Keep the root: an empty member set
+      // would make the digest below a constant, and every comparison against it vacuous.
+      members = touched.length > 0 ? touched : ["."];
+    }
+    const snapshot = await workspaceSnapshot(this.identity.root, members);
+    const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
+    if (missing.length > 0) throw nativeError("FY_GIT_REQUIRED",
+      `Native runs bind evidence to a revision, and these member repositories have no commit yet: ${missing.sort().join(", ")}.`);
     if (envelope.tool === "fy_approval_request") {
       const run = findRun(this.store.read(), String(payload.runId));
       return this.response(envelope, { runId: run.plan.id, planSha256: run.planSha256, capsuleId: capsule.id,
@@ -202,7 +223,7 @@ export class ProjectService {
     // Read before the transaction: the mutate callback is synchronous, and a declaration is I/O.
     const declared = envelope.tool === "fy_finalize" ? await this.declaredBaseline() : null;
     const changedPaths = payload.runId ? await changedSince(this.identity.root,
-      findRun(this.store.read(), String(payload.runId)).baselineHead) : [];
+      findRun(this.store.read(), String(payload.runId)).baselineHeads) : [];
     const transaction = this.store.change(envelope, Number(payload.expectedRevision), (state) => {
       if (envelope.tool === "fy_attach") {
         if (state.writer && state.writer.sessionId !== payload.sessionId)
@@ -217,8 +238,8 @@ export class ProjectService {
       }
       assertWriter(state, String(payload.sessionId), this.now());
       if (envelope.tool === "fy_plan") {
+        // Already validated above, where its scopes had to be confined before the member walk.
         const plan = payload.plan as unknown as ProductPlan;
-        validateProductPlan(plan, capsule);
         if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Create a product plan from a committed baseline; existing user changes are not silently copied or committed.");
         if (state.runs.some((run) => run.plan.id === plan.id)) throw nativeError("FY_PLAN_INVALID", "Run IDs are immutable. Use a new run ID for a new feature or explicitly reconcile the current plan.");
         const content = `${canonicalJson({ schemaVersion: 1, capsuleId: capsule.id, plan })}\n`;
@@ -226,7 +247,8 @@ export class ProjectService {
         const run: NativeRun = { plan, planSha256: sha256Text(canonicalJson(plan)), capsuleId: capsule.id,
           status: "awaiting-approval", createdAt: this.now().toISOString(),
           deadlineAt: new Date(this.now().getTime() + capsule.payload.policy.timeboxMinutes * 60000).toISOString(),
-          repairs: 0, approvalBaseline: snapshot.sha256, baselineHead: snapshot.head!, artifactSha256: sha256Text(content),
+          repairs: 0, approvalBaseline: snapshot.sha256, artifactSha256: sha256Text(content),
+          baselineHeads: Object.fromEntries([...snapshot.members].map(([name, member]) => [name, member.head!])),
           checkpoints: [], criteria: [], reviews: [], completedTaskIds: [], decisions: [], recordedCostUsd: null, usage: [] };
         state.runs.push(run);
         return { runId: plan.id, action: "awaiting-approval", planSha256: run.planSha256,
@@ -339,7 +361,8 @@ export class ProjectService {
         if (verdict === "delivered") {
           run.completedTaskIds = run.plan.tasks.map((task) => task.id);
           const content = `${canonicalJson({ schemaVersion: 1, runId: run.plan.id, capsuleId: capsule.id,
-            planSha256: run.planSha256, gitCommit: snapshot.head, inputSha256: snapshot.sha256,
+            planSha256: run.planSha256, inputSha256: snapshot.sha256,
+            gitCommits: Object.fromEntries([...snapshot.members].map(([member, snapshot]) => [member, snapshot.head])),
             verdict, criteria: run.criteria, gates: state.operations.filter((operation) => operation.runId === run.plan.id &&
               operation.inputSha256 === snapshot.sha256).map(({ processOwner: _owner, ...operation }) => operation),
             reviews: run.reviews, limits: { recordedCostUsd: run.recordedCostUsd, hardProviderSpendLimit: false },
@@ -459,11 +482,12 @@ export class ProjectService {
     const run = findRun(before, runId);
     const artifact = await readRegularProjectFile(this.identity.root, `.forgeyard/project/${runId}.json`);
     if (sha256Text(artifact) !== run.artifactSha256) throw nativeError("FY_PLAN_DRIFT", "The product artifact differs from the stored proposed plan.");
-    const snapshot = await workspaceSnapshot(this.identity.root);
+    const members = Object.keys(run.baselineHeads);
+    const snapshot = await workspaceSnapshot(this.identity.root, members);
     const decision = await this.confirmation({ title: "Forgeyard: approve this plan", description:
       `Approve this exact plan/policy/baseline for local implementation and finite gates?\nBaseline fingerprint: ${snapshot.sha256}`, plan: run.plan, capsule });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "The local human confirmation was rejected.");
-    const after = await workspaceSnapshot(this.identity.root);
+    const after = await workspaceSnapshot(this.identity.root, members);
     const currentCapsule = await this.capsule();
     if (after.sha256 !== snapshot.sha256 || currentCapsule.id !== capsule.id) throw nativeError("FY_APPROVAL_STALE", "The project changed while the confirmation was open.");
     return this.store.change({ protocolVersion: "0.2", requestId: `consent-${randomUUID()}`, tool: "human-consent", payload: { runId } },
@@ -549,21 +573,30 @@ export class ProjectService {
     assertWriter(before, sessionId, this.now());
     if (!grantFor(before, run, capsule, sessionId)) throw nativeError("FY_APPROVAL_REQUIRED", "Approve the exact plan before reviewing it.");
     await this.references([artifact]);
-    const snapshot = await workspaceSnapshot(this.identity.root);
+    const baselines = Object.entries(run.baselineHeads).sort(([left], [right]) => left.localeCompare(right, "en"));
+    const members = baselines.map(([member]) => member);
+    const snapshot = await workspaceSnapshot(this.identity.root, members);
     if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Human review must refer to a clean committed revision.");
     const reviewText = await readRegularProjectFile(this.identity.root, artifact.path, 131072);
-    const diff = await execa("git", ["diff", "--no-ext-diff", "--no-textconv", "--unified=3", run.baselineHead, "HEAD", "--",
-      ...run.plan.tasks.flatMap((task) => task.writeScopes)], {
-      cwd: this.identity.root, shell: false, stdin: "ignore", timeout: 10000, maxBuffer: 131072,
-      env: { GIT_OPTIONAL_LOCKS: "0" } });
+    // One diff per member, each in its own working tree: a revision range is only meaningful
+    // inside the repository that recorded it, and the label says which one the hunks came from.
+    const diffs = await Promise.all(baselines.map(async ([member, baseline]) => {
+      const memberRoot = member === "." ? this.identity.root : path.join(this.identity.root, member);
+      const scopes = scopesInMember(member, run.plan.tasks.flatMap((task) => task.writeScopes));
+      const result = await execa("git", ["diff", "--no-ext-diff", "--no-textconv", "--unified=3",
+        baseline, "HEAD", "--", ...scopes], { cwd: memberRoot, shell: false, stdin: "ignore",
+        timeout: 10000, maxBuffer: 131072, env: { GIT_OPTIONAL_LOCKS: "0" } });
+      return `# member: ${member}\n${result.stdout}`;
+    }));
     const findings = run.reviews.filter((review) => review.inputSha256 === snapshot.sha256).flatMap((review) => review.findings);
     const decision = await this.confirmation({ title: "Forgeyard: human review of this revision", plan: run.plan, capsule,
       description: `Approve only after personally reviewing this exact revision and artifact. You confirm that all listed important/blocking findings are resolved.\n` +
-        `Git: ${snapshot.head}\nInput: ${snapshot.sha256}\nArtifact: ${artifact.path} ${artifact.sha256}\n` +
-        `Prior findings: ${JSON.stringify(findings)}\n\nREVIEW ARTIFACT\n${reviewText}\n\nPRODUCT DIFF\n${diff.stdout}` });
+        `Git: ${baselines.map(([member, head]) => `${member}@${head}`).join(" ")}\n` +
+        `Input: ${snapshot.sha256}\nArtifact: ${artifact.path} ${artifact.sha256}\n` +
+        `Prior findings: ${JSON.stringify(findings)}\n\nREVIEW ARTIFACT\n${reviewText}\n\nPRODUCT DIFF\n${diffs.join("\n")}` });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "The human review was rejected.");
     await this.references([artifact]);
-    if ((await workspaceSnapshot(this.identity.root)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id)
+    if ((await workspaceSnapshot(this.identity.root, members)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id)
       throw nativeError("FY_APPROVAL_STALE", "The reviewed revision changed while the dialog was open.");
     return this.store.change({ protocolVersion: "0.2", requestId: `human-review-${randomUUID()}`, tool: "human-review", payload: { runId, artifact } },
       before.revision, (state) => {
@@ -583,8 +616,9 @@ export class ProjectService {
     const uncertain = before.operations.filter((operation) => ["prepared", "running", "uncertain"].includes(operation.status));
     if (uncertain.length > 0 || this.jobs.size > 0)
       throw nativeError("FY_RECONCILIATION_REQUIRED", "A Forgeyard gate is still active or uncertain. Do not release its writer or repeat its effects. Inspect the recorded operation first.");
-    const snapshot = await workspaceSnapshot(this.identity.root);
-    const changed = await changedSince(this.identity.root, run.baselineHead);
+    const members = Object.keys(run.baselineHeads);
+    const snapshot = await workspaceSnapshot(this.identity.root, members);
+    const changed = await changedSince(this.identity.root, run.baselineHeads);
     if (changed.some((file) => !run.plan.tasks.some((task) => task.writeScopes.some((scope) => contains(scope, file))) &&
       !before.artifacts.some((artifact) => artifact.path === file))) throw nativeError("FY_SCOPE_DENIED", "Reconciliation found unapproved path changes.");
     const decision = await this.confirmation({ title: "Forgeyard: explicitly resume this project", plan: run.plan, capsule,
@@ -592,7 +626,7 @@ export class ProjectService {
         `Previous writer: ${before.writer?.sessionId ?? "none"}\nRevision: ${snapshot.sha256}\n` +
         "Forgeyard cannot stop or observe AI conversations. This transfers only the cooperative lease; budgets and prior evidence remain unchanged." });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Local reconciliation was rejected.");
-    if ((await workspaceSnapshot(this.identity.root)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id)
+    if ((await workspaceSnapshot(this.identity.root, members)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id)
       throw nativeError("FY_APPROVAL_STALE", "The project changed during reconciliation.");
     return this.store.change({ protocolVersion: "0.2", requestId: `reconcile-${randomUUID()}`, tool: "human-reconcile", payload: { runId, sessionId } },
       before.revision, (state) => {
@@ -615,13 +649,14 @@ export class ProjectService {
     if (this.jobs.has(operationId) || processMayBeAlive(operation.ownerPid) ||
       (operation.gatePid !== undefined && processMayBeAlive(operation.gatePid)))
       throw nativeError("FY_OPERATION_BUSY", "A recorded Forgeyard service/gate may still be alive. Stop it normally and inspect it; no process will be killed or writer automatically released.");
-    const run = findRun(before, operation.runId); const snapshot = await workspaceSnapshot(this.identity.root);
+    const run = findRun(before, operation.runId); const members = Object.keys(run.baselineHeads);
+    const snapshot = await workspaceSnapshot(this.identity.root, members);
     const decision = await this.confirmation({ title: "Forgeyard: reconcile ceased gate", plan: run.plan, capsule,
       description: `Operation: ${operation.id}\nRecorded HF service PID: ${operation.ownerPid}\nRecorded gate PID: ${operation.gatePid ?? "not observed"}\n` +
         `Old input: ${operation.inputSha256}\nCurrent input: ${snapshot.sha256}\n` +
         "Known recorded processes are absent, but child-process termination is not proven by Forgeyard. Personally confirm the old gate and all its children have stopped, inspect any effects, and mark this attempt UNVERIFIED. This does not approve automatic retries, release a native conversation or certify a pass." });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Operation reconciliation was rejected.");
-    if ((await workspaceSnapshot(this.identity.root)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id ||
+    if ((await workspaceSnapshot(this.identity.root, members)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id ||
       processMayBeAlive(operation.ownerPid) || (operation.gatePid !== undefined && processMayBeAlive(operation.gatePid)))
       throw nativeError("FY_RECONCILIATION_REQUIRED", "Inputs/process state changed during operation reconciliation.");
     return this.store.change({ protocolVersion: "0.2", requestId: `operation-reconcile-${randomUUID()}`, tool: "human-operation-reconcile", payload: { operationId } },
@@ -647,7 +682,10 @@ export class ProjectService {
   private async performGate(operationId: string, capsule: Capsule, signal: AbortSignal): Promise<void> {
     const operation = this.store.read().operations.find((entry) => entry.id === operationId)!;
     const gate = capsule.payload.gates.find((entry) => entry.id === operation.gateId)!;
-    const before = await workspaceSnapshot(this.identity.root);
+    // The same members the run's `inputSha256` was taken over: a digest computed on another
+    // set would never equal it, and the comparisons below would refuse every gate.
+    const members = Object.keys(findRun(this.store.read(), operation.runId).baselineHeads);
+    const before = await workspaceSnapshot(this.identity.root, members);
     const currentCapsule = await this.capsule();
     if (signal.aborted || !before.clean || before.sha256 !== operation.inputSha256 || currentCapsule.id !== operation.capsuleId ||
       sha256Text(canonicalJson(gate)) !== operation.gateSha256) {
@@ -671,7 +709,7 @@ export class ProjectService {
     if (!Number.isSafeInteger(result.exitCode) || typeof result.stdout !== "string" || typeof result.stderr !== "string")
       throw nativeError("FY_GATE_RESULT_INVALID", "The trusted gate runner returned an invalid result.");
     const tests = gate.parser === "test-summary" ? discoveredTests(result.stdout + result.stderr) : null;
-    const after = await workspaceSnapshot(this.identity.root);
+    const after = await workspaceSnapshot(this.identity.root, members);
     let failure: string | undefined;
     if (signal.aborted || result.exitCode !== 0 || result.canceled || result.timedOut) failure = signal.aborted || result.canceled ? "canceled" : result.timedOut ? "timeout" : "nonzero-exit";
     else if (gate.parser === "test-summary") failure = testSummaryFailure(result.stdout + result.stderr) ?? undefined;

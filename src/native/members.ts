@@ -43,3 +43,16 @@ export async function touchedMembers(root: string, scopes: readonly string[]): P
   for (const scope of scopes) members.add(await memberForScope(root, scope));
   return [...members].sort((left, right) => left.localeCompare(right, "en"));
 }
+
+/**
+ * The workspace-relative scopes that live in `member`, rewritten relative to that member's own
+ * root so they can be used as pathspecs with its working tree as `cwd`. The root member owns
+ * every scope: a nested member's tree does not show its own contents in the outer `git diff`
+ * anyway, so keeping them costs nothing and losing them would widen the diff to the whole tree.
+ */
+export function scopesInMember(member: string, scopes: readonly string[]): readonly string[] {
+  if (member === ".") return [...scopes];
+  return scopes.filter((scope) => scope === member || scope.startsWith(`${member}/`))
+    // Git rejects an empty pathspec, so a scope that is the member itself becomes ".".
+    .map((scope) => scope === member ? "." : scope.slice(member.length + 1));
+}

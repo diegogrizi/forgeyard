@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, test } from "vitest";
 
-import { memberForScope, touchedMembers } from "../../../src/native/members.js";
+import { memberForScope, scopesInMember, touchedMembers } from "../../../src/native/members.js";
 
 const roots: string[] = [];
 afterAll(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -81,5 +81,28 @@ describe("da un ambito di scrittura al suo repository membro", () => {
     const root = await workspace();
     expect(await touchedMembers(root, ["frontend/src", "servizio-ordini/src", "frontend/test"]))
       .toEqual(["frontend", "servizio-ordini"]);
+  });
+});
+
+describe("gli ambiti di un membro, visti dalla sua radice", () => {
+  test("la radice li tiene tutti e non li riscrive", () => {
+    // Un `git diff` nella radice e' limitato agli ambiti del piano: se questa riscrittura
+    // li perdesse, il diff diventerebbe l'intero albero e la revisione umana mostrerebbe
+    // anche cio' che il piano non ha approvato.
+    expect(scopesInMember(".", ["src", "docs/guide"])).toEqual(["src", "docs/guide"]);
+  });
+
+  test("un membro tiene solo i propri, relativi a se' stesso", () => {
+    expect(scopesInMember("frontend", ["frontend/src", "servizio-ordini/src", "frontend/test"]))
+      .toEqual(["src", "test"]);
+  });
+
+  test("un ambito che e' il membro stesso diventa '.', non la stringa vuota", () => {
+    // Git rifiuta un pathspec vuoto: un ambito che coincide col membro va detto "."
+    expect(scopesInMember("frontend", ["frontend"])).toEqual(["."]);
+  });
+
+  test("un membro omonimo per prefisso non cattura gli ambiti dell'altro", () => {
+    expect(scopesInMember("frontend", ["frontend-legacy/src"])).toEqual([]);
   });
 });

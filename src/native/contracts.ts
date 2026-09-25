@@ -31,7 +31,8 @@ export interface NativeRun {
   plan: ProductPlan; planSha256: string; capsuleId: string; status: RunStatus;
   createdAt: string; deadlineAt: string; repairs: number;
   approvalBaseline: string; artifactSha256: string;
-  baselineHead: string;
+  /** One commit per touched member: with several members there is no single "the" HEAD. */
+  baselineHeads: Readonly<Record<string, string>>;
   checkpoints: readonly { taskId: string; note: string; at: string }[];
   criteria: readonly CriterionRecord[]; reviews: readonly ReviewRecord[];
   completedTaskIds: readonly string[];
