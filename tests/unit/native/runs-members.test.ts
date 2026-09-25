@@ -39,6 +39,16 @@ describe("un lavoro attraversa i membri, un'attivita' no", () => {
       .toEqual({ T1: "frontend", T2: "servizio-ordini" });
   });
 
+  test("un piano a repository singolo produce ancora '.'", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-attivita-"));
+    roots.push(root);
+    await mkdir(path.join(root, ".git"), { recursive: true });
+    await mkdir(path.join(root, "src"), { recursive: true });
+    // Un piano a repository singolo deve continuare a produrre ".", ed e' cio' che
+    // conserva il comportamento di oggi.
+    expect(await assertTaskMembers(root, plan([["src"]]))).toEqual({ T1: "." });
+  });
+
   test("rifiuta un'attivita' che mescola due membri, e li nomina entrambi", async () => {
     const root = await workspace();
     // Un gate gira una volta per attivita', con una cwd: se gli ambiti stessero in due
@@ -48,6 +58,10 @@ describe("un lavoro attraversa i membri, un'attivita' no", () => {
       .rejects.toMatchObject({ code: "FY_PLAN_INVALID" });
     await expect(assertTaskMembers(root, plan([["frontend/src", "servizio-ordini/src"]])))
       .rejects.toMatchObject({ message: expect.stringContaining("frontend") });
+    await expect(assertTaskMembers(root, plan([["frontend/src", "servizio-ordini/src"]])))
+      .rejects.toMatchObject({ message: expect.stringContaining("servizio-ordini") });
+    await expect(assertTaskMembers(root, plan([["frontend/src", "servizio-ordini/src"]])))
+      .rejects.toMatchObject({ message: expect.stringContaining("T1") });
   });
 
   test("un'attivita' senza ambiti non ha un membro e non viene rifiutata", async () => {
