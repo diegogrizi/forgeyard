@@ -3,10 +3,15 @@ import { describe, expect, test } from "vitest";
 import { NATIVE_TOOL_SCHEMAS } from "../../../src/native/protocol.js";
 
 /**
- * Tools whose payload binds nothing to a revision, so `ProjectService.execute` answers them
- * before the run branch and never demands a commit from any member: the project-intake family,
- * the read-only context, the cooperative lease, the plan that creates a run in the first place,
- * and the handle on a recorded gate operation.
+ * Tools whose payload carries no `runId`, so `ProjectService.execute` answers them before the
+ * run branch: the project-intake family, the read-only context, the cooperative lease, the plan
+ * that creates a run in the first place, and the handle on a recorded gate operation.
+ *
+ * Most of them also bind nothing to a revision and demand a commit from no member. `fy_plan`
+ * does not: it sets `bindsToRevision` and refuses every touched member that has no commit. It
+ * is exempt from carrying an identifier it is itself about to create, not from the binding —
+ * and in this repository a comment that mis-states the invariant it guards is what later
+ * becomes the contract.
  */
 const WITHOUT_RUN_BINDING: ReadonlySet<string> = new Set([
   "fy_inspect", "fy_compose", "fy_prepare", "fy_apply",
