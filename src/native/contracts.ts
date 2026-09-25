@@ -33,6 +33,9 @@ export interface NativeRun {
   approvalBaseline: string; artifactSha256: string;
   /** One commit per touched member: with several members there is no single "the" HEAD. */
   baselineHeads: Readonly<Record<string, string>>;
+  /** Task id to member repository, as observed from the task's write scopes at plan time.
+      A task that writes nowhere has no entry: its gate runs at the workspace root. */
+  membersByTask: Readonly<Record<string, string>>;
   checkpoints: readonly { taskId: string; note: string; at: string }[];
   criteria: readonly CriterionRecord[]; reviews: readonly ReviewRecord[];
   completedTaskIds: readonly string[];

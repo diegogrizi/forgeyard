@@ -76,6 +76,11 @@ export function evidenceGaps(state: NativeState, run: NativeRun, capsule: Capsul
   invalidEvidence: readonly string[] = []): string[] {
   const gaps: string[] = [...invalidEvidence.filter((gap) => gap.startsWith("review:") ||
     run.plan.tasks.some((task) => gap.startsWith(`criterion-evidence:${task.id}/`)))];
+  /** `.` keeps today's shape: a single-repository report must not learn a second grammar. */
+  const qualify = (taskId: string, suffix: string): string => {
+    const member = run.membersByTask[taskId];
+    return member === undefined || member === "." ? suffix : `${member}/${suffix}`;
+  };
   for (const task of run.plan.tasks) {
     if (task.writeScopes.length > 0 && !capsule.payload.gates.some((gate) => gate.parser === "test-summary"))
       gaps.push(`test-gate:missing:${task.id}`);
@@ -88,7 +93,7 @@ export function evidenceGaps(state: NativeState, run: NativeRun, capsule: Capsul
       const latest = state.operations.findLast((operation) => operation.runId === run.plan.id && operation.taskId === task.id &&
         operation.gateId === gate && operation.planSha256 === run.planSha256 && operation.capsuleId === capsule.id);
       if (!latest || latest.gateSha256 !== sha256Text(canonicalJson(definition)) || latest.inputSha256 !== inputSha256 ||
-        latest.status !== "passed") gaps.push(`gate:${task.id}/${gate}`);
+        latest.status !== "passed") gaps.push(`gate:${qualify(task.id, `${task.id}/${gate}`)}`);
     }
   }
   if (state.operations.some((operation) => operation.runId === run.plan.id && ["prepared", "running", "uncertain"].includes(operation.status)))

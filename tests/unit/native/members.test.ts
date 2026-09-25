@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, test } from "vitest";
 
-import { memberForScope, scopesInMember, touchedMembers } from "../../../src/native/members.js";
+import { memberForScope, memberRoot, scopesInMember, touchedMembers } from "../../../src/native/members.js";
 
 const roots: string[] = [];
 afterAll(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -104,5 +104,19 @@ describe("gli ambiti di un membro, visti dalla sua radice", () => {
 
   test("un membro omonimo per prefisso non cattura gli ambiti dell'altro", () => {
     expect(scopesInMember("frontend", ["frontend-legacy/src"])).toEqual([]);
+  });
+});
+
+describe("la radice di un membro", () => {
+  test("il membro '.' e' la radice stessa, e un membro e' la sua sottocartella", () => {
+    // La cwd di un gate si calcola da qui: se questa regola avesse due sedi, un gate girerebbe
+    // in una cartella e la sua ricevuta parlerebbe di un'altra.
+    // Root passato per `path.resolve`, non un letterale come "/w": su Windows quel letterale
+    // non e' un percorso assoluto (manca la lettera di unita'), e confrontarlo con
+    // `path.resolve` produrrebbe due stringhe diverse per un motivo che non riguarda
+    // `memberRoot` — lo stesso difetto che AGENTS.md racconta per `registry/load.test.ts`.
+    const root = path.resolve("/w");
+    expect(memberRoot(root, ".")).toBe(root);
+    expect(memberRoot(root, "frontend")).toBe(path.resolve(root, "frontend"));
   });
 });

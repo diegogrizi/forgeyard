@@ -190,11 +190,16 @@ export class ProjectService {
     // cannot reach the transaction unvalidated: today the schema forbids that combination,
     // but a branch whose safety rests on another file is a rule with no test behind it.
     let members: readonly string[] = ["."];
+    // Observed once, here, and carried into the transaction's closure below: `assertTaskMembers`
+    // does I/O, the transaction's mutate callback is synchronous, and a run persists this exact
+    // map as `membersByTask` rather than re-deriving it later.
+    let membersByTask: Readonly<Record<string, string>> = {};
     if (plan !== null) {
       // Validated before the walk: the scopes are model-supplied strings, and this is what
       // confines them to this project before anything reads the filesystem with them.
       validateProductPlan(plan, capsule);
-      const touched = [...new Set(Object.values(await assertTaskMembers(this.identity.root, plan)))];
+      membersByTask = await assertTaskMembers(this.identity.root, plan);
+      const touched = [...new Set(Object.values(membersByTask))];
       // A plan that writes nowhere touches no member, and a snapshot over no members is
       // refused. The root is the binding such a plan still has: it is approved against this
       // working tree's revision like any other.
@@ -257,6 +262,7 @@ export class ProjectService {
           deadlineAt: new Date(this.now().getTime() + capsule.payload.policy.timeboxMinutes * 60000).toISOString(),
           repairs: 0, approvalBaseline: snapshot.sha256, artifactSha256: sha256Text(content),
           baselineHeads: Object.fromEntries([...snapshot.members].map(([name, member]) => [name, member.head!])),
+          membersByTask,
           checkpoints: [], criteria: [], reviews: [], completedTaskIds: [], decisions: [], recordedCostUsd: null, usage: [] };
         state.runs.push(run);
         return { runId: plan.id, action: "awaiting-approval", planSha256: run.planSha256,

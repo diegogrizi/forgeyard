@@ -10,6 +10,7 @@ function run(usage?: readonly UsageObservation[]): NativeRun {
     planSha256: "a".repeat(64), capsuleId: "b".repeat(64), status: "reviewing",
     createdAt: "2026-09-22T10:00:00.000Z", deadlineAt: "2026-09-22T15:00:00.000Z", repairs: 0,
     approvalBaseline: "c".repeat(64), artifactSha256: "d".repeat(64), baselineHeads: { ".": "e".repeat(40) },
+    membersByTask: {},
     checkpoints: [], criteria: [], reviews: [], completedTaskIds: [], decisions: [],
     recordedCostUsd: null, ...(usage === undefined ? {} : { usage }),
   };
