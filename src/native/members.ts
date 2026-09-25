@@ -1,0 +1,45 @@
+import { lstat } from "node:fs/promises";
+import path from "node:path";
+
+import { normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
+import { nativeError } from "./store.js";
+
+/** True for a directory `.git` and for the `.git` file a linked worktree uses. */
+async function isWorkingTree(directory: string): Promise<boolean> {
+  try {
+    await lstat(path.join(directory, ".git"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Which member repository owns this write scope. The service never runs discovery, so it does
+ * not ask anyone: it observes. The walk starts at the nearest ancestor that exists on disk,
+ * because a write scope may name a directory the work is about to create, and it stops at the
+ * nearest working tree, because whoever owns a path is the tree containing it — and it is that
+ * tree's HEAD that says whether the path changed.
+ */
+export async function memberForScope(root: string, scope: string): Promise<string> {
+  const absoluteRoot = path.resolve(root);
+  let cursor = resolveInsideRoot(absoluteRoot, scope);
+  for (;;) {
+    if (await isWorkingTree(cursor)) {
+      const relative = path.relative(absoluteRoot, cursor);
+      return relative.length === 0 ? "." : normalizePortablePath(relative);
+    }
+    if (cursor === absoluteRoot) {
+      throw nativeError("FY_GIT_REQUIRED",
+        `Write scope '${scope}' is not inside a Git working tree. A governed run binds its evidence to a revision, and this path has none.`);
+    }
+    cursor = path.dirname(cursor);
+  }
+}
+
+/** Ordered and deduplicated, so two reads of one plan produce one set. */
+export async function touchedMembers(root: string, scopes: readonly string[]): Promise<readonly string[]> {
+  const members = new Set<string>();
+  for (const scope of scopes) members.add(await memberForScope(root, scope));
+  return [...members].sort((left, right) => left.localeCompare(right, "en"));
+}
