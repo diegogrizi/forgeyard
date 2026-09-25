@@ -190,6 +190,10 @@ export class ProjectService {
     // cannot reach the transaction unvalidated: today the schema forbids that combination,
     // but a branch whose safety rests on another file is a rule with no test behind it.
     let members: readonly string[] = ["."];
+    // Whether this call binds anything at all to a revision. A plan binds its touched members
+    // and a run binds its own; a call that names neither binds nothing, and the `["."]` above
+    // is then only a placeholder so the snapshot has something to photograph.
+    let bindsToRevision = false;
     // Observed once, here, and carried into the transaction's closure below: `assertTaskMembers`
     // does I/O, the transaction's mutate callback is synchronous, and a run persists this exact
     // map as `membersByTask` rather than re-deriving it later.
@@ -204,14 +208,20 @@ export class ProjectService {
       // refused. The root is the binding such a plan still has: it is approved against this
       // working tree's revision like any other.
       members = touched.length > 0 ? touched : ["."];
+      bindsToRevision = true;
     } else if (typeof payload.runId === "string") {
       members = Object.keys(findRun(this.store.read(), payload.runId).baselineHeads);
+      bindsToRevision = true;
     }
     const snapshot = await workspaceSnapshot(this.identity.root, members);
-    // `fy_attach` binds no evidence to a revision, so it requires none. The workspace root of a
-    // multi-repository project is not a working tree, and refusing here is what kept such a
-    // project from ever starting. `fy_plan` still demands a commit, per touched member.
-    if (envelope.tool !== "fy_attach") {
+    // The demand for a commit belongs to what a call binds to, not to a list of tool names.
+    // `fy_attach` binds no evidence to a revision, and neither does `fy_operation`, which reads
+    // or cancels a recorded operation: exempting the first by name left the second demanding a
+    // HEAD from the placeholder member ".", and the workspace root of a multi-repository project
+    // is not a working tree — so polling a gate was refused there, on the first run of this whole
+    // path over two real repositories. `fy_plan` still demands a commit, per touched member, and
+    // every tool that reaches the run branch below carries a `runId` by schema.
+    if (bindsToRevision) {
       // The map is built from sorted members, so the names come out sorted already.
       const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
       if (missing.length > 0) throw nativeError("FY_GIT_REQUIRED",
