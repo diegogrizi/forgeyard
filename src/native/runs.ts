@@ -4,6 +4,7 @@ import { normalizePortablePath } from "../core/paths.js";
 import { certifyVerdict, summarizeEvidence, validateClaims, type Claim, type VerdictCertification } from "../evidence/epistemic.js";
 import { compare, summarizeAgentic, type AccountingReport, type HumanBaseline } from "../measure/accounting.js";
 import type { NativeRun, NativeState, ProductPlan, ProductTask } from "./contracts.js";
+import { memberForScope } from "./members.js";
 import { nativeError } from "./store.js";
 
 const RESERVED = [".git", ".forgeyard", ".codex", ".claude", ".agents", ".cursor", "AGENTS.md", "CLAUDE.md", "forgeyard.yaml", "forgeyard.lock", ".mcp.json"];
@@ -200,4 +201,27 @@ export function deliveryEvidence(state: NativeState, run: NativeRun, capsule: Ca
  */
 export function deliveryAccounting(run: NativeRun, baseline: HumanBaseline | null = null): AccountingReport {
   return compare(summarizeAgentic(run.usage ?? []), baseline);
+}
+
+/**
+ * Which member each task belongs to. A run may have tasks in different members — that is the
+ * cross-repository case — but a task may not mix them: its gate runs once, with one `cwd`, and
+ * its receipt has to name the revision it ran against. A task with no write scope has no member.
+ */
+export async function assertTaskMembers(
+  root: string,
+  plan: ProductPlan,
+): Promise<Readonly<Record<string, string>>> {
+  const byTask: Record<string, string> = {};
+  for (const task of plan.tasks) {
+    const members = new Set<string>();
+    for (const scope of task.writeScopes) members.add(await memberForScope(root, scope));
+    if (members.size > 1) {
+      throw nativeError("FY_PLAN_INVALID",
+        `Task '${task.id}' writes into more than one member repository (${[...members].sort().join(", ")}). Split it: a gate runs once, in one working tree.`);
+    }
+    const [member] = [...members];
+    if (member !== undefined) byTask[task.id] = member;
+  }
+  return byTask;
 }
