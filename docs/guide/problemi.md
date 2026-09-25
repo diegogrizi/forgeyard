@@ -348,12 +348,22 @@ test, `review:required`, `review:unresolved-findings`,
 di lavoro sporco, `operation:active-or-uncertain` per un'operazione ancora in corso o di
 esito incerto, `timebox-exhausted` e `repair-budget-exhausted` per i budget.
 
+In un workspace con più repository membri quei due divari **nominano il membro**, perché
+altrimenti direbbero che qualcosa manca senza dire dove: il gate diventa
+`gate:<membro>/<attività>/<gate>`, e un albero sporco produce un
+`git:dirty-inputs:<membro>` per ogni membro sporco — uno per membro, così che committare
+in uno ne chiuda esattamente uno. Il membro non compare quando è la radice stessa: un
+progetto a repository singolo continua a leggere `gate:<attività>/<gate>` e
+`git:dirty-inputs`, identici a prima. Lo stesso vale per i rifiuti che chiedono un albero
+pulito, che elencano i membri con modifiche non committate, e per la ricevuta di un gate,
+il cui esito `stale-inputs` diventa `stale-inputs:<membri>`.
+
 **Cosa fare.** Non cercare di aggirarlo: produci l'evidenza che manca. Leggi gli altri
 divari e chiudili uno per uno — esegui i gate richiesti sulla revisione testata, lega i
-criteri a evidenza corrente, registra la review dove serve, pulisci gli input Git — poi
-fai riderivare il verdetto. Se qualcosa cambia dopo, il completamento si **riapre**: un
-rapporto vecchio resta un documento storico, non una prova corrente. Il ragionamento
-completo è in [Garanzie](garanzie.md).
+criteri a evidenza corrente, registra la review dove serve, pulisci gli input Git nel
+membro che il divario nomina — poi fai riderivare il verdetto. Se qualcosa cambia dopo,
+il completamento si **riapre**: un rapporto vecchio resta un documento storico, non una
+prova corrente. Il ragionamento completo è in [Garanzie](garanzie.md).
 
 Una forma diversa dello stesso rifiuto è `FY_CLAIM_INVALID`, che respinge le affermazioni
 non verificabili prima ancora di pesarle: un'impronta che non è uno sha256 minuscolo, un
