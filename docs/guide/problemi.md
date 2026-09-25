@@ -348,7 +348,7 @@ test, `review:required`, `review:unresolved-findings`,
 di lavoro sporco, `operation:active-or-uncertain` per un'operazione ancora in corso o di
 esito incerto, `timebox-exhausted` e `repair-budget-exhausted` per i budget.
 
-In un workspace con più repository membri quei due divari **nominano il membro**, perché
+In un workspace con più repository membri due di quei divari **nominano il membro**, perché
 altrimenti direbbero che qualcosa manca senza dire dove: il gate diventa
 `gate:<membro>/<attività>/<gate>`, e un albero sporco produce un
 `git:dirty-inputs:<membro>` per ogni membro sporco — uno per membro, così che committare
