@@ -224,20 +224,20 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 25 settembre 2026 `npm run verify` è passato interamente su questa macchina in 947,94 s,
-  con codice di uscita 0**: 79 file di test, 593 prove superate, una saltata e nessuna fallita;
+- **Il 25 settembre 2026 `npm run verify` è passato interamente su questa macchina in 962,06 s,
+  con codice di uscita 0**: 80 file di test, 600 prove superate, una saltata e nessuna fallita;
   catalogo verificato byte per byte (**1.007 file sorgente**, **211.594 righe fisiche**),
   provenienza rigenerabile senza differenze, audit di release passato (202 agenti, 183 skill e
   105 comandi) e contenuto del pacchetto controllato. La misura è stata presa ad albero fermo,
   senza nessun editor sul repository, e il codice di uscita è stato letto da `npm` e non da un
   `echo` — due difetti di metodo commessi poco prima, che insieme avevano prodotto un «exit 0»
   per un giro con un rosso dentro.
-  Vale per quella revisione e per questa macchina: non è un'attestazione riusabile per un'altra,
-  e il giro di correzioni che l'ha seguita ha aggiunto un file di test e sette prove che quella
-  misura non copre.
-- **Il costo della verifica non è cresciuto con il lavoro sui repository membri.** 947,94 s cade
+  **La revisione è `35b022a`**, e nominarla serve: una misura è di un albero, non di una data.
+  L'unica cosa cambiata dopo di essa è questa voce. Vale per questa macchina: non è
+  un'attestazione riusabile per un'altra.
+- **Il costo della verifica non è cresciuto con il lavoro sui repository membri.** 962,06 s cade
   **dentro** l'intervallo di 879-1047 s misurato il 24 settembre, quando la suite aveva 71 file
-  e 548 prove: quel lavoro ne ha aggiunti 8 e 45, incluse cinque prove che installano
+  e 548 prove: quel lavoro ne ha aggiunti 9 e 52, incluse cinque prove che installano
   un'imbracatura vera su due repository Git e percorrono l'intero protocollo con gate reali.
   **Misurata è la non crescita**, non la sua spiegazione: che le prove pesanti girino in
   parallelo e che quindi la più lenta non si sommi al totale è l'inferenza più semplice che la
