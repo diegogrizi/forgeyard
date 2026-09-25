@@ -12,11 +12,10 @@ import { createProjectService } from "../../../src/native/service.js";
 import type { NativeGateRunner, ProductPlan } from "../../../src/native/contracts.js";
 import { commitAll, git, nativeFixture, nativeHarness } from "../../helpers/native.js";
 
-const { fixtures, services, call, mutation } = nativeHarness({ requestPrefix: "gate-cwd", runId: "gate-cwd-check" });
+const { register, call, mutation } = nativeHarness({ requestPrefix: "gate-cwd", runId: "gate-cwd-check" });
 
 test("un gate gira con la cwd del membro della sua attivita', non la radice del workspace", async () => {
   const fixture = await nativeFixture();
-  fixtures.push(fixture);
   // Inside the service, `this.identity.root` is `realpath(path.resolve(input))`, and on this
   // machine `realpath` can answer in a different form (an 8.3 short name) than the string this
   // fixture was handed. Comparing against the unresolved value would be the same canonical-
@@ -31,7 +30,7 @@ test("un gate gira con la cwd del membro della sua attivita', non la radice del 
   };
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), gateRunner });
-  services.push(service);
+  register(fixture, service);
 
   // `fy_attach` snapshots the root as member ".": it must still be a clean, ordinary working
   // tree at this point. The nested member is created only after this call returns, so root's
@@ -76,7 +75,6 @@ test("un gate gira con la cwd del membro della sua attivita', non la radice del 
 
 test("un'attivita' senza ambiti di scrittura gira il gate alla radice del workspace", async () => {
   const fixture = await nativeFixture();
-  fixtures.push(fixture);
   // Same canonicalization concern as the test above: compare against what `realpath` actually
   // answers, not the string the fixture was handed.
   const root = await realpath(fixture.root);
@@ -88,7 +86,7 @@ test("un'attivita' senza ambiti di scrittura gira il gate alla radice del worksp
   };
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), gateRunner });
-  services.push(service);
+  register(fixture, service);
 
   await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
 

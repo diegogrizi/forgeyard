@@ -17,7 +17,7 @@ import { createProjectService, type ProjectService } from "../../../src/native/s
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
 import { commitAll, multiMemberFixture, multiMemberPlan, nativeHarness } from "../../helpers/native.js";
 
-const { fixtures, services, call, mutation } = nativeHarness({ requestPrefix: "membri", runId: "filter-orders" });
+const { register, call, mutation } = nativeHarness({ requestPrefix: "membri", runId: "filter-orders" });
 
 const REVIEW = "# Review\nThe fixture test and intended interface were inspected. No findings.\n";
 
@@ -34,10 +34,10 @@ async function planRun(fixture: { service: ProjectService }, id: string, members
  * root belong to no member, so no member's working tree is dirty at this point.
  */
 async function setup(members: readonly string[], gateRunner?: NativeGateRunner) {
-  const fixture = await multiMemberFixture(); fixtures.push(fixture);
+  const fixture = await multiMemberFixture();
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), ...(gateRunner ? { gateRunner } : {}) });
-  services.push(service);
+  register(fixture, service);
   await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
   await planRun({ service }, "filter-orders", members);
   await mutation(service, "fy_next", {});
@@ -51,7 +51,11 @@ async function setup(members: readonly string[], gateRunner?: NativeGateRunner) 
       criterionId: "C1", outcome: "met", evidence: [{ path: evidencePath,
         sha256: sha256Text(await readFile(path.join(fixture.root, evidencePath), "utf8")) }] } });
   }
-  return { ...fixture, service, reviewRef: { path: reviewPath, sha256: sha256Text(REVIEW) } };
+  // `members` is overwritten deliberately: the fixture's own tuple is the two repositories that
+  // exist on disk, while this run touches only the ones its plan names, and the two lists differ
+  // in three of the five scenarios. Spreading the fixture's tuple through under that name would
+  // hand a caller the wrong one.
+  return { ...fixture, members, service, reviewRef: { path: reviewPath, sha256: sha256Text(REVIEW) } };
 }
 
 /** Every required gate of every named task, each asserted to have really passed. */
