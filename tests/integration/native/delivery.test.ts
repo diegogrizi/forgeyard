@@ -15,12 +15,13 @@ import { createProjectService, type ProjectService } from "../../../src/native/s
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
 import { commitAll, nativeFixture, nativeHarness, productPlan } from "../../helpers/native.js";
 
-const { register, call, mutation } = nativeHarness({ requestPrefix: "delivery", runId: "filter-orders" });
+const { registerFixture, registerService, call, mutation } = nativeHarness({ requestPrefix: "delivery", runId: "filter-orders" });
 async function setup(risk: "low" | "medium" = "low", gateRunner?: NativeGateRunner) {
   const fixture = await nativeFixture();
+  registerFixture(fixture);
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), ...(gateRunner ? { gateRunner } : {}) });
-  register(fixture, service);
+  registerService(service);
   await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
   await mutation(service, "fy_plan", { plan: productPlan(risk) });
   await service.consent("filter-orders", "writer");

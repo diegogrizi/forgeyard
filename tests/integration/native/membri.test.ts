@@ -17,7 +17,7 @@ import { createProjectService, type ProjectService } from "../../../src/native/s
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
 import { commitAll, multiMemberFixture, multiMemberPlan, nativeHarness } from "../../helpers/native.js";
 
-const { register, call, mutation } = nativeHarness({ requestPrefix: "membri", runId: "filter-orders" });
+const { registerFixture, registerService, call, mutation } = nativeHarness({ requestPrefix: "membri", runId: "filter-orders" });
 
 const REVIEW = "# Review\nThe fixture test and intended interface were inspected. No findings.\n";
 
@@ -35,9 +35,10 @@ async function planRun(fixture: { service: ProjectService }, id: string, members
  */
 async function setup(members: readonly string[], gateRunner?: NativeGateRunner) {
   const fixture = await multiMemberFixture();
+  registerFixture(fixture);
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }), ...(gateRunner ? { gateRunner } : {}) });
-  register(fixture, service);
+  registerService(service);
   await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
   await planRun({ service }, "filter-orders", members);
   await mutation(service, "fy_next", {});

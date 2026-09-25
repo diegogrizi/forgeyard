@@ -120,10 +120,13 @@ export function multiMemberPlan(members: readonly string[] = ["frontend", "servi
  * was not the kind `AGENTS.md` forbids — but a suite should get the teardown by asking for the
  * harness, not by remembering to write it, so `afterAll` is registered here.
  *
- * The two arrays stay private and `register` is the only way in. An earlier shape handed them
- * back and every suite still wrote `fixtures.push(...)` and `services.push(...)` by hand: the
- * teardown was automatic but half of what it needs was not, which is the same thing to forget
- * one line later.
+ * The two arrays stay private; `registerFixture` and `registerService` are the only way in.
+ * A single combined `register(fixture, service)` looked safer — one call instead of two — but
+ * it can only run after `createProjectService` returns, one statement after the fixture itself
+ * exists. A service that throws then leaves that fixture's temporary directory unregistered,
+ * and `afterAll` never removes it. Splitting the call in two lets each caller register a value
+ * the instant it exists — the fixture right after it is created, the service right after it is
+ * opened — which is the order the three near-identical copies this replaced already used.
  */
 export function nativeHarness(options: { requestPrefix: string; runId?: string }) {
   const fixtures: { directory: string }[] = [];
@@ -134,11 +137,8 @@ export function nativeHarness(options: { requestPrefix: string; runId?: string }
     for (const service of services.splice(0)) await service.close();
     for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
   });
-  /** A fixture and the service opened on it, handed to the teardown in one statement. */
-  function register(fixture: { directory: string }, service: ProjectService): void {
-    fixtures.push(fixture);
-    services.push(service);
-  }
+  function registerFixture(fixture: { directory: string }): void { fixtures.push(fixture); }
+  function registerService(service: ProjectService): void { services.push(service); }
   async function call(service: ProjectService, tool: string, payload: Record<string, unknown>,
     requestId = `${options.requestPrefix}-${++index}`): Promise<NativeResponse> {
     return service.execute({ protocolVersion: "0.2", requestId, tool, payload });
@@ -148,5 +148,5 @@ export function nativeHarness(options: { requestPrefix: string; runId?: string }
     return call(service, tool, { sessionId: "writer", expectedRevision: context.revision,
       ...(tool === "fy_plan" || options.runId === undefined ? {} : { runId: options.runId }), ...payload });
   }
-  return { register, call, mutation };
+  return { registerFixture, registerService, call, mutation };
 }

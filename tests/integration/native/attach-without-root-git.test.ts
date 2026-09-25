@@ -49,13 +49,14 @@ async function noGitRootFixture() {
   return { directory, root, stateDirectory: path.join(directory, "private-state"), memberRelative };
 }
 
-const { register, call } = nativeHarness({ requestPrefix: "attach-no-git" });
+const { registerFixture, registerService, call } = nativeHarness({ requestPrefix: "attach-no-git" });
 
 test("fy_attach riesce senza un repository alla radice, e fy_plan rifiuta ancora nominando il membro senza commit", async () => {
   const fixture = await noGitRootFixture();
+  registerFixture(fixture);
   const service = await createProjectService({ ...fixture,
     confirmation: async () => ({ accepted: true, channel: "test-fixture" }) });
-  register(fixture, service);
+  registerService(service);
 
   // `fy_attach` binds no evidence to a revision: a workspace root that is not a working tree
   // must not block it. This is the exact `FY_GIT_REQUIRED` this whole plan exists to remove.
