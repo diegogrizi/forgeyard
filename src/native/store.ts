@@ -60,6 +60,11 @@ export class NativeStore {
   }
 
   replay(envelope: NativeEnvelope): NativeResponse | null {
+    // The same version gate `read()` enforces: `replay()` answers from a different table, so it
+    // never re-interprets the state itself, but a cached response still belongs to whatever
+    // state produced it. Reading here, and discarding the result, is what keeps this the one
+    // check rather than a second copy of it that could drift more permissive.
+    this.read();
     const previous = this.db.prepare("SELECT fingerprint,response FROM requests WHERE workspace=? AND id=?")
       .get(this.workspaceId, envelope.requestId);
     if (!previous) return null;
