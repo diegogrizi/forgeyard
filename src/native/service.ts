@@ -18,7 +18,7 @@ import { projectRequirements } from "../intake/requirements.js";
 import type { ComposeProjectOptions } from "../intake/contracts.js";
 import type { EvidenceReference, GateOperation, HumanConfirmation, NativeEnvelope, NativeGateRunner,
   NativeResponse, NativeRun, NativeState, ProductPlan, ReviewRecord } from "./contracts.js";
-import { projectContext } from "./context.js";
+import { projectContext, reportedRuns } from "./context.js";
 import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
@@ -167,10 +167,12 @@ export class ProjectService {
       const capsule = this.store.read().installation ? null : await this.optionalCapsule();
       const current = this.store.read();
       if (capsule) {
-        // One snapshot per run, over that run's own members: two runs on disjoint members
-        // must not invalidate each other's evidence. The runs are independent reads, and
-        // serially each one costs four Git spawns on the ordinary path.
-        await Promise.all(current.runs.map(async (run) => {
+        // One snapshot per *reported* run, over that run's own members: two runs on disjoint
+        // members must not invalidate each other's evidence. The runs are independent reads,
+        // and each one costs four Git spawns per member on the ordinary read call — so the set
+        // is bounded by the one `projectContext` renders, because refreshing a run this answer
+        // does not carry buys nothing. The bound is that function's, not a second copy of it.
+        await Promise.all(reportedRuns(current).map(async (run) => {
           const snapshot = await workspaceSnapshot(this.identity.root, Object.keys(run.baselineHeads));
           const invalid = await this.invalidEvidence(run, snapshot.sha256);
           run.completedTaskIds = this.currentCompletion(current, run, capsule, snapshot.sha256, invalid);
