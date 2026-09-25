@@ -23,7 +23,7 @@ import { localDialogConfirmation } from "./confirmation.js";
 import { discoveredTests, nativeGateRunner, testSummaryFailure } from "./gates.js";
 import { validateNativeEnvelope } from "./protocol.js";
 import { assertTaskMembers, assertWriter, budgetGaps, contains, deliveryAccounting, deliveryEvidence, evidenceGaps, findRun, grantFor, requiredGates, validateProductPlan } from "./runs.js";
-import { scopesInMember } from "./members.js";
+import { memberRoot, scopesInMember } from "./members.js";
 import { validateHumanBaseline, type HumanBaseline } from "../measure/accounting.js";
 import { NativeStore, nativeError } from "./store.js";
 import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
@@ -166,39 +166,47 @@ export class ProjectService {
       const capsule = this.store.read().installation ? null : await this.optionalCapsule();
       const current = this.store.read();
       if (capsule) {
-        for (const run of current.runs) {
-          // One snapshot per run, over that run's own members: two runs on disjoint members
-          // must not invalidate each other's evidence.
+        // One snapshot per run, over that run's own members: two runs on disjoint members
+        // must not invalidate each other's evidence. The runs are independent reads, and
+        // serially each one costs four Git spawns on the ordinary path.
+        await Promise.all(current.runs.map(async (run) => {
           const snapshot = await workspaceSnapshot(this.identity.root, Object.keys(run.baselineHeads));
           const invalid = await this.invalidEvidence(run, snapshot.sha256);
           run.completedTaskIds = this.currentCompletion(current, run, capsule, snapshot.sha256, invalid);
           if (run.status === "delivered" && evidenceGaps(current, run, capsule, snapshot.sha256, invalid).length > 0)
             run.status = "blocked";
-        }
+        }));
       }
       return this.response(envelope, { ...projectContext(current, capsule), configuredClient: this.client ?? null });
     }
     const capsule = await this.capsule();
+    // `fy_plan` is the only tool carrying a plan, and the cast happens once for both the
+    // member walk here and the transaction below.
+    const plan = envelope.tool === "fy_plan" ? payload.plan as unknown as ProductPlan : null;
     // The snapshot is taken per member, so the member list has to exist before it. Both
     // sources are I/O and the transaction below is synchronous, so both are read here: an
-    // existing run already carries its members, and a new plan's are observed from its scopes.
+    // existing run already carries its members, and a new plan's are observed from its
+    // scopes. The plan is tested first, so a payload carrying both a plan and a run ID
+    // cannot reach the transaction unvalidated: today the schema forbids that combination,
+    // but a branch whose safety rests on another file is a rule with no test behind it.
     let members: readonly string[] = ["."];
-    if (typeof payload.runId === "string") {
-      members = Object.keys(findRun(this.store.read(), payload.runId).baselineHeads);
-    } else if (envelope.tool === "fy_plan") {
-      const plan = payload.plan as unknown as ProductPlan;
+    if (plan !== null) {
       // Validated before the walk: the scopes are model-supplied strings, and this is what
       // confines them to this project before anything reads the filesystem with them.
       validateProductPlan(plan, capsule);
       const touched = [...new Set(Object.values(await assertTaskMembers(this.identity.root, plan)))];
-      // A plan that writes nowhere touches no member. Keep the root: an empty member set
-      // would make the digest below a constant, and every comparison against it vacuous.
+      // A plan that writes nowhere touches no member, and a snapshot over no members is
+      // refused. The root is the binding such a plan still has: it is approved against this
+      // working tree's revision like any other.
       members = touched.length > 0 ? touched : ["."];
+    } else if (typeof payload.runId === "string") {
+      members = Object.keys(findRun(this.store.read(), payload.runId).baselineHeads);
     }
     const snapshot = await workspaceSnapshot(this.identity.root, members);
+    // The map is built from sorted members, so the names come out sorted already.
     const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
     if (missing.length > 0) throw nativeError("FY_GIT_REQUIRED",
-      `Native runs bind evidence to a revision, and these member repositories have no commit yet: ${missing.sort().join(", ")}.`);
+      `Native runs bind evidence to a revision, and these member repositories have no commit yet: ${missing.join(", ")}.`);
     if (envelope.tool === "fy_approval_request") {
       const run = findRun(this.store.read(), String(payload.runId));
       return this.response(envelope, { runId: run.plan.id, planSha256: run.planSha256, capsuleId: capsule.id,
@@ -237,9 +245,9 @@ export class ProjectService {
           maxWorkItems: capsule.payload.policy.maxConcurrency, aiSessions: "native-client-owned" } };
       }
       assertWriter(state, String(payload.sessionId), this.now());
-      if (envelope.tool === "fy_plan") {
-        // Already validated above, where its scopes had to be confined before the member walk.
-        const plan = payload.plan as unknown as ProductPlan;
+      // A plan is present exactly for `fy_plan`, and it was validated above, where its scopes
+      // had to be confined before the member walk.
+      if (plan !== null) {
         if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Create a product plan from a committed baseline; existing user changes are not silently copied or committed.");
         if (state.runs.some((run) => run.plan.id === plan.id)) throw nativeError("FY_PLAN_INVALID", "Run IDs are immutable. Use a new run ID for a new feature or explicitly reconcile the current plan.");
         const content = `${canonicalJson({ schemaVersion: 1, capsuleId: capsule.id, plan })}\n`;
@@ -580,14 +588,16 @@ export class ProjectService {
     const reviewText = await readRegularProjectFile(this.identity.root, artifact.path, 131072);
     // One diff per member, each in its own working tree: a revision range is only meaningful
     // inside the repository that recorded it, and the label says which one the hunks came from.
-    const diffs = await Promise.all(baselines.map(async ([member, baseline]) => {
-      const memberRoot = member === "." ? this.identity.root : path.join(this.identity.root, member);
+    const diffs = (await Promise.all(baselines.map(async ([member, baseline]) => {
       const scopes = scopesInMember(member, run.plan.tasks.flatMap((task) => task.writeScopes));
+      // A member no task writes to contributes no section: `git diff` with no pathspec would
+      // show the whole tree, and a human must not be asked to approve what no task claimed.
+      if (scopes.length === 0) return null;
       const result = await execa("git", ["diff", "--no-ext-diff", "--no-textconv", "--unified=3",
-        baseline, "HEAD", "--", ...scopes], { cwd: memberRoot, shell: false, stdin: "ignore",
-        timeout: 10000, maxBuffer: 131072, env: { GIT_OPTIONAL_LOCKS: "0" } });
+        baseline, "HEAD", "--", ...scopes], { cwd: memberRoot(this.identity.root, member), shell: false,
+        stdin: "ignore", timeout: 10000, maxBuffer: 131072, env: { GIT_OPTIONAL_LOCKS: "0" } });
       return `# member: ${member}\n${result.stdout}`;
-    }));
+    }))).filter((section) => section !== null);
     const findings = run.reviews.filter((review) => review.inputSha256 === snapshot.sha256).flatMap((review) => review.findings);
     const decision = await this.confirmation({ title: "Forgeyard: human review of this revision", plan: run.plan, capsule,
       description: `Approve only after personally reviewing this exact revision and artifact. You confirm that all listed important/blocking findings are resolved.\n` +

@@ -85,6 +85,15 @@ describe("fotografia di un workspace con piu' membri", () => {
     expect(snapshot.members.get("vuoto")?.head).toBeNull();
   });
 
+  test("una fotografia su zero membri e' rifiutata, non aggregata a vuoto", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-snap-"));
+    roots.push(root);
+    // Su zero membri `clean` sarebbe vero per vacuita' e il digest sarebbe una costante:
+    // ogni confronto di staleness contro di lui passerebbe sempre. L'invariante appartiene
+    // a questa funzione, non alla prosa di chi la chiama.
+    await expect(workspaceSnapshot(root, [])).rejects.toMatchObject({ code: "FY_INTERNAL" });
+  });
+
   test("senza membri espliciti fotografa la radice, come prima", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-snap-"));
     roots.push(root);

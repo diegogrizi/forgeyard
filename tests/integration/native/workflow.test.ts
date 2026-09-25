@@ -4,12 +4,14 @@ import { execa } from "execa";
 
 import { afterAll, describe, expect, test, vi } from "vitest";
 
+import { sha256Text } from "../../../src/core/hash.js";
 import { createProjectService } from "../../../src/native/service.js";
 import { commitAll, nativeFixture, productPlan } from "../../helpers/native.js";
 // Ogni prova di questo file installa un'imbracatura reale: caricamento del registro,
 // rendering, applicazione transazionale e comandi Git veri. Prova piu' lenta, cronometrata
-// su questa macchina a riposo: 42,5 s. Il tetto globale di 30 s e' tarato sui test unitari,
-// e un tetto piu' stretto del lavoro che delimita segnala un difetto che non c'e'.
+// su questa macchina a riposo: 64,9 s — erano 42,5 s con sette prove concorrenti, l'ottava
+// le rallenta tutte. Il tetto globale di 30 s e' tarato sui test unitari, e un tetto piu'
+// stretto del lavoro che delimita segnala un difetto che non c'e'.
 vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
 
 const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];
@@ -120,6 +122,40 @@ describe("native project protocol", () => {
     expect(persisted).not.toContain("session-a");
     const capsule = await readFile(path.join(fixture.root, ".forgeyard/capsule.json"), "utf8");
     expect(context.result).toMatchObject({ capsuleId: JSON.parse(capsule).id });
+  });
+
+  test.concurrent("un piano che non scrive da nessuna parte resta legato alla radice, e non mostra un diff che nessuno ha chiesto", async () => {
+    const fixture = await nativeFixture(); fixtures.push(fixture);
+    const dialogs: string[] = [];
+    const service = await createProjectService({ ...fixture, confirmation: async (input) => {
+      dialogs.push(input.description); return { accepted: true, channel: "test-fixture" }; } });
+    services.push(service);
+    const attached = await call(service, "fy_attach", { mode: "write", sessionId: "session-a", expectedRevision: 0 });
+    const plan = { ...productPlan(), id: "solo-revisione",
+      tasks: productPlan().tasks.map((task) => ({ ...task, writeScopes: [] })) };
+
+    // Senza ambiti il piano non tocca alcun membro. Se la fotografia si prendesse su zero
+    // membri, `clean` sarebbe vero per vacuita' e questo piano nascerebbe da un albero
+    // sporco: resta invece legato alla radice, e qui viene rifiutato.
+    await writeFile(path.join(fixture.root, "src/feature.txt"), "non committato\n");
+    await expect(call(service, "fy_plan", { sessionId: "session-a", expectedRevision: attached.revision, plan }))
+      .rejects.toMatchObject({ code: "FY_GIT_REQUIRED" });
+    await commitAll(fixture.root);
+
+    expect((await call(service, "fy_plan", { sessionId: "session-a", expectedRevision: attached.revision, plan })).result)
+      .toMatchObject({ action: "awaiting-approval" });
+    await service.consent("solo-revisione", "session-a");
+
+    const review = "# Revisione\nNessun rilievo.\n";
+    await writeFile(path.join(fixture.root, "src/review.md"), review);
+    await writeFile(path.join(fixture.root, "src/feature.txt"), "cambiato dopo la baseline\n");
+    await commitAll(fixture.root);
+
+    // Nessuna attivita' ha chiesto `src/feature.txt`: un membro senza ambiti non contribuisce
+    // alcun diff, altrimenti il dialogo chiederebbe di approvare cio' che nessuno ha proposto.
+    await service.humanReview("solo-revisione", "session-a", { path: "src/review.md", sha256: sha256Text(review) });
+    expect(dialogs.at(-1)).not.toContain("cambiato dopo la baseline");
+    expect(dialogs.at(-1)).not.toContain("# member:");
   });
 
   test.concurrent("detects policy drift before a run can advance", async () => {

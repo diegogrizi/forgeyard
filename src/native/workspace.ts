@@ -5,6 +5,7 @@ import { execa } from "execa";
 
 import { canonicalJson, sha256Bytes, sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
+import { memberRoot, workspacePath } from "./members.js";
 import { nativeError } from "./store.js";
 import { regularBytes } from "./files.js";
 
@@ -49,16 +50,16 @@ export async function workspaceIdentity(input: string): Promise<WorkspaceIdentit
   return { root, commonDirectory, id: sha256Text(canonicalJson({ root, commonDirectory })) };
 }
 
-async function memberSnapshot(memberRoot: string): Promise<MemberSnapshot> {
+async function memberSnapshot(treeRoot: string): Promise<MemberSnapshot> {
   // Four independent reads of the same working tree. Serially they cost four process spawns,
   // about 850 ms each on Windows, on every protocol call; concurrently they cost one round
   // trip. `reject: false` keeps the failure handling below exactly where it was: a repository
   // without a HEAD still answers, and its answer is still discarded.
   const [headResult, status, changed, untracked] = await Promise.all([
-    git(memberRoot, ["rev-parse", "--verify", "HEAD"]),
-    git(memberRoot, ["status", "--porcelain=v1", "--untracked-files=all"]),
-    git(memberRoot, ["diff", "--name-only", "-z", "HEAD", "--"]),
-    git(memberRoot, ["ls-files", "--others", "--exclude-standard", "-z"]),
+    git(treeRoot, ["rev-parse", "--verify", "HEAD"]),
+    git(treeRoot, ["status", "--porcelain=v1", "--untracked-files=all"]),
+    git(treeRoot, ["diff", "--name-only", "-z", "HEAD", "--"]),
+    git(treeRoot, ["ls-files", "--others", "--exclude-standard", "-z"]),
   ]);
   if (headResult.exitCode !== 0 || status.exitCode !== 0) return { head: null, clean: false, sha256: "", changedPaths: [] };
   const head = headResult.stdout.trim();
@@ -67,7 +68,7 @@ async function memberSnapshot(memberRoot: string): Promise<MemberSnapshot> {
   const hashes: { path: string; sha256: string }[] = [];
   let totalBytes = 0;
   for (const relativePath of changedPaths) {
-    const absolute = resolveInsideRoot(memberRoot, relativePath);
+    const absolute = resolveInsideRoot(treeRoot, relativePath);
     const stats = await lstat(absolute).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return undefined;
       throw error;
@@ -78,7 +79,7 @@ async function memberSnapshot(memberRoot: string): Promise<MemberSnapshot> {
       throw nativeError("FY_INPUT_UNSAFE", "Commit or remove unrelated private inputs before creating a governed run.");
     totalBytes += stats.size;
     if (totalBytes > 33_554_432 || changedPaths.length > 20000) throw nativeError("FY_INPUT_LIMIT", "Changed inputs exceed the bounded snapshot limit.");
-    hashes.push({ path: relativePath, sha256: sha256Bytes(await regularBytes(memberRoot, relativePath, 33_554_432 - totalBytes + stats.size)) });
+    hashes.push({ path: relativePath, sha256: sha256Bytes(await regularBytes(treeRoot, relativePath, 33_554_432 - totalBytes + stats.size)) });
   }
   return { head, clean: status.stdout.trim().length === 0, changedPaths,
     sha256: sha256Text(canonicalJson({ head, status: status.stdout, hashes })) };
@@ -92,14 +93,19 @@ export async function workspaceSnapshot(
   root: string,
   members: readonly string[] = ["."],
 ): Promise<WorkspaceSnapshot> {
+  // Over no members this would answer `clean: true` by vacuity and a constant digest, so
+  // every staleness comparison against it would pass forever. A caller with nothing to
+  // photograph has a bug, and the invariant belongs here rather than in each caller's prose.
+  if (members.length === 0) throw nativeError("FY_INTERNAL",
+    "A workspace snapshot over no members would produce a digest that can never change.");
   const ordered = [...new Set(members)].sort((left, right) => left.localeCompare(right, "en"));
   const snapshots = await Promise.all(ordered.map(async (member) =>
-    [member, await memberSnapshot(member === "." ? root : path.join(root, member))] as const));
+    [member, await memberSnapshot(memberRoot(root, member))] as const));
   return {
     members: new Map(snapshots),
     clean: snapshots.every(([, snapshot]) => snapshot.clean),
     changedPaths: snapshots.flatMap(([member, snapshot]) =>
-      snapshot.changedPaths.map((changed) => member === "." ? changed : `${member}/${changed}`)),
+      snapshot.changedPaths.map((changed) => workspacePath(member, changed))),
     // Sorted member entries: the digest is a property of the set, not of the request order.
     sha256: sha256Text(canonicalJson(snapshots.map(([member, snapshot]) => ({ member, sha256: snapshot.sha256 })))),
   };
@@ -116,11 +122,9 @@ export async function changedSince(
   const members = Object.keys(baselines).sort((left, right) => left.localeCompare(right, "en"));
   const current = await workspaceSnapshot(root, members);
   const perMember = await Promise.all(members.map(async (member) => {
-    const memberRoot = member === "." ? root : path.join(root, member);
-    const committed = await git(memberRoot, ["diff", "--name-only", "-z", baselines[member]!, "HEAD", "--"]);
+    const committed = await git(memberRoot(root, member), ["diff", "--name-only", "-z", baselines[member]!, "HEAD", "--"]);
     if (committed.exitCode !== 0) throw nativeError("FY_GIT_REQUIRED", `The approved baseline for member '${member}' is unavailable.`);
-    return committed.stdout.split("\0").filter(Boolean)
-      .map((changed) => member === "." ? changed : `${member}/${changed}`);
+    return committed.stdout.split("\0").filter(Boolean).map((changed) => workspacePath(member, changed));
   }));
   return [...new Set([...perMember.flat(), ...current.changedPaths])]
     .sort((left, right) => left.localeCompare(right, "en"));

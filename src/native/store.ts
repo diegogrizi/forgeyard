@@ -11,8 +11,11 @@ export function nativeError(code: string, message: string): ForgeyardError {
     remediation: "Inspect Forgeyard context and the current revision before retrying. Do not bypass a blocked operation." });
 }
 
+/** Raised at 2 when a run's baseline became one commit per member. */
+const SCHEMA_VERSION = 2;
+
 function initialState(): NativeState {
-  return { schemaVersion: 1, revision: 0, capsuleId: null, writer: null,
+  return { schemaVersion: SCHEMA_VERSION, revision: 0, capsuleId: null, writer: null,
     runs: [], grants: [], operations: [], artifacts: [] };
 }
 
@@ -43,7 +46,17 @@ export class NativeStore {
 
   read(): NativeState {
     const row = this.db.prepare("SELECT state FROM workspaces WHERE id=?").get(this.workspaceId)!;
-    return JSON.parse(String(row.state)) as NativeState;
+    const state = JSON.parse(String(row.state)) as NativeState;
+    // The version was written and never read, which made it a declaration nothing could
+    // falsify. A state from before an incompatible change cannot be interpreted, and reading
+    // it anyway surfaces as a raw TypeError on a field that is simply absent.
+    const version: number = state.schemaVersion;
+    if (version !== SCHEMA_VERSION) throw new ForgeyardError({
+      code: "FY_STATE_INCOMPATIBLE", exitCode: 9,
+      message: `This private execution state declares schema version ${String(version)}; this Forgeyard writes version ${String(SCHEMA_VERSION)}.`,
+      remediation: "This state predates an incompatible change and is not migrated. Remove the Forgeyard state directory and start a new run; no project file is touched.",
+    });
+    return state;
   }
 
   replay(envelope: NativeEnvelope): NativeResponse | null {

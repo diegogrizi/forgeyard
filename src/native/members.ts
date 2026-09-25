@@ -37,6 +37,20 @@ export async function memberForScope(root: string, scope: string): Promise<strin
   }
 }
 
+/**
+ * Where a member's working tree lives. The workspace root is itself the member ".", and that
+ * equivalence is stated once: it is the rule two call sites in this codebase already drifted
+ * apart on, each resolving the same path its own way.
+ */
+export function memberRoot(root: string, member: string): string {
+  return member === "." ? root : path.join(root, member);
+}
+
+/** The mirror of `memberRoot` for paths: a member-relative path stated from the workspace. */
+export function workspacePath(member: string, relativePath: string): string {
+  return member === "." ? relativePath : `${member}/${relativePath}`;
+}
+
 /** Ordered and deduplicated, so two reads of one plan produce one set. */
 export async function touchedMembers(root: string, scopes: readonly string[]): Promise<readonly string[]> {
   const members = new Set<string>();
