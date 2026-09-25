@@ -2,7 +2,7 @@ import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, expect, test, vi } from "vitest";
 
-// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 39,6 s.
+// Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 30,2 s.
 // Installa un'imbracatura vera con un secondo repository annidato e percorre il protocollo
 // nativo fino a un gate reale (runner iniettato). Il tetto dichiarato serve a cogliere un
 // blocco, non a sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
@@ -86,4 +86,48 @@ test("un gate gira con la cwd del membro della sua attivita', non la radice del 
   // of the member would fail this exact comparison, since the two are different directories.
   expect(seenCwds).toEqual([memberAbsolute]);
   expect(seenCwds[0]).not.toBe(root);
+});
+
+test("un'attivita' senza ambiti di scrittura gira il gate alla radice del workspace", async () => {
+  const fixture = await nativeFixture();
+  fixtures.push(fixture);
+  // Same canonicalization concern as the test above: compare against what `realpath` actually
+  // answers, not the string the fixture was handed.
+  const root = await realpath(fixture.root);
+
+  const seenCwds: string[] = [];
+  const gateRunner: NativeGateRunner = async ({ cwd }) => {
+    seenCwds.push(cwd);
+    return { exitCode: 0, stdout: "# tests 1\n# pass 1\n", stderr: "" };
+  };
+  const service = await createProjectService({ ...fixture,
+    confirmation: async () => ({ accepted: true, channel: "test-fixture" }), gateRunner });
+  services.push(service);
+
+  await call(service, "fy_attach", { mode: "write", sessionId: "writer", expectedRevision: 0 });
+
+  // A review-only task writes nowhere, so `assertTaskMembers` gives it no entry in
+  // `membersByTask`. `performGate`'s `?? "."` is the only thing standing between that absent
+  // entry and `memberRoot` receiving `undefined`: this pins that its gate runs at the
+  // workspace root, not that it merely "does not crash".
+  const plan: ProductPlan = {
+    id: "gate-cwd-check", request: "Verify a scopeless task's gate runs at the workspace root", risk: "low",
+    requirements: [{ id: "R1", description: "A review-only task's gate still runs, at the root" }],
+    tasks: [{ id: "T1", title: "Review only", objective: "This task has no write scope",
+      requirementIds: ["R1"], dependsOn: [], writeScopes: [], role: "reviewer",
+      criteria: [{ id: "C1", description: "The gate passes", gateIds: ["G001"] }] }],
+  };
+  await mutation(service, "fy_plan", { plan });
+  await service.consent("gate-cwd-check", "writer");
+  await mutation(service, "fy_next", {});
+  // `fy_plan` registers the proposed-plan artifact, and `flushArtifacts()` writes it to disk
+  // workspace-root-relative right after every call. With this task's only member being the
+  // root itself, that untracked file would make `fy_verify`'s cleanliness check refuse the
+  // gate — the same reason `tests/helpers/native.ts`'s callers commit between `fy_next` and
+  // verifying. It is a fixture step, not part of what this test observes.
+  await commitAll(root);
+  await mutation(service, "fy_verify", { taskId: "T1", gateId: "G001" });
+  await service.waitForOperations();
+
+  expect(seenCwds).toEqual([root]);
 });

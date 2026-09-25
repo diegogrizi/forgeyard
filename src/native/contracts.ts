@@ -60,7 +60,7 @@ export interface GateOperation {
   ownerPid?: number; gatePid?: number;
 }
 export interface NativeState {
-  schemaVersion: 2; revision: number; capsuleId: string | null;
+  schemaVersion: 3; revision: number; capsuleId: string | null;
   writer: { sessionId: string; expiresAt: string; baselineSha256: string } | null;
   runs: NativeRun[]; grants: ConsentGrant[]; operations: GateOperation[];
   artifacts: { path: string; content: string; sha256: string }[];

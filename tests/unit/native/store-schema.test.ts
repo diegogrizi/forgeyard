@@ -35,6 +35,24 @@ describe("la versione di schema dello stato privato e' letta, non solo scritta",
     store.close();
   });
 
+  test("uno stato scritto alla versione precedente (senza membersByTask) e' rifiutato, non interpretato", async () => {
+    const store = await openStore();
+    try {
+      // Versione 2: un lavoro a quella versione non ha `membersByTask`, e leggerlo come lo
+      // stato di oggi finirebbe in un `TypeError` grezzo la prima volta che un gate cercasse
+      // il membro della propria attivita'. Lo stesso guasto che il test sopra copre per la
+      // versione 1, un cambio incompatibile piu' recente.
+      store.internal("fixture-schema-2", "downgrade-to-2", (state) => {
+        (state as { schemaVersion: number }).schemaVersion = 2;
+        return {};
+      });
+
+      expect(thrownBy(() => store.read())).toMatchObject({ code: "FY_STATE_INCOMPATIBLE" });
+    } finally {
+      store.close();
+    }
+  });
+
   test("uno stato scritto da questa versione si legge senza rifiuti", async () => {
     const store = await openStore();
     expect(store.read().revision).toBe(0);
@@ -43,18 +61,21 @@ describe("la versione di schema dello stato privato e' letta, non solo scritta",
 
   test("replay() passa per lo stesso controllo: una risposta gia' in cache non basta a saltarlo", async () => {
     const store = await openStore();
-    const envelope = { protocolVersion: "0.2" as const, requestId: "replay-schema-check", tool: "fy_context", payload: {} };
-    // Una risposta per questo requestId esiste ora nella tabella `requests`. `replay()` la
-    // troverebbe comunque, perche' interroga quella tabella direttamente e non passa da
-    // `read()`: e' la seconda sede della stessa regola, e quella che AGENTS.md apre descrivendo.
-    store.change(envelope, 0, () => ({ ok: true }));
+    try {
+      const envelope = { protocolVersion: "0.2" as const, requestId: "replay-schema-check", tool: "fy_context", payload: {} };
+      // Una risposta per questo requestId esiste ora nella tabella `requests`. `replay()` la
+      // troverebbe comunque, perche' interroga quella tabella direttamente e non passa da
+      // `read()`: e' la seconda sede della stessa regola, e quella che AGENTS.md apre descrivendo.
+      store.change(envelope, 0, () => ({ ok: true }));
 
-    store.internal("fixture-older-schema", "downgrade", (state) => {
-      (state as { schemaVersion: number }).schemaVersion = 1;
-      return {};
-    });
+      store.internal("fixture-older-schema", "downgrade", (state) => {
+        (state as { schemaVersion: number }).schemaVersion = 1;
+        return {};
+      });
 
-    expect(thrownBy(() => store.replay(envelope))).toMatchObject({ code: "FY_STATE_INCOMPATIBLE" });
-    store.close();
+      expect(thrownBy(() => store.replay(envelope))).toMatchObject({ code: "FY_STATE_INCOMPATIBLE" });
+    } finally {
+      store.close();
+    }
   });
 });

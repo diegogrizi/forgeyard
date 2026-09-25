@@ -100,7 +100,7 @@ const capsuleConfig: ForgeyardConfig = {
 };
 const capsule: Capsule = compileCapsule(capsuleConfig, []);
 
-const state: NativeState = { schemaVersion: 2, revision: 0, capsuleId: null, writer: null,
+const state: NativeState = { schemaVersion: 3, revision: 0, capsuleId: null, writer: null,
   runs: [], grants: [], operations: [], artifacts: [] };
 
 // A complete `NativeRun`, not a partial cast: `membersByTask` is what these tests exercise,

@@ -11,8 +11,10 @@ export function nativeError(code: string, message: string): ForgeyardError {
     remediation: "Inspect Forgeyard context and the current revision before retrying. Do not bypass a blocked operation." });
 }
 
-/** Raised at 2 when a run's baseline became one commit per member. */
-const SCHEMA_VERSION = 2;
+/** Raised at 2 when a run's baseline became one commit per member, and at 3 when a run gained
+    `membersByTask`: a run written before either change has no such field, and reading it as
+    today's shape would surface as a raw `TypeError` the first time a gate looked one up. */
+const SCHEMA_VERSION = 3;
 
 function initialState(): NativeState {
   return { schemaVersion: SCHEMA_VERSION, revision: 0, capsuleId: null, writer: null,
