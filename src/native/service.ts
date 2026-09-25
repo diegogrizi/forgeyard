@@ -698,9 +698,10 @@ export class ProjectService {
   private async performGate(operationId: string, capsule: Capsule, signal: AbortSignal): Promise<void> {
     const operation = this.store.read().operations.find((entry) => entry.id === operationId)!;
     const gate = capsule.payload.gates.find((entry) => entry.id === operation.gateId)!;
+    const run = findRun(this.store.read(), operation.runId);
     // The same members the run's `inputSha256` was taken over: a digest computed on another
     // set would never equal it, and the comparisons below would refuse every gate.
-    const members = Object.keys(findRun(this.store.read(), operation.runId).baselineHeads);
+    const members = Object.keys(run.baselineHeads);
     const before = await workspaceSnapshot(this.identity.root, members);
     const currentCapsule = await this.capsule();
     if (signal.aborted || !before.clean || before.sha256 !== operation.inputSha256 || currentCapsule.id !== operation.capsuleId ||
@@ -716,7 +717,10 @@ export class ProjectService {
       state.operations.find((entry) => entry.id === operationId)!.status = "running";
       return { operationId, status: "running" };
     });
-    const result = await this.runner({ gate, cwd: this.identity.root, signal, onSpawn: (pid) => {
+    // A gate runs inside the member that owns its task: one working tree, one cwd, and a receipt
+    // that can say which revision it ran on. A task with no write scopes runs at the root.
+    const gateRoot = memberRoot(this.identity.root, run.membersByTask[operation.taskId] ?? ".");
+    const result = await this.runner({ gate, cwd: gateRoot, signal, onSpawn: (pid) => {
       this.store.internal("gate-process-observed", `pid-${operationId}`, (state) => {
         state.operations.find((entry) => entry.id === operationId)!.gatePid = pid;
         return { operationId, processObserved: true };
