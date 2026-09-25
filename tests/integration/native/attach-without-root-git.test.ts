@@ -1,7 +1,7 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 // Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 9,5 s.
 // Installa un'imbracatura vera su una radice senza `.git` e percorre il protocollo nativo fino
@@ -15,9 +15,9 @@ import { applyInstallPlan } from "../../../src/installer/apply.js";
 import { buildInstallPlan } from "../../../src/installer/plan.js";
 import { loadRegistry } from "../../../src/registry/load.js";
 import { resolveProfile } from "../../../src/registry/resolve.js";
-import { createProjectService, type ProjectService } from "../../../src/native/service.js";
+import { createProjectService } from "../../../src/native/service.js";
 import type { ProductPlan } from "../../../src/native/contracts.js";
-import { git } from "../../helpers/native.js";
+import { git, nativeHarness } from "../../helpers/native.js";
 
 /**
  * A workspace root with no `.git` at all — the exact case this plan exists to stop refusing at
@@ -49,16 +49,7 @@ async function noGitRootFixture() {
   return { directory, root, stateDirectory: path.join(directory, "private-state"), memberRelative };
 }
 
-const fixtures: Awaited<ReturnType<typeof noGitRootFixture>>[] = [];
-const services: ProjectService[] = [];
-let index = 0;
-async function call(service: ProjectService, tool: string, payload: Record<string, unknown>, requestId = `attach-no-git-${++index}`) {
-  return service.execute({ protocolVersion: "0.2", requestId, tool, payload });
-}
-afterAll(async () => {
-  for (const service of services.splice(0)) await service.close();
-  for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
-});
+const { fixtures, services, call } = nativeHarness({ requestPrefix: "attach-no-git" });
 
 test("fy_attach riesce senza un repository alla radice, e fy_plan rifiuta ancora nominando il membro senza commit", async () => {
   const fixture = await noGitRootFixture();

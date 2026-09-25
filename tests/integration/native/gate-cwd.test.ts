@@ -1,6 +1,6 @@
-import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { afterAll, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 // Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 30,2 s.
 // Installa un'imbracatura vera con un secondo repository annidato e percorre il protocollo
@@ -8,25 +8,11 @@ import { afterAll, expect, test, vi } from "vitest";
 // blocco, non a sorvegliare la durata: se scade, cronometra prima di dare la colpa alla macchina.
 vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
 
-import { createProjectService, type ProjectService } from "../../../src/native/service.js";
+import { createProjectService } from "../../../src/native/service.js";
 import type { NativeGateRunner, ProductPlan } from "../../../src/native/contracts.js";
-import { commitAll, git, nativeFixture } from "../../helpers/native.js";
+import { commitAll, git, nativeFixture, nativeHarness } from "../../helpers/native.js";
 
-const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];
-const services: ProjectService[] = [];
-let index = 0;
-async function call(service: ProjectService, tool: string, payload: Record<string, unknown>, requestId = `gate-cwd-${++index}`) {
-  return service.execute({ protocolVersion: "0.2", requestId, tool, payload });
-}
-async function mutation(service: ProjectService, tool: string, payload: Record<string, unknown>) {
-  const context = await call(service, "fy_context", {});
-  return call(service, tool, { sessionId: "writer", expectedRevision: context.revision,
-    ...(tool === "fy_plan" ? {} : { runId: "gate-cwd-check" }), ...payload });
-}
-afterAll(async () => {
-  for (const service of services.splice(0)) await service.close();
-  for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
-});
+const { fixtures, services, call, mutation } = nativeHarness({ requestPrefix: "gate-cwd", runId: "gate-cwd-check" });
 
 test("un gate gira con la cwd del membro della sua attivita', non la radice del workspace", async () => {
   const fixture = await nativeFixture();

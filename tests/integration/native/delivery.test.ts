@@ -1,6 +1,6 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { afterAll, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 // Prova piu' lenta di questo file, cronometrata su questa macchina a riposo: 142,9 s.
 // Il tetto globale di 30 s e' tarato sui test unitari; qui si installano imbracature vere,
@@ -10,19 +10,9 @@ vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
 import { sha256Text } from "../../../src/core/hash.js";
 import { createProjectService, type ProjectService } from "../../../src/native/service.js";
 import type { NativeGateRunner } from "../../../src/native/contracts.js";
-import { commitAll, nativeFixture, productPlan } from "../../helpers/native.js";
+import { commitAll, nativeFixture, nativeHarness, productPlan } from "../../helpers/native.js";
 
-const fixtures: Awaited<ReturnType<typeof nativeFixture>>[] = [];
-const services: ProjectService[] = [];
-let index = 0;
-async function call(service: ProjectService, tool: string, payload: Record<string, unknown>, requestId = `delivery-${++index}`) {
-  return service.execute({ protocolVersion: "0.2", requestId, tool, payload });
-}
-async function mutation(service: ProjectService, tool: string, payload: Record<string, unknown>) {
-  const context = await call(service, "fy_context", {});
-  return call(service, tool, { sessionId: "writer", expectedRevision: context.revision,
-    ...(tool === "fy_plan" ? {} : { runId: "filter-orders" }), ...payload });
-}
+const { fixtures, services, call, mutation } = nativeHarness({ requestPrefix: "delivery", runId: "filter-orders" });
 async function setup(risk: "low" | "medium" = "low", gateRunner?: NativeGateRunner) {
   const fixture = await nativeFixture(); fixtures.push(fixture);
   const service = await createProjectService({ ...fixture,
@@ -52,10 +42,6 @@ async function gates(fixture: { service: ProjectService; stateDirectory: string 
     expect(result.result.operation, log).toMatchObject({ status: "passed", exitCode: 0 });
   }
 }
-afterAll(async () => {
-  for (const service of services.splice(0)) await service.close();
-  for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
-});
 
 test.concurrent("real finite gates certify a clean revision; the report does not invalidate that revision", async () => {
   const fixture = await setup();
