@@ -79,6 +79,24 @@ Due casi vanno decisi qui, non a implementazione in corso:
   quel percorso è il working tree che lo contiene, ed è il suo HEAD a dire se è cambiato.
   È la stessa regola che la ricognizione applica già ai repository annidati.
 
+### Un lavoro attraversa i membri, un'attività no
+
+Un gate gira una volta per attività, con una `cwd`. Se gli ambiti di una singola
+attività stessero in due membri, quella `cwd` non esisterebbe e la sua ricevuta dovrebbe
+dire su quale revisione ha girato senza poterlo dire.
+
+Quindi: **gli ambiti di scrittura di un'attività devono stare tutti in un membro.** Un piano
+che viola la regola viene rifiutato a `fy_plan`, con il nome dell'attività e dei membri che
+mescola. Un lavoro resta libero di avere attività in membri diversi: è il caso cross.
+
+Ne segue tutto il resto, e senza aggiungere forme:
+
+- il gate ha una `cwd`: `root/<membro dell'attività>`;
+- la ricevuta del gate resta **invariata** — il suo `inputSha256` è l'aggregato, che è già
+  una stringa sola;
+- il divario è qualificabile col membro dell'attività: `gate:servizio-ordini/T1/G001`;
+- la baseline di un'attività è `baselineHeads[membro]`.
+
 ### Dove vive il multi-HEAD
 
 ```text
@@ -102,7 +120,11 @@ un round trip in fila.
 | Sito | Oggi | Domani | Perché |
 |---|---|---|---|
 | `NativeRun.baselineHead` | `string` | `Record<membro, string>` | serve per `git diff <baseline> HEAD` e `changedSince`: con N membri servono N baseline e N `cwd` |
-| ricevuta del gate, `gitCommit` | `string` | `Record<membro, string>` | una ricevuta deve dire su quale revisione ha girato, e con due membri ce ne sono due |
+| rapporto di consegna, `gitCommit` | `string` | `Record<membro, string>` | il rapporto dichiara su quali revisioni vale la consegna |
+
+Una sola forma **persistita** cambia, non due: la prima riga. La seconda è un artefatto
+generato (`.forgeyard/reports/...`), e la ricevuta del gate non porta affatto un commit —
+ha `inputSha256`, che resta una stringa. Verificato leggendo `GateOperation`, non assunto.
 
 Il costo di compatibilità è **teorico**: quelle forme vivono nello stato privato,
 e P3 non è mai stato provato live, quindi non esistono lavori in corso da migrare.
