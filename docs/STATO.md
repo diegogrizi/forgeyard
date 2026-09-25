@@ -224,14 +224,30 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 24 settembre 2026 `npm run verify` è passato interamente su questa macchina in 879-1047 s**: 71 file
-  di test, 548 prove superate e una saltata, catalogo verificato byte per byte (1007 file),
-  provenienza rigenerabile senza differenze, audit di release passato e contenuto del
-  pacchetto controllato. Vale per questa revisione e per questa macchina: non è un'attestazione
-  riusabile per un'altra.
-- **I tetti dei test sono stati misurati tutti, e la regola è diventata un controllo.** Le 110
+- **Il 25 settembre 2026 `npm run verify` è passato interamente su questa macchina in 947,94 s,
+  con codice di uscita 0**: 79 file di test, 593 prove superate, una saltata e nessuna fallita;
+  catalogo verificato byte per byte (**1.007 file sorgente**, **211.594 righe fisiche**),
+  provenienza rigenerabile senza differenze, audit di release passato (202 agenti, 183 skill e
+  105 comandi) e contenuto del pacchetto controllato. La misura è stata presa ad albero fermo,
+  senza nessun editor sul repository, e il codice di uscita è stato letto da `npm` e non da un
+  `echo` — due difetti di metodo commessi poco prima, che insieme avevano prodotto un «exit 0»
+  per un giro con un rosso dentro.
+  Vale per quella revisione e per questa macchina: non è un'attestazione riusabile per un'altra,
+  e il giro di correzioni che l'ha seguita ha aggiunto un file di test e sette prove che quella
+  misura non copre.
+- **Il costo della verifica non è cresciuto con il lavoro sui repository membri.** 947,94 s cade
+  **dentro** l'intervallo di 879-1047 s misurato il 24 settembre, quando la suite aveva 71 file
+  e 548 prove: quel lavoro ne ha aggiunti 8 e 45, incluse cinque prove che installano
+  un'imbracatura vera su due repository Git e percorrono l'intero protocollo con gate reali.
+  Le prove pesanti girano in parallelo, quindi la più lenta non si somma al totale: è misurato,
+  non dedotto, ed è la ragione per cui `native/membri` resta nel percorso di verifica
+  predefinito invece di essere spostata altrove.
+- **I tetti dei test sono stati misurati tutti, e la regola è diventata un controllo.** Le 120
   prove di `tests/integration` e `tests/roundtrip` sono state cronometrate una per una, a
-  macchina ferma: vanno da 10 ms a 142,9 s. Quattro suite stavano sotto il tetto globale di
+  macchina ferma: vanno da 10 ms a 332,7 s. Le due suite più pesanti dichiarano **due** misure,
+  perché sotto la suite completa i worker si contendono gli stessi processi Git e lo stesso
+  lavoro costa circa il doppio: `native/membri` 332,7 s a riposo e 779,8 s sotto carico,
+  `native/delivery` 142,9 s e 568,0 s. Quattro suite stavano sotto il tetto globale di
   30 s tarato sui test unitari — `problem-first-preparation` da solo ne costa 40,9 — e
   andavano in rosso a ogni carico. Ogni suite pesante dichiara ora il proprio tetto **con la
   misura accanto**, e un test lo verifica (`tests/unit/meta/declared-timeouts.test.ts`):
