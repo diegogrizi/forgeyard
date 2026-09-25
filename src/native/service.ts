@@ -26,7 +26,8 @@ import { assertTaskMembers, assertWriter, budgetGaps, contains, deliveryAccounti
 import { memberRoot, scopesInMember } from "./members.js";
 import { validateHumanBaseline, type HumanBaseline } from "../measure/accounting.js";
 import { NativeStore, nativeError } from "./store.js";
-import { changedSince, workspaceIdentity, workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
+import { changedSince, dirtyInputGaps, namedUncleanMembers, uncleanMemberClause, workspaceIdentity,
+  workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
 import { atomicText, regularBytes, assertDirectoryChain } from "./files.js";
 import { defaultNativeStateDirectory } from "./bindings.js";
 import { processMayBeAlive } from "./recovery.js";
@@ -271,7 +272,7 @@ export class ProjectService {
       // A plan is present exactly for `fy_plan`, and it was validated above, where its scopes
       // had to be confined before the member walk.
       if (plan !== null) {
-        if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Create a product plan from a committed baseline; existing user changes are not silently copied or committed.");
+        if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", `Create a product plan from a committed baseline; existing user changes are not silently copied or committed.${uncleanMemberClause(snapshot)}`);
         if (state.runs.some((run) => run.plan.id === plan.id)) throw nativeError("FY_PLAN_INVALID", "Run IDs are immutable. Use a new run ID for a new feature or explicitly reconcile the current plan.");
         const content = `${canonicalJson({ schemaVersion: 1, capsuleId: capsule.id, plan })}\n`;
         state.artifacts.push({ path: `.forgeyard/project/${plan.id}.json`, content, sha256: sha256Text(content) });
@@ -363,7 +364,7 @@ export class ProjectService {
         return { recorded: true, independent: false, reason: "A model-declared origin or worker name is not verified session isolation." };
       }
       if (envelope.tool === "fy_verify") {
-        if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Commit the intended plan/product revision before running a certification gate.");
+        if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", `Commit the intended plan/product revision before running a certification gate.${uncleanMemberClause(snapshot)}`);
         const task = run.plan.tasks.find((task) => task.id === payload.taskId);
         const gate = capsule.payload.gates.find((gate) => gate.id === payload.gateId);
         if (!task || !gate || !requiredGates(task, capsule).includes(gate.id)) throw nativeError("FY_GATE_DENIED", "The gate ID is not approved for this task.");
@@ -379,7 +380,7 @@ export class ProjectService {
       }
       if (envelope.tool === "fy_finalize") {
         const finalGaps = [...evidenceGaps(state, run, capsule, snapshot.sha256, invalid), ...budgetGaps(run, capsule, this.now()),
-          ...(!snapshot.clean ? ["git:dirty-inputs"] : [])];
+          ...dirtyInputGaps(snapshot)];
         // Restate the run on the epistemic ladder: the certificate must declare what it rests
         // on, and the model's prose must never be able to carry it.
         const evidence = deliveryEvidence(state, run, capsule, snapshot.sha256, invalid);
@@ -608,7 +609,7 @@ export class ProjectService {
     const baselines = Object.entries(run.baselineHeads).sort(([left], [right]) => left.localeCompare(right, "en"));
     const members = baselines.map(([member]) => member);
     const snapshot = await workspaceSnapshot(this.identity.root, members);
-    if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", "Human review must refer to a clean committed revision.");
+    if (!snapshot.clean) throw nativeError("FY_GIT_REQUIRED", `Human review must refer to a clean committed revision.${uncleanMemberClause(snapshot)}`);
     const reviewText = await readRegularProjectFile(this.identity.root, artifact.path, 131072);
     // One diff per member, each in its own working tree: a revision range is only meaningful
     // inside the repository that recorded it, and the label says which one the hunks came from.
@@ -751,7 +752,13 @@ export class ProjectService {
     let failure: string | undefined;
     if (signal.aborted || result.exitCode !== 0 || result.canceled || result.timedOut) failure = signal.aborted || result.canceled ? "canceled" : result.timedOut ? "timeout" : "nonzero-exit";
     else if (gate.parser === "test-summary") failure = testSummaryFailure(result.stdout + result.stderr) ?? undefined;
-    if (!failure && (after.sha256 !== operation.inputSha256 || !after.clean)) failure = "stale-inputs";
+    // A receipt that only says "stale" sends a reader to look through every member. `failure` is
+    // one slot, not a list, so the members it names travel inside it rather than one per entry as
+    // the gaps do; a digest that drifted with every tree clean names nobody, and stays as it was.
+    if (!failure && (after.sha256 !== operation.inputSha256 || !after.clean)) {
+      const dirty = namedUncleanMembers(after);
+      failure = dirty.length === 0 ? "stale-inputs" : `stale-inputs:${dirty.join(",")}`;
+    }
     try { await this.capsule(); } catch { failure = "capsule-drift"; }
     if (Buffer.byteLength(result.stdout) > gate.maxOutputBytes || Buffer.byteLength(result.stderr) > gate.maxOutputBytes) {
       failure = "output-limit"; result.stdout = result.stdout.slice(0, Math.floor(gate.maxOutputBytes / 4));

@@ -4,7 +4,7 @@ import { normalizePortablePath } from "../core/paths.js";
 import { certifyVerdict, summarizeEvidence, validateClaims, type Claim, type VerdictCertification } from "../evidence/epistemic.js";
 import { compare, summarizeAgentic, type AccountingReport, type HumanBaseline } from "../measure/accounting.js";
 import type { NativeRun, NativeState, ProductPlan, ProductTask } from "./contracts.js";
-import { memberForScope } from "./members.js";
+import { memberForScope, namedMember } from "./members.js";
 import { nativeError } from "./store.js";
 
 const RESERVED = [".git", ".forgeyard", ".codex", ".claude", ".agents", ".cursor", "AGENTS.md", "CLAUDE.md", "forgeyard.yaml", "forgeyard.lock", ".mcp.json"];
@@ -78,8 +78,8 @@ export function evidenceGaps(state: NativeState, run: NativeRun, capsule: Capsul
     run.plan.tasks.some((task) => gap.startsWith(`criterion-evidence:${task.id}/`)))];
   /** `.` keeps today's shape: a single-repository report must not learn a second grammar. */
   const qualify = (taskId: string, suffix: string): string => {
-    const member = run.membersByTask[taskId];
-    return member === undefined || member === "." ? suffix : `${member}/${suffix}`;
+    const member = namedMember(run.membersByTask[taskId]);
+    return member === null ? suffix : `${member}/${suffix}`;
   };
   for (const task of run.plan.tasks) {
     if (task.writeScopes.length > 0 && !capsule.payload.gates.some((gate) => gate.parser === "test-summary"))

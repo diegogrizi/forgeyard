@@ -11,7 +11,8 @@ import { afterAll, describe, expect, test, vi } from "vitest";
 // la durata.
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
-import { changedSince, workspaceSnapshot } from "../../../src/native/workspace.js";
+import { changedSince, dirtyInputGaps, namedUncleanMembers, uncleanMemberClause,
+  workspaceSnapshot } from "../../../src/native/workspace.js";
 
 const roots: string[] = [];
 afterAll(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -108,6 +109,61 @@ describe("fotografia di un workspace con piu' membri", () => {
     const snapshot = await workspaceSnapshot(root);
     expect([...snapshot.members.keys()]).toEqual(["."]);
     expect(snapshot.members.get(".")?.head).toMatch(/^[0-9a-f]{40}$/);
+  });
+});
+
+describe("un albero sporco dice QUALE membro lo e'", () => {
+  test("il divario nomina il membro sporco, e solo quello", async () => {
+    const root = await twoMembers();
+    // Sporco uno dei due membri: chi legge il rifiuto deve sapere dove andare, e su due
+    // repository `git:dirty-inputs` da solo lo manda a cercare.
+    await writeFile(path.join(root, "servizio-ordini", "src", "bozza.ts"), "export const y = 2;\n");
+    const snapshot = await workspaceSnapshot(root, ["frontend", "servizio-ordini"]);
+
+    expect(dirtyInputGaps(snapshot)).toEqual(["git:dirty-inputs:servizio-ordini"]);
+    expect(uncleanMemberClause(snapshot)).toContain("servizio-ordini");
+    // E il membro pulito non compare: un rifiuto che accusasse anche frontend manderebbe
+    // chi legge a cercare un guasto dove non c'e'.
+    expect(uncleanMemberClause(snapshot)).not.toContain("frontend");
+  });
+
+  test("due membri sporchi danno due divari, uno per membro", async () => {
+    const root = await twoMembers();
+    for (const member of ["frontend", "servizio-ordini"])
+      await writeFile(path.join(root, member, "src", "bozza.ts"), "export const y = 2;\n");
+    const snapshot = await workspaceSnapshot(root, ["frontend", "servizio-ordini"]);
+
+    // Un divario per membro, non uno che li elenca: un divario e' una cosa da chiudere, e
+    // committare in un membro deve toglierne esattamente uno.
+    expect(dirtyInputGaps(snapshot)).toEqual(["git:dirty-inputs:frontend", "git:dirty-inputs:servizio-ordini"]);
+    expect(namedUncleanMembers(snapshot)).toEqual(["frontend", "servizio-ordini"]);
+  });
+
+  test("a repository singolo il divario resta quello di oggi, e il messaggio non cambia", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-snap-"));
+    roots.push(root);
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", "index.ts"), "export const x = 1;\n");
+    await git(root, ["init", "-b", "main"]);
+    await git(root, ["config", "user.name", "Fixture"]);
+    await git(root, ["config", "user.email", "fixture@example.invalid"]);
+    await git(root, ["add", "--all"]);
+    await git(root, ["commit", "-m", "init"]);
+    await writeFile(path.join(root, "src", "bozza.ts"), "export const y = 2;\n");
+
+    const snapshot = await workspaceSnapshot(root);
+    // Il membro "." non si nomina: un progetto a repository singolo non deve imparare una
+    // seconda grammatica, ne' nei divari ne' nei messaggi di rifiuto.
+    expect(dirtyInputGaps(snapshot)).toEqual(["git:dirty-inputs"]);
+    expect(namedUncleanMembers(snapshot)).toEqual([]);
+    expect(uncleanMemberClause(snapshot)).toBe("");
+  });
+
+  test("un albero pulito non produce divari ne' clausola", async () => {
+    const root = await twoMembers();
+    const snapshot = await workspaceSnapshot(root, ["frontend", "servizio-ordini"]);
+    expect(dirtyInputGaps(snapshot)).toEqual([]);
+    expect(uncleanMemberClause(snapshot)).toBe("");
   });
 });
 

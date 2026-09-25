@@ -146,6 +146,26 @@ test.concurrent("un commit in un membro non toccato non invalida le prove", asyn
   expect(final.result).toMatchObject({ verdict: "delivered", gaps: [] });
 });
 
+test.concurrent("un albero sporco dice QUALE membro lo e', nel divario e nel rifiuto", async () => {
+  // La decisione 3 del design chiede «blocked, col membro nel divario». Il divario di gate lo
+  // nominava gia'; quello di albero sporco no, e su due membri chi legge doveva andare a
+  // scoprire quale dei due. Nessun gate qui: e' la prova piu' economica del file.
+  const fixture = await setup(["frontend", "servizio-ordini"]);
+  await writeFile(path.join(fixture.root, "servizio-ordini", "src", "bozza.txt"), "lavoro non committato\n");
+
+  await expect(mutation(fixture.service, "fy_verify", { taskId: "T2", gateId: "G001" }))
+    .rejects.toMatchObject({ code: "FY_GIT_REQUIRED", message: expect.stringContaining("servizio-ordini") });
+
+  const final = await mutation(fixture.service, "fy_finalize", {});
+  expect(final.result.verdict).toBe("blocked");
+  const gaps = final.result.gaps as readonly string[];
+  expect(gaps).toContain("git:dirty-inputs:servizio-ordini");
+  // Il membro pulito non viene accusato, e il divario nudo non compare piu' accanto a quello
+  // qualificato: un lettore che ne vedesse due penserebbe a due alberi sporchi.
+  expect(gaps).not.toContain("git:dirty-inputs:frontend");
+  expect(gaps).not.toContain("git:dirty-inputs");
+});
+
 test.concurrent("due lavori su membri disgiunti non si invalidano a vicenda", async () => {
   // Chiesto dalla review dell'Attivita' 2': la regola «una fotografia per lavoro, sui suoi
   // membri» vive oggi solo in un commento in service.ts. Qui diventa un comportamento.

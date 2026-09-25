@@ -5,7 +5,7 @@ import { execa } from "execa";
 
 import { canonicalJson, sha256Bytes, sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
-import { memberRoot, workspacePath } from "./members.js";
+import { memberRoot, namedMember, workspacePath } from "./members.js";
 import { nativeError } from "./store.js";
 import { regularBytes } from "./files.js";
 
@@ -109,6 +109,38 @@ export async function workspaceSnapshot(
     // Sorted member entries: the digest is a property of the set, not of the request order.
     sha256: sha256Text(canonicalJson(snapshots.map(([member, snapshot]) => ({ member, sha256: snapshot.sha256 })))),
   };
+}
+
+/**
+ * The unclean members a reader can be sent to, in the map's own sorted order. The workspace root
+ * is not among them — see `namedMember` — so this is empty exactly when the only dirty tree is
+ * the single repository the caller is already standing in.
+ */
+export function namedUncleanMembers(snapshot: WorkspaceSnapshot): readonly string[] {
+  return [...snapshot.members].filter(([member, state]) => !state.clean && namedMember(member) !== null)
+    .map(([member]) => member);
+}
+
+/**
+ * One gap per unclean member, because a gap is a thing to close and committing in one member has
+ * to remove exactly one: a single gap listing them all would only disappear with the last of
+ * them, hiding every step in between. `.` keeps today's exact string, and a named member is
+ * appended to it, so `git:dirty-inputs` stays a prefix of the qualified form and a reader who
+ * knows today's gap still recognizes tomorrow's.
+ */
+export function dirtyInputGaps(snapshot: WorkspaceSnapshot): readonly string[] {
+  return [...snapshot.members].filter(([, state]) => !state.clean)
+    .map(([member]) => namedMember(member) === null ? "git:dirty-inputs" : `git:dirty-inputs:${member}`);
+}
+
+/**
+ * What a cleanliness refusal appends to say WHERE. Empty for a single-repository workspace: the
+ * message already says where, because there is one place it can be. The wording follows the
+ * refusal that names members with no commit, so the two read as one voice.
+ */
+export function uncleanMemberClause(snapshot: WorkspaceSnapshot): string {
+  const named = namedUncleanMembers(snapshot);
+  return named.length === 0 ? "" : ` These member repositories have uncommitted changes: ${named.join(", ")}.`;
 }
 
 /**

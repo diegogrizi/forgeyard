@@ -51,6 +51,17 @@ export function workspacePath(member: string, relativePath: string): string {
   return member === "." ? relativePath : `${member}/${relativePath}`;
 }
 
+/**
+ * The member's name when it has one a reader needs, and `null` for the workspace root. Every gap
+ * and every refusal message that names a member asks this first, because a single-repository
+ * project must not learn a second grammar: there `.` is the only member there can be, so naming
+ * it would add a word without adding an answer. Stated once, because it is the rule two grammars
+ * — the gate gap's and the dirty-tree gap's — would otherwise each restate in their own way.
+ */
+export function namedMember(member: string | undefined): string | null {
+  return member === undefined || member === "." ? null : member;
+}
+
 /** Ordered and deduplicated, so two reads of one plan produce one set. */
 export async function touchedMembers(root: string, scopes: readonly string[]): Promise<readonly string[]> {
   const members = new Set<string>();
