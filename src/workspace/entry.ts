@@ -165,23 +165,23 @@ async function instructionsPresent(root: string, client: HarnessId): Promise<boo
  * guess. `null` means the registry could not be read, which is not the same as no plugins.
  */
 /**
- * Why a native run cannot start here, or null when it can. The runtime binds a run to a Git
- * working tree with at least one commit — the workspace root itself, or any of its member
- * repositories — so a native run now spans several member repositories: evidence binds to
- * the HEADs of only the members a task actually touches. Only a folder with no Git anywhere,
- * neither at the root nor in a member, gets a harness that installs perfectly and then has
- * nothing to attach to. Preparing a folder nobody will be able to work in, without saying so
- * first, is an undeclared effect wearing a technical limit as a costume.
+ * Why a native run cannot start here, or null when it can. A native run now spans several
+ * member repositories, and `fy_attach` itself asks for no Git at all: evidence binds to the
+ * HEADs of only the members a task actually touches, and that requirement is enforced at
+ * `fy_plan`, not here — so this check counts repositories the reconnaissance found, not
+ * their commits. Only a folder with no Git anywhere, neither at the root nor in a member,
+ * can never satisfy `fy_plan` later: preparing it without saying so first is an undeclared
+ * effect wearing a technical limit as a costume.
  */
 function nativeWorkBlocker(discovery: PersonalPreview["discovery"]): string | null {
   if (discovery.kind === "repository" || discovery.repositories.length > 0) return null;
-  return "non è un repository Git e non contiene repository membri, e il runtime ne richiede almeno uno con un commit";
+  return "non è un repository Git e non contiene repository membri";
 }
 
 function writeNativeWorkBlocker(io: WorkspaceCliIo, reason: string | null): void {
   if (reason === null) return;
   io.writeOut(`  Lavoro nativo: non parte in questa cartella perché ${reason}.\n`);
-  io.writeOut("  L'imbracatura viene installata lo stesso e resta utile; per lavorare apri un singolo repository.\n");
+  io.writeOut("  L'imbracatura viene installata lo stesso e resta utile; per lavorare inizializza un repository Git e crea un commit.\n");
 }
 
 function writeProvidedByClient(io: WorkspaceCliIo, provided: readonly string[] | null | undefined): void {

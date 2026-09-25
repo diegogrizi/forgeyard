@@ -222,6 +222,21 @@ test("non avverte quando la cartella e' un solo repository", async () => tempora
   expect(result.stdout).not.toContain("Lavoro nativo: non parte");
 }));
 
+// La sola meta' positiva del blocco: nessun'altra prova afferma che l'avvertimento venga
+// mai stampato, quindi senza questa `writeNativeWorkBlocker` potrebbe sparire del tutto e la
+// suite resterebbe verde. Il messaggio nomina solo cio' che il codice controlla davvero — il
+// conteggio dei repository trovati, non i loro commit — e non promette un commit che
+// `nativeWorkBlocker` non verifica.
+test("avverte quando la cartella non contiene alcun repository", async () => temporary(async (root) => {
+  const result = await entry(root, { outcome: "Un servizio di ricerca", confirm: false,
+    harness: harnessDouble(), native: nativeDouble() });
+
+  expect(result.stdout).toContain(
+    "Lavoro nativo: non parte in questa cartella perché non è un repository Git e non contiene repository membri.");
+  expect(result.stdout).toContain(
+    "per lavorare inizializza un repository Git e crea un commit.");
+}));
+
 test("l'anteprima dice quali plugin il client fornisce già per questa cartella", async () =>
   temporary(async (root) => {
     const result = await entry(root, {

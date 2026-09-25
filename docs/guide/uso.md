@@ -105,11 +105,13 @@ la riusa già. Exit 0 indica una risposta valida **anche se parziale**, quindi c
 consuma deve leggere `scan.status`; exit 2 segnala argomenti non validi, exit 4 una root
 o un'ispezione non utilizzabili.
 
-## Percorso nativo, per un singolo repository
+## Percorso nativo
 
-Questo è il percorso su cui vivono oggi le garanzie di consegna. Vale per un repository
-alla volta, ed è distinto dall'area personale descritta sopra: i due non sono ancora
-stati uniti.
+Questo è il percorso su cui vivono oggi le garanzie di consegna, ed è distinto dall'area
+personale descritta sopra: i due non sono ancora stati uniti. Un lavoro attraversa il
+workspace preparato sopra — un solo repository o più repository membri — ma un'attività
+resta sempre confinata a un membro solo: il suo gate gira una volta, in un albero di lavoro
+solo.
 
 Dalla cartella del prodotto, scegliendo il proprio client:
 
@@ -188,9 +190,9 @@ verdetto bloccato, fino a come annullare — sono raccolti in
 ## Passaggi ancora necessari
 
 Collegare l'area personale ai punti d'ingresso reali dei client, distribuire o riusare le
-capacità pertinenti, integrare stato e verifiche per i repository membri, e collaudare il
-percorso completo nelle app. Questi passaggi completeranno **lo stesso** ingresso: non
-diventeranno una sequenza di comandi da memorizzare.
+capacità pertinenti, e collaudare il percorso completo nelle app. Questi passaggi
+completeranno **lo stesso** ingresso: non diventeranno una sequenza di comandi da
+memorizzare.
 
 Il risultato finale resta quello: preparo una volta il workspace, apro la mia
 conversazione, descrivo il software, e nei commit finisce soltanto il software.

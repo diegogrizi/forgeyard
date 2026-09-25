@@ -92,6 +92,12 @@ membro che possiede la sua attività, non alla radice del workspace. L'anteprima
 più l'avvertimento su questo caso: il limite dichiarato ora vale soltanto per una cartella
 senza alcun repository, dove resta vero.
 
+Un limite residuo dell'anteprima va registrato, e non è nuovo: un membro presente ma senza
+ancora un commit non riceve l'avvertimento, perché il controllo conta i repository trovati
+dalla ricognizione, non i loro commit. Il rifiuto arriva comunque, a `fy_plan`, che nomina il
+membro senza commit. Lo stesso buco esisteva già, prima di questo lavoro, per una radice
+senza commit: non è una regressione, è un limite conosciuto scritto invece che taciuto.
+
 Due cose restano scoperte, e per due ragioni diverse. La **prova live** manca per lo stesso
 motivo di P3: queste sono prove strutturali su fixture con Git vero, e nessuno ha ancora
 aperto un workspace a due repository in un Claude Code o in un Codex autenticato — una prova

@@ -43,10 +43,10 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
   percorso composto. Da 22 a 15 capacità, da 339 a 249 file, e due controlli che lo tengono
   fermo.
 
-- L'anteprima dichiara quando il lavoro nativo **non potrà partire** nella cartella scelta.
-  Un workspace con più repository riceveva l'imbracatura completa e poi rifiutava ogni
-  `fy_attach` con `FY_GIT_REQUIRED`: preparata e inerte, senza che nessuno l'avesse detto
-  prima della conferma.
+- L'anteprima dichiara quando il lavoro nativo **non potrà partire** nella cartella scelta —
+  oggi, soltanto una cartella senza alcun repository Git. Un workspace con più repository
+  riceveva l'imbracatura completa e poi rifiutava ogni `fy_attach` con `FY_GIT_REQUIRED`:
+  preparata e inerte, senza che nessuno l'avesse detto prima della conferma.
 - La stessa riga nomina ora il file giusto: `.git/info/exclude` dentro un repository, una
   regola in `.gitignore` fuori. Erano due file diversi chiamati con un nome solo.
 
