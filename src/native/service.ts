@@ -208,10 +208,15 @@ export class ProjectService {
       members = Object.keys(findRun(this.store.read(), payload.runId).baselineHeads);
     }
     const snapshot = await workspaceSnapshot(this.identity.root, members);
-    // The map is built from sorted members, so the names come out sorted already.
-    const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
-    if (missing.length > 0) throw nativeError("FY_GIT_REQUIRED",
-      `Native runs bind evidence to a revision, and these member repositories have no commit yet: ${missing.join(", ")}.`);
+    // `fy_attach` binds no evidence to a revision, so it requires none. The workspace root of a
+    // multi-repository project is not a working tree, and refusing here is what kept such a
+    // project from ever starting. `fy_plan` still demands a commit, per touched member.
+    if (envelope.tool !== "fy_attach") {
+      // The map is built from sorted members, so the names come out sorted already.
+      const missing = [...snapshot.members].filter(([, member]) => member.head === null).map(([name]) => name);
+      if (missing.length > 0) throw nativeError("FY_GIT_REQUIRED",
+        `Native runs bind evidence to a revision, and these member repositories have no commit yet: ${missing.join(", ")}.`);
+    }
     if (envelope.tool === "fy_approval_request") {
       const run = findRun(this.store.read(), String(payload.runId));
       return this.response(envelope, { runId: run.plan.id, planSha256: run.planSha256, capsuleId: capsule.id,
