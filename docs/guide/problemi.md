@@ -356,7 +356,7 @@ in uno ne chiuda esattamente uno. Il membro non compare quando è la radice stes
 progetto a repository singolo continua a leggere `gate:<attività>/<gate>` e
 `git:dirty-inputs`, identici a prima. Lo stesso vale per i rifiuti che chiedono un albero
 pulito, che elencano i membri con modifiche non committate, e per la ricevuta di un gate,
-il cui esito `stale-inputs` diventa `stale-inputs:<membri>`.
+il cui esito `stale-inputs` diventa `stale-inputs:<membri>`, separati da virgola.
 
 **Cosa fare.** Non cercare di aggirarlo: produci l'evidenza che manca. Leggi gli altri
 divari e chiudili uno per uno — esegui i gate richiesti sulla revisione testata, lega i

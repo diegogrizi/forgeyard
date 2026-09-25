@@ -592,7 +592,7 @@ export class ProjectService {
     // check that cannot fail. It was unreachable in this shape while `fy_attach` demanded a
     // root HEAD; removing that demand is what made it reachable, so refuse rather than simulate.
     if ((snapshot.members.get(".")?.head ?? null) === null) throw nativeError("FY_GIT_REQUIRED",
-      "This workspace root is not a Git working tree, so this route cannot tell whether the project changed while the confirmation was open, and it does not pretend to check. No product run exists here and nothing is bound to a revision: remove this workspace's private execution state directory and start again. No project file is touched.");
+      "This workspace root has no commit to compare against — it is not a Git working tree, or it is one with no commit yet — so this route cannot tell whether the project changed while the confirmation was open, and it does not pretend to check. No product run exists here and nothing is bound to a revision: remove this workspace's private execution state directory and start again. No project file is touched.");
     const plan: ProductPlan = { id: "reconcile-writer", request: "Recover an idle cooperative writer; no product run is approved", risk: "medium",
       requirements: [{ id: "R1", description: "Only the previous writer lease is transferred" }], tasks: [{ id: "T1", role: "factory",
         title: "Recover idle writer", objective: "Transfer cooperative ownership without approving product writes", requirementIds: ["R1"], dependsOn: [],

@@ -239,9 +239,10 @@ Alla data di questo documento, e su questa macchina:
   **dentro** l'intervallo di 879-1047 s misurato il 24 settembre, quando la suite aveva 71 file
   e 548 prove: quel lavoro ne ha aggiunti 8 e 45, incluse cinque prove che installano
   un'imbracatura vera su due repository Git e percorrono l'intero protocollo con gate reali.
-  Le prove pesanti girano in parallelo, quindi la più lenta non si somma al totale: è misurato,
-  non dedotto, ed è la ragione per cui `native/membri` resta nel percorso di verifica
-  predefinito invece di essere spostata altrove.
+  **Misurata è la non crescita**, non la sua spiegazione: che le prove pesanti girino in
+  parallelo e che quindi la più lenta non si sommi al totale è l'inferenza più semplice che la
+  regge, non un secondo dato. Il dato è sufficiente per la decisione che ne dipende:
+  `native/membri` resta nel percorso di verifica predefinito invece di essere spostata altrove.
 - **I tetti dei test sono stati misurati tutti, e la regola è diventata un controllo.** Le 120
   prove di `tests/integration` e `tests/roundtrip` sono state cronometrate una per una, a
   macchina ferma: vanno da 10 ms a 332,7 s. Le due suite più pesanti dichiarano **due** misure,

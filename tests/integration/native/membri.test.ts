@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 // gli stessi processi Git. Ogni prova installa un'imbracatura vera su DUE repository e percorre
 // il protocollo con gate reali, quindi ogni chiamata paga una fotografia Git per membro.
 // Il tetto dichiarato serve a cogliere un blocco, non a sorvegliare la durata: a 600 s era piu'
-// stretto del lavoro che racchiude, e quattro prove su cinque diventavano rosse sotto carico
+// stretto del lavoro che racchiude, e quattro delle cinque prove di allora diventavano rosse sotto carico
 // senza che nulla fosse rotto. Se scade, cronometra prima di dare la colpa alla macchina.
 vi.setConfig({ testTimeout: 1_800_000, hookTimeout: 1_800_000 });
 
@@ -160,8 +160,11 @@ test.concurrent("un albero sporco dice QUALE membro lo e', nel divario e nel rif
   expect(final.result.verdict).toBe("blocked");
   const gaps = final.result.gaps as readonly string[];
   expect(gaps).toContain("git:dirty-inputs:servizio-ordini");
-  // Il membro pulito non viene accusato, e il divario nudo non compare piu' accanto a quello
-  // qualificato: un lettore che ne vedesse due penserebbe a due alberi sporchi.
+  // Il membro pulito non viene accusato. E qui, dove nessun ambito sta nella radice, non
+  // compare nemmeno il divario nudo accanto a quello qualificato: un lettore che ne vedesse
+  // due penserebbe a due alberi sporchi. Vale per questa fixture, non in generale — in un
+  // workspace la cui radice e' a sua volta un albero di lavoro, '.' e' un membro come gli
+  // altri e il divario nudo e' il suo.
   expect(gaps).not.toContain("git:dirty-inputs:frontend");
   expect(gaps).not.toContain("git:dirty-inputs");
 });
