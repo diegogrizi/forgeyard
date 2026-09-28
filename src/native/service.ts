@@ -30,7 +30,7 @@ import { changedSince, dirtyInputGaps, namedUncleanMembers, uncleanMemberClause,
   workspaceSnapshot, type WorkspaceIdentity } from "./workspace.js";
 import { atomicText, regularBytes, assertDirectoryChain } from "./files.js";
 import { defaultNativeStateDirectory } from "./bindings.js";
-import { processMayBeAlive } from "./recovery.js";
+import { capsuleDifference, processMayBeAlive } from "./recovery.js";
 import { loadInstallManifest, parseOperationJournal } from "../installer/manifest.js";
 import { runDoctor } from "../doctor/run-doctor.js";
 
@@ -124,11 +124,19 @@ export class ProjectService {
     }
   }
 
-  private async capsule(): Promise<Capsule> {
+  /** The installer reservation gate, in one place: `capsule()` refuses while a reservation is
+   *  recorded, and the capsule recovery route below has to refuse for the same reason without
+   *  going through `capsule()` at all. Two copies of this sentence would diverge. */
+  private assertNoReservation(): void {
     if (this.store.read().installation) throw nativeError("FY_RECONCILIATION_REQUIRED", "Resolve the recorded installer reservation through the local reconcile-install route before product work.");
+  }
+
+  private async capsule(): Promise<Capsule> {
+    this.assertNoReservation();
     const capsule = await readCapsule(this.identity.root);
     const stored = this.store.read().capsuleId;
-    if (stored !== null && stored !== capsule.id) throw nativeError("FY_CAPSULE_MIGRATION_REQUIRED", "This working tree's capsule changed. Reconcile the explicit upgrade before starting another run.");
+    if (stored !== null && stored !== capsule.id) throw nativeError("FY_CAPSULE_MIGRATION_REQUIRED",
+      "This working tree's capsule changed after this project stored one. Accept the new capsule and its policy in a local confirmation: forgeyard reconcile-capsule --root <project>. That route refuses while any product run exists, because a run's consent was given against the stored capsule; reconcile the exact run instead.");
     return capsule;
   }
 
@@ -579,6 +587,80 @@ export class ProjectService {
       before.revision, (state) => { state.installation = null; state.capsuleId = installed?.id ?? null;
         return { reconciled: true, installed: !!installed, capsuleId: installed?.id ?? null, confirmationChannel: decision.channel,
           retry: "Read the current revision; use a new request ID. No prior installer call was replayed." }; }).response;
+  }
+
+  /**
+   * The bytes the stored capsule id stands for, when the installer's own backup still holds
+   * them. Only an exact content-addressed match is answered: a capsule whose identity does not
+   * equal the stored one describes a policy this project never worked under, and printing its
+   * fields as "before" would be a fabricated difference. Anything missing, unreadable or
+   * mismatched answers null, which the confirmation then declares instead of filling in — and
+   * which is also why every failure here is swallowed: a recovery route that a malformed
+   * journal can block is the deadlock this route exists to end.
+   */
+  private async previousCapsule(storedId: string): Promise<Capsule | null> {
+    try {
+      const manifest = await loadInstallManifest(this.identity.root);
+      const journalPath = `.forgeyard/state/operations/${manifest.latestOperationId}.json`;
+      const journal = parseOperationJournal(await readRegularProjectFile(this.identity.root, journalPath), journalPath);
+      const entry = journal.entries.find((record) => record.path === ".forgeyard/capsule.json");
+      if (entry?.backupPath === undefined) return null;
+      const capsule = JSON.parse(await readRegularProjectFile(this.identity.root, entry.backupPath)) as Capsule;
+      return capsule.id === storedId && capsule.id === sha256Text(canonicalJson(capsule.payload)) ? capsule : null;
+    } catch { return null; }
+  }
+
+  /**
+   * The way out of a capsule that changed under a stored one. `capsule()` refuses every call
+   * once the two identities disagree, and every route that could rewrite the stored id went
+   * through that same guard — so the runtime had no exit at all and the refusal named a remedy
+   * the product did not offer. This route reads the capsule file directly for exactly that
+   * reason: reaching it through the guard would make the recovery unreachable.
+   *
+   * The guard stays intolerant, because it protects something real: a policy change must not
+   * slide underneath work a human consented to against the old one. What makes this route safe
+   * is the refusal below — no run exists, so there is no consent to protect. A writer lease is
+   * a lease, not an approval, and it is dropped rather than carried across.
+   *
+   * It takes no workspace snapshot on purpose. This route binds nothing to a revision, and a
+   * multi-repository workspace root is not a working tree: demanding a HEAD here would make
+   * the recovery unreachable in exactly the projects that also hit the deadlock.
+   */
+  async reconcileCapsule(): Promise<NativeResponse> {
+    this.assertNoReservation();
+    const before = this.store.read();
+    if (before.runs.length > 0) throw nativeError("FY_RECONCILIATION_REQUIRED",
+      "A product run exists, and its human consent was given against the stored capsule. Reconcile that exact run with forgeyard reconcile --root <project> --run <id> --session <id>; this route does not swap a capsule underneath an approved plan.");
+    const capsule = await readCapsule(this.identity.root);
+    const envelope: NativeEnvelope = { protocolVersion: "0.2", requestId: `capsule-reconcile-${randomUUID()}`,
+      tool: "human-capsule-reconcile", payload: {} };
+    if (before.capsuleId === null || before.capsuleId === capsule.id)
+      return this.response(envelope, { reconciled: true, changed: false, capsuleId: before.capsuleId });
+    const plan: ProductPlan = { id: "reconcile-capsule", request: "Accept this project's changed capsule; no product run is approved", risk: "medium",
+      requirements: [{ id: "R1", description: "Only the stored capsule identity and the writer lease change" }],
+      tasks: [{ id: "T1", role: "factory", title: "Accept the changed capsule",
+        objective: "Store the current capsule and release the lease taken under the previous one",
+        requirementIds: ["R1"], dependsOn: [], writeScopes: [],
+        criteria: [{ id: "C1", description: "A human accepted this exact policy difference", gateIds: capsule.payload.gates.map((gate) => gate.id) }] }] };
+    const decision = await this.confirmation({ title: "Forgeyard: accept this project's changed capsule", plan, capsule,
+      description: [`Root: ${this.identity.root}`, `Stored capsule: ${before.capsuleId}`, `Current capsule: ${capsule.id}`,
+        ...capsuleDifference(await this.previousCapsule(before.capsuleId), capsule),
+        `Accepted policy: ${canonicalJson(capsule.payload.policy)}`,
+        `Writer lease released: ${before.writer?.sessionId ?? "none"}. It was taken under the stored capsule, and no lease is carried across a policy it never saw.`,
+        "No product run exists here, so no plan approval is transferred and no project file is written. Accept only if this policy is the one this project should work under; the next attach takes its lease under it."].join("\n") });
+    if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Capsule reconciliation was rejected.");
+    if ((await readCapsule(this.identity.root)).id !== capsule.id)
+      throw nativeError("FY_APPROVAL_STALE", "The capsule changed again while the confirmation was open.");
+    // No second run check inside the transaction: a run can only appear with a revision, and
+    // `store.change` refuses a stale expected revision. A check that cannot fail teaches
+    // nothing and hides which one is load-bearing.
+    return this.store.change(envelope, before.revision, (state) => {
+      state.capsuleId = capsule.id;
+      state.writer = null;
+      return { reconciled: true, changed: true, capsuleId: capsule.id, previousCapsuleId: before.capsuleId,
+        writerReleased: before.writer !== null, confirmationChannel: decision.channel,
+        next: "Attach again with fy_attach mode=write to take a writer lease under this capsule." };
+    }).response;
   }
 
   async reconcileWriter(sessionId: string): Promise<NativeResponse> {

@@ -9,7 +9,7 @@ import { connectNativeClient, disconnectNativeClient, type NativeClient } from "
 
 /** The single list the binary routes on: a second copy would diverge, and it did. */
 export const NATIVE_COMMANDS: readonly string[] = ["mcp", "tool", "consent", "human-review", "reconcile",
-  "reconcile-install", "reconcile-writer", "reconcile-operation", "connect", "disconnect"];
+  "reconcile-capsule", "reconcile-install", "reconcile-writer", "reconcile-operation", "connect", "disconnect"];
 
 async function readEnvelope(): Promise<unknown> {
   const chunks: Buffer[] = []; let bytes = 0;
@@ -72,6 +72,8 @@ export async function runNativeCli(args: readonly string[]): Promise<number> {
     });
   rootCommand("reconcile-install", "Resolve only a ceased exact installer after journal/capsule checks and local human confirmation; no replay.")
     .action(async (options: { root: string }) => { service = await createProjectService({ root: options.root }); output(await service.reconcileInstallation()); });
+  rootCommand("reconcile-capsule", "Accept a capsule that changed under the stored one, only while no product run exists; shows the policy difference, then releases the writer lease.")
+    .action(async (options: { root: string }) => { service = await createProjectService({ root: options.root }); output(await service.reconcileCapsule()); });
   rootCommand("reconcile-writer", "Recover an idle writer only when no product run exists; local confirmation, not expiry takeover.")
     .requiredOption("--session <id>", "New cooperative writer session")
     .action(async (options: { root: string; session: string }) => { service = await createProjectService({ root: options.root }); output(await service.reconcileWriter(options.session)); });

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,9 +6,11 @@ import { execa } from "execa";
 import { afterAll } from "vitest";
 
 import { createCodexAdapter } from "../../src/adapters/codex.js";
+import { readCapsule, type Capsule } from "../../src/capsule/capsule.js";
 import { loadConfig } from "../../src/config/config.js";
 import { applyInstallPlan } from "../../src/installer/apply.js";
 import { buildInstallPlan } from "../../src/installer/plan.js";
+import { applyUpdate, planUpdate } from "../../src/installer/update.js";
 import { loadRegistry } from "../../src/registry/load.js";
 import { resolveProfile } from "../../src/registry/resolve.js";
 import type { NativeResponse, ProductPlan } from "../../src/native/contracts.js";
@@ -38,6 +40,32 @@ export async function nativeFixture() {
   await git(root, ["config", "user.email", "fixture@example.invalid"]);
   await commitAll(root);
   return { directory, root, stateDirectory: path.join(directory, "private-state") };
+}
+
+/**
+ * The capsule change the native runtime has to survive, produced by the real update pipeline
+ * rather than written by hand: `readCapsule` compares the capsule with the install manifest,
+ * with `forgeyard.yaml` and with every frozen harness file, so a hand-patched capsule would
+ * exercise a shape the product never installs. Changing the timebox is the smallest owned
+ * configuration edit that moves the frozen policy, which is exactly the reported sequence:
+ * edit `forgeyard.yaml`, run `forgeyard update`, and the stored capsule id no longer matches.
+ * The profile, adapter and registry root mirror `nativeFixture` above, because this update has
+ * to be the same installation that fixture created, one revision later.
+ */
+export async function regenerateFixtureCapsule(root: string, timeboxMinutes: number): Promise<Capsule> {
+  const configPath = path.join(root, "forgeyard.yaml");
+  const source = await readFile(configPath, "utf8");
+  const edited = source.replace(/^timeboxMinutes: \d+$/m, `timeboxMinutes: ${String(timeboxMinutes)}`);
+  if (edited === source) throw new Error("the fixture configuration declares no timebox to change");
+  await writeFile(configPath, edited);
+  const config = await loadConfig(configPath);
+  const registry = await loadRegistry(path.resolve("."));
+  const resolved = resolveProfile(registry, "minimal", "codex");
+  const files = await createCodexAdapter().render(resolved.components, config);
+  const next = buildInstallPlan({ targetRoot: root, config, resolved, renderedFiles: files,
+    operationId: `native-fixture-update-${String(timeboxMinutes)}`, forgeyardVersion: "0.1.0" });
+  await applyUpdate(await planUpdate(root, next));
+  return readCapsule(root);
 }
 
 export async function git(root: string, argv: string[]) {
