@@ -4,34 +4,20 @@ Un comando prepara la cartella per Claude Code e Codex. Poi il lavoro si chiude 
 
 [![Node](https://img.shields.io/badge/Node-24.19%2B-3c873a)](#installazione) [![Claude Code](https://img.shields.io/badge/Claude%20Code-supportato-d97757)](docs/guide/uso.md) [![Codex](https://img.shields.io/badge/Codex-supportato-412991)](docs/guide/uso.md) [![Licenza](https://img.shields.io/badge/licenza-Apache--2.0-blue)](LICENSE)
 
-Usi **Claude Code** o **Codex** per scrivere software. Prima del codice c'è sempre lo stesso lavoro: capire il progetto, comporre un ambiente che non si contraddica, ricordare da dove si parte. Forgeyard fa quel lavoro sulla tua macchina. Guarda la cartella, ti chiede il risultato, ti mostra cosa scriverà e, dopo il tuo sì, lascia l'ambiente pronto. Poi torni nel client che usi già e parli del software.
+Se lavori con Claude Code o Codex conosci la routine. Prima di scrivere una riga devi spiegare il progetto all'agente, mettere insieme istruzioni e skill e sperare che non si contraddicano. Alla fine l'agente ti dice «fatto, i test passano», e tu devi credergli sulla parola.
 
-**Un comando. Una domanda. Una conferma.**
+Forgeyard si occupa di tutte e due le cose. Lo lanci nella cartella, lui la guarda, ti fa una sola domanda, ti mostra cosa installerà e aspetta il tuo sì. Poi torni nel client di sempre e lavori come al solito, con una differenza: l'agente non può più chiudere un lavoro con la sola parola. Ogni affermazione deve poggiare su qualcosa che si può controllare, come un comando eseguito o un file letto, altrimenti il lavoro resta aperto.
 
-```bash
-forgeyard
-```
-
-- Legge il progetto prima di farti una domanda.
-- Sceglie un ambiente coerente per quella cartella, e te lo mostra.
-- Una consegna si chiude quando l'affermazione poggia su una prova.
+Un comando, una domanda, una conferma. Non ci sono profili da scegliere né skill da ricordare per nome.
 
 > [!NOTE]
-> **Nessuna prova live con account Claude Code o Codex è mai stata eseguita.** Ciò che questa pagina descrive è verificato da test strutturali, locali e di CI: nessuno ha ancora aperto una cartella preparata in un client autenticato. Lo [stato](docs/STATO.md) lo registra con la sua data.
-
----
+> **Nessuna prova live con account Claude Code o Codex è mai stata eseguita.** Quello che leggi qui è verificato da test automatici, in locale e in CI, ma nessuno ha ancora aperto una cartella preparata in un client vero, con un account autenticato. Lo [stato](docs/STATO.md) tiene il conto preciso, con la data.
 
 ## Installazione
 
-Ti servono Node.js, Git e un client. Forgeyard usa quelli che hai già.
+Ti servono Node.js 24.19 o una 24.x successiva, Git, e Claude Code o Codex già installato e collegato al tuo account. Forgeyard non tocca l'account e non chiama modelli: la conversazione resta nel client che usi già.
 
-| | |
-|---|---|
-| **Node.js** | `24.19.0` o una successiva `24.x`. Controlla con `node --version`. |
-| **Git** | raggiungibile nel `PATH`. La ricognizione ne legge i metadati: dov'è un repository, se è un worktree o un submodule, quali file sono già tracciati. |
-| **Un client** | Claude Code oppure Codex, già installato e autenticato. La conversazione e l'account restano lì. |
-
-Si installa dal checkout. Il pacchetto npm pubblico non c'è: le dipendenze restano quelle del lockfile.
+Non c'è ancora un pacchetto su npm, quindi si installa dal sorgente:
 
 ```bash
 git clone https://github.com/diegogrizi/forgeyard.git
@@ -39,118 +25,93 @@ cd forgeyard
 npm run install:local
 ```
 
-Il comando installa le dipendenze, compila e collega `forgeyard` ai comandi di npm, puntando a questo checkout. Non scrive nelle cartelle dei tuoi progetti e non tocca l'account del client. Se aggiorni il checkout, ricompila con `npm run build` prima di riusare il comando.
+Il comando installa le dipendenze dal lockfile, compila e rende `forgeyard` disponibile da qualunque cartella. Non scrive niente nei tuoi progetti. Se più avanti aggiorni il checkout, rilancia `npm run build`.
 
 ## Preparare una cartella
 
-Apri il terminale nella cartella su cui vuoi lavorare. Può essere vuota, essere un repository, stare dentro un repository o contenerne diversi.
+Apri il terminale nella cartella su cui vuoi lavorare e lancia `forgeyard`. Va bene una cartella vuota, un repository o una cartella che ne contiene diversi.
 
-```bash
-forgeyard
-```
-
-Niente profili, niente autori di skill, niente ordine da ricordare. Il client lo decidono la cartella e la macchina, e l'anteprima dice il perché: un `CLAUDE.md` già presente prepara Claude Code, un `AGENTS.md` già presente prepara Codex. Senza nessuno dei due file conta il client installato su questa macchina; se li trova installati entrambi, o nessuno, prepara il formato di Codex.
-
-Immagina il checkout del servizio ordini. Vuoi il pagamento con carta, e il database dei clienti deve restare com'è. L'unica domanda è il risultato, in una riga:
+Forgeyard guarda cosa c'è e sceglie il client da solo. Se trova un `CLAUDE.md` prepara Claude Code, se trova un `AGENTS.md` prepara Codex, altrimenti guarda quale dei due hai installato. Se li hai tutti e due, o nessuno, usa il formato di Codex. Poi ti fa l'unica domanda a cui non può rispondere da solo:
 
 ```text
 Che risultato vuoi ottenere?
 > Il servizio ordini accetta il pagamento con carta, senza toccare il database dei clienti
 ```
 
-Poi arriva l'anteprima: quale client, quante capacità entrano e quante restano fuori, quali verifiche il progetto dichiara già e quanti file. La conferma, se non rispondi, è no. Un no lascia la cartella come l'hai trovata. Senza un terminale interattivo — un pipe, uno script — vedi solo l'anteprima, e non viene scritto nessun file.
+Prima di scrivere qualunque cosa ti mostra un riepilogo: quale client, quante capacità ha scelto, quali verifiche userà e quanti file creerà. Se dici di no, o premi invio senza rispondere, la cartella resta com'era. Se dici sì, crea la sua area privata in `.forgeyard/`, installa l'ambiente per l'agente (sullo schermo lo chiama *imbracatura*) e lo collega al client come server locale. Se all'apertura il client ti chiede di abilitare quel server, accetta e riapri la cartella.
 
-Il sì fa tre cose, e il programma le dice mentre le fa.
+Se lo rilanci, rifà solo quello che manca, e se non manca niente non tocca niente. Se invece lo lanci da uno script, senza un terminale, ti mostra il riepilogo e si ferma lì.
 
-1. **Area personale.** Crea `.forgeyard/`, con la mappa della cartella e un'esclusione che la tiene fuori dai commit.
-2. **Imbracatura.** Installa l'ambiente dell'assistente: istruzioni, capacità scelte per questo progetto, controlli, e un'identità fissata byte per byte.
-3. **Collegamento.** Registra un server locale che il client può avviare: la voce `forgeyard` in `.mcp.json` per Claude Code, la sezione `[mcp_servers.forgeyard]` in `.codex/config.toml` per Codex.
+Cosa significa ogni riga che vedi a schermo è spiegato in [Primo avvio](docs/guide/primo-avvio.md).
 
-Se il client, all'apertura, chiede di abilitare quel server, accettalo dai suoi controlli e riapri la cartella. La fiducia resta una sua decisione.
+## Lavorare nel client
 
-Alla seconda esecuzione vengono rifatti soltanto i passi che mancano. Se non manca niente, non chiede niente e non scrive niente.
-
-Ogni riga di quello schermo è spiegata in [Primo avvio](docs/guide/primo-avvio.md).
-
-## Lavorare
-
-Apri la cartella nel client che la riga finale ha nominato. Descrivi il risultato, i vincoli e come si vede che è fatto:
+Da qui in poi si lavora nel client. Apri la cartella e descrivi quello che vuoi con parole tue, per esempio:
 
 > Nel servizio ordini serve il pagamento con carta. Non toccare il database dei clienti. Quando hai finito, dimmi su quali prove poggia il risultato.
 
-Descrivi il risultato con parole tue. L'ambiente sceglie procedura, contesto e controlli.
+L'agente legge il progetto e ti propone un piano: cosa cambierà, dove scriverà e come si vedrà che è fatto. Quando lo approvi, lavora solo dentro quei confini, esegue le verifiche che hai visto nel riepilogo e chiude con un verdetto che dice su cosa poggia. Se un punto è sostenuto solo dalle sue parole, il verdetto resta bloccato.
 
-1. L'assistente legge il progetto e propone un piano: requisiti, attività, ambiti di scrittura, criteri osservabili.
-2. Te lo fa confermare. Il sì vale per quel piano, su questa macchina.
-3. Implementa dentro gli ambiti confermati.
-4. Esegue i controlli che l'anteprima ti ha mostrato, e ne registra l'esito.
-5. Chiude con un verdetto che dichiara il sostegno più debole. Un criterio sorretto solo da prosa resta bloccato.
+Il giro completo, compreso cosa succede se qualcosa si interrompe a metà, è in [Uso](docs/guide/uso.md). Se qualcosa non va, parti da [Problemi](docs/guide/problemi.md).
 
-Il giro completo, e cosa succede se un passo si interrompe, è in [Uso](docs/guide/uso.md). Da un sintomo alla causa: [Problemi](docs/guide/problemi.md).
+## Perché un programma e non una raccolta di prompt
 
-## Cosa resta sotto controllo
+Le raccolte di agenti e skill che si trovano in giro descrivono come si dovrebbe lavorare. Però sono istruzioni scritte: un agente può ignorarle senza che nessuno se ne accorga, e a lavoro finito non c'è modo di sapere quali affermazioni del rapporto sono state verificate e quali no.
 
-L'imbracatura è l'ambiente con cui l'assistente lavorerà su questa cartella. Sei meccanismi la tengono onesta. Ognuno è codice, e ognuno ha un modo di mancare: il dettaglio, compresi i codici con cui si presenta, è in [Garanzie](docs/guide/garanzie.md).
+Forgeyard è un programma, e questo ci permette di trasformare le regole in controlli. Sono sei:
 
-| | |
-|---|---|
-| **Identità** | L'imbracatura che hai approvato è quella che gira. Se un suo file cambia, non si apre. |
-| **Evidenza** | Ogni affermazione ha un livello: un comando eseguito, dei byte letti, un'inferenza che cita le prove, oppure prosa del modello. La prosa non chiude una consegna. |
-| **Citazioni** | Un riferimento punta ai byte letti. Se la fonte cambia, la citazione è stantia. |
-| **Deriva** | Le istruzioni vengono confrontate con il codice. Una documentazione invecchiata compare come rilievo, con una severità. |
-| **Misura** | Tempo e costo sono un numero con un metodo dichiarato. Se in `forgeyard.yaml` hai dichiarato una linea di base umana, il certificato la confronta. Senza quella dichiarazione il confronto è assente. |
-| **Coerenza** | Prima di scrivere, un'imbracatura incoerente viene rifiutata: un rimando a un file che non verrà installato, un segnaposto rimasto, un percorso della macchina di chi l'ha generata. |
+- **Identità.** L'ambiente che hai approvato è esattamente quello che gira. Se un suo file cambia, il lavoro si ferma.
+- **Evidenza.** Ogni affermazione ha un livello di prova, e una fatta solo di parole non basta a chiudere un lavoro.
+- **Citazioni.** Quando l'agente cita un file, la citazione è legata al contenuto che ha letto. Se il file cambia, la citazione scade.
+- **Deriva.** Se le istruzioni smettono di descrivere il codice, `forgeyard doctor` se ne accorge.
+- **Misura.** Tempo e costo sono numeri con un metodo. Il confronto con un lavoro umano compare solo se hai dichiarato tu una linea di base in `forgeyard.yaml`.
+- **Coerenza.** Un ambiente con un link a un file che non c'è, o con un segnaposto dimenticato, viene rifiutato prima di essere scritto.
 
-## Dove finiscono i file
+Ognuno di questi controlli è codice che può fallire, e quando fallisce lo dice con un suo codice d'errore. Li trovi tutti in [Garanzie](docs/guide/garanzie.md), e la versione lunga del perché è in [Direzione](docs/DIREZIONE.md).
 
-```text
-workspace/
-├── .forgeyard/          area personale, fuori dai commit
-├── servizio-ordini/     repository Git
-├── servizio-clienti/    repository Git
-└── frontend/            repository Git
-```
+## Cosa tocca nella tua cartella
 
-Durante la preparazione il codice dei progetti non viene modificato. L'area personale si scrive da sé la propria esclusione, e il `.gitignore` condiviso del software resta com'è quando la cartella è un repository: l'esclusione della configurazione del client sta in `.git/info/exclude`, perché quella configurazione contiene percorsi di questa macchina. In una cartella che non è un repository, la stessa esclusione è una regola in `.gitignore`.
+Il tuo codice resta com'è. La memoria di Forgeyard sta in `.forgeyard/`, che resta fuori dai commit. L'ambiente per l'agente va dove il client se lo aspetta: con Claude Code, per esempio, in `.claude/`, insieme a `PROJECT.md`, `forgeyard.yaml` e `forgeyard.lock` alla radice. Questi file, per ora, Git li vede.
 
-Se un `CLAUDE.md` o un `AGENTS.md` esiste già, in coda arriva un blocco delimitato. L'anteprima elenca queste scritture prima del sì.
+La configurazione del client (`.mcp.json` o `.codex/config.toml`) contiene percorsi di questa macchina, quindi viene esclusa da Git con `.git/info/exclude` e il tuo `.gitignore` resta com'è. Se la cartella non è un repository, l'esclusione diventa una regola in `.gitignore`. Se il file di istruzioni del client esiste già, ci aggiunge in fondo un blocco delimitato, e te lo dice nel riepilogo prima del sì.
 
-Sono riconosciuti anche repository senza commit, worktree collegati e submodule. Un lavoro può attraversare più repository della stessa cartella; un'attività resta dentro un solo membro, perché il suo controllo gira una volta, in un solo albero.
+Funziona anche con repository senza commit, worktree collegati e submodule, e con una cartella che contiene più repository. In quel caso un lavoro può toccarli tutti, ma ogni singola attività resta dentro uno solo.
 
-Nella cartella già preparata, `forgeyard update` aggiorna l'imbracatura e `forgeyard rollback` annulla l'ultima operazione reversibile. Per iniziare non servono. Quali comandi sono l'ingresso e quali no: [Comandi avanzati](docs/percorsi-legacy.md).
+Per aggiornare l'ambiente c'è `forgeyard update`, per annullare l'ultima operazione `forgeyard rollback`. Gli altri comandi sono in [Comandi avanzati](docs/percorsi-legacy.md), ma per iniziare non ti servono.
 
-## Confini
+## Cosa non fa
 
-- Modelli, credenziali, abbonamenti e quote restano nel client. Forgeyard non li legge e non li sostituisce.
-- Push, issue remote, deploy e messaggi li autorizzi tu, nel momento in cui li fai.
-- I byte di terze parti restano quelli della loro licenza. In preparazione il programma non esegue gli hook e gli script di quel catalogo.
-- Insieme al programma viaggia un catalogo pinnato — 202 agenti, 183 skill e 105 comandi — di cui la preparazione usa la parte che il progetto regge. Origine e impronte: [Provenienza](docs/provenance/catalog-sources.md).
+Forgeyard non chiama modelli, non legge credenziali e non sostituisce abbonamenti o quote: tutto questo resta nel client. Non fa push, deploy o issue da solo, perché quelli li autorizzi tu quando succedono. E non manda telemetria.
 
-## Per chi lavora su questo repository
+Insieme al programma arriva un catalogo di terze parti fissato a una versione precisa, con 202 agenti, 183 skill e 105 comandi. La preparazione ne prende solo quello che serve al tuo progetto e non ne esegue hook o script. Da dove viene e con quale licenza è in [Provenienza](docs/provenance/catalog-sources.md).
+
+## Se vuoi lavorare sul codice
+
+Parti da [AGENTS.md](AGENTS.md), dove ci sono le regole del progetto. La verifica completa è un comando solo:
 
 ```bash
 npm run verify
 ```
 
-Typecheck, test, build, controllo byte per byte del catalogo, provenienza, audit di release e contenuto del pacchetto. L'esito misurato, con data e revisione, è in [Stato](docs/STATO.md). Le regole di sviluppo sono in [AGENTS.md](AGENTS.md), il modo di contribuire in [CONTRIBUTING.md](CONTRIBUTING.md), il modello di minaccia in [SECURITY.md](SECURITY.md).
+Fa typecheck, test e build, controlla il catalogo byte per byte, rigenera la provenienza e verifica il contenuto del pacchetto. L'ultimo esito misurato, con la data, è in [Stato](docs/STATO.md). Per contribuire c'è [CONTRIBUTING.md](CONTRIBUTING.md), per la sicurezza [SECURITY.md](SECURITY.md).
 
 ## Documentazione
 
-Per usare il programma basta questa pagina. Il resto è lì quando vuoi andare più a fondo.
+Per iniziare basta questa pagina. Il resto serve quando vuoi andare più a fondo.
 
 | | |
 |---|---|
 | [Primo avvio](docs/guide/primo-avvio.md) | ogni riga dello schermo, e cosa succede se un passo non riesce |
-| [Uso](docs/guide/uso.md) | il giro di lavoro nel client, dal piano al verdetto |
-| [Problemi](docs/guide/problemi.md) | un sintomo, la causa, cosa fare |
-| [Garanzie](docs/guide/garanzie.md) | i sei meccanismi, come mancano, cosa non promettono |
-| [Manifesto](docs/MANIFESTO.md) | il testo da cui il programma discende, in inglese |
-| [Direzione](docs/DIREZIONE.md) | la tesi e i confini di progetto |
-| [Stato](docs/STATO.md) | cosa è implementato, cosa attraversa il percorso ordinario, cosa è stato misurato |
+| [Uso](docs/guide/uso.md) | il lavoro nel client, dal piano al verdetto |
+| [Problemi](docs/guide/problemi.md) | dal sintomo alla causa, e cosa fare |
+| [Garanzie](docs/guide/garanzie.md) | i sei controlli, come falliscono e cosa non promettono |
+| [Manifesto](docs/MANIFESTO.md) | il testo da cui è nato il progetto, in inglese |
+| [Direzione](docs/DIREZIONE.md) | la tesi e i confini del progetto |
+| [Stato](docs/STATO.md) | cosa c'è, cosa manca e cosa non è mai stato provato dal vivo |
 | [Architettura](docs/guide/architettura.md) | la mappa dei moduli |
-| [Provenienza del catalogo](docs/provenance/catalog-sources.md) | origine, licenza e integrità dei byte di terzi |
-| [Comandi avanzati](docs/percorsi-legacy.md) | diagnosi, aggiornamento, rollback, e i comandi che non sono l'ingresso |
+| [Provenienza del catalogo](docs/provenance/catalog-sources.md) | origine, licenza e integrità dei file di terzi |
+| [Comandi avanzati](docs/percorsi-legacy.md) | diagnosi, aggiornamento, rollback e gli altri comandi |
 
 ## Licenza
 
-Codice, documentazione, pack e template originali sono [Apache-2.0](LICENSE). Le attribuzioni stanno in [NOTICE](NOTICE). I componenti esterni, catalogo compreso, conservano le proprie licenze in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Il codice, la documentazione, i pack e i template originali sono sotto [Apache-2.0](LICENSE), con le attribuzioni in [NOTICE](NOTICE). I componenti esterni, catalogo compreso, mantengono le loro licenze, elencate in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
