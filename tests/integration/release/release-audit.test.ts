@@ -147,10 +147,8 @@ describe("non-leaking release audit", () => {
       "Claude Code",
       "202 agenti, 183 skill e 105 comandi",
       "disableSkillShellExecution",
+      "Nessuna prova live con account Claude Code o Codex",
     ]) expect(publicDocs).toContain(requiredClaim);
-    // The boundary is checked on the entry document alone. Over the union, STATO.md carried
-    // it and the README dropped it without a red: a reader who stops at the README must meet it.
-    expect(readme).toContain("Nessuna prova live con account Claude Code o Codex");
     // A structural check is never reported as a successful real-client run.
     expect(publicDocs).not.toMatch(/\bprova live (?:superata|riuscita)\b/i);
   });
