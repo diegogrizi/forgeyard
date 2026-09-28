@@ -1,12 +1,12 @@
 # Forgeyard
 
-Con un comando prepari la cartella per Claude Code e Codex, e da lì in poi l'agente non può dirti «fatto» senza dimostrarlo.
+La fucina del software agentico: prepara Claude Code e Codex, guida il lavoro e verifica ogni consegna.
 
 [![Node](https://img.shields.io/badge/Node-24.19%2B-3c873a)](#installazione) [![Claude Code](https://img.shields.io/badge/Claude%20Code-supportato-d97757)](docs/guide/uso.md) [![Codex](https://img.shields.io/badge/Codex-supportato-412991)](docs/guide/uso.md) [![Licenza](https://img.shields.io/badge/licenza-Apache--2.0-blue)](LICENSE)
 
-Chi lavora con Claude Code o Codex lo sa bene. Prima ancora di scrivere una riga bisogna spiegare il progetto all'agente e mettere insieme istruzioni e skill sperando che non si contraddicano. Alla fine, quando l'agente annuncia che è tutto pronto e che i test passano, non resta che credergli sulla parola.
+Forgeyard trasforma una cartella di lavoro in un'officina in cui Claude Code e Codex costruiscono software con metodo. Che la cartella sia vuota, un repository o un insieme di repository, l'agente sa che cosa deve ottenere, entro quali confini può muoversi e come si dimostra che il lavoro è finito.
 
-Forgeyard nasce per risolvere entrambe le cose. Basta lanciarlo nella cartella: la esamina, ti fa una sola domanda, ti mostra che cosa installerà e aspetta il tuo via libera. Dopodiché torni nel client di sempre e lavori come hai sempre fatto, con una differenza sostanziale. Un lavoro si chiude soltanto quando ogni affermazione dell'agente si regge su qualcosa di verificabile, come un comando eseguito o un file letto davvero.
+Tutto avviene in tre tempi. Con un solo comando Forgeyard prepara l'ambiente, poi guida l'agente dal piano alla consegna e infine verifica che ogni affermazione si regga su una prova concreta, come un comando eseguito o un file letto davvero. Alla fine hai software che puoi accettare sapendo su che cosa poggia, invece di doverti fidare sulla parola.
 
 Un comando, una domanda, una conferma. Niente profili da scegliere e niente skill da ricordare a memoria.
 
@@ -24,11 +24,11 @@ npm run install:local
 
 Il comando installa le dipendenze indicate nel lockfile, compila il progetto e rende `forgeyard` disponibile in qualsiasi cartella, senza scrivere nulla nei tuoi progetti. Quando aggiorni il checkout, ricordati di rilanciare `npm run build`.
 
-## Preparare una cartella
+## Preparare la cartella
 
-Apri il terminale nella cartella in cui vuoi lavorare e lancia `forgeyard`. Può essere una cartella vuota, un singolo repository oppure una cartella che ne raccoglie diversi.
+Apri il terminale nella cartella in cui vuoi lavorare e lancia `forgeyard`. Il programma la esamina, capisce che tipo di progetto contiene e sceglie il client da preparare. Se trova un `CLAUDE.md` sceglie Claude Code, se trova un `AGENTS.md` sceglie Codex. Se non c'è nessuno dei due file guarda quale client hai installato, e se li trova entrambi, o nessuno, ripiega sul formato di Codex.
 
-Per prima cosa Forgeyard decide quale client preparare. Se trova un `CLAUDE.md` sceglie Claude Code, se trova un `AGENTS.md` sceglie Codex. Se non c'è nessuno dei due file guarda quale client hai installato, e se li trova entrambi, o nessuno, ripiega sul formato di Codex. Subito dopo ti fa l'unica domanda a cui non può rispondere da solo:
+A quel punto ti fa l'unica domanda a cui non può rispondere da solo:
 
 ```text
 Che risultato vuoi ottenere?
@@ -41,25 +41,25 @@ Puoi rilanciarlo quando vuoi, perché rifà soltanto i passaggi che mancano e, s
 
 Il significato di ogni riga che compare a schermo è spiegato in [Primo avvio](docs/guide/primo-avvio.md).
 
-## Lavorare nel client
+## Guidare il lavoro
 
-A questo punto si passa al client. Apri la cartella e descrivi con parole tue quello che ti serve, per esempio:
+Il lavoro vero si svolge nel client che usi già, ma dentro l'officina che Forgeyard ha appena allestito. Apri la cartella e descrivi con parole tue quello che ti serve, per esempio:
 
 > Aggiungi al servizio ordini il pagamento con carta, senza toccare il database dei clienti, e quando hai finito dimmi su quali prove si basa il risultato.
 
-L'agente studia il progetto e ti propone un piano che dice cosa cambierà, dove interverrà e come si capirà che il lavoro è finito. Una volta approvato il piano, si muove solo entro quei confini, esegue le verifiche che hai visto nel riepilogo e chiude con un verdetto che dichiara su quali prove si regge. Se un punto è sostenuto soltanto dalle sue parole, il verdetto resta bloccato.
+Non devi scegliere procedure né richiamare skill per nome, perché ci pensa l'ambiente. L'agente studia il progetto e ti propone un piano che dice cosa cambierà, dove interverrà e come si capirà che il lavoro è finito. Una volta approvato il piano, si muove solo entro quei confini, esegue le verifiche che hai visto nel riepilogo e chiude con un verdetto che dichiara su quali prove si regge.
 
 Il giro completo, compreso quello che succede quando qualcosa si interrompe a metà, è descritto in [Uso](docs/guide/uso.md). Se qualcosa non funziona, il punto di partenza è [Problemi](docs/guide/problemi.md).
 
-## Perché un programma e non una raccolta di prompt
+## Verificare la consegna
 
-Le raccolte di agenti e skill che circolano in rete spiegano come si dovrebbe lavorare, ma restano istruzioni scritte. Un agente può ignorarle senza che nessuno se ne accorga, e a lavoro finito non c'è modo di distinguere le affermazioni verificate da quelle che non lo sono.
+Qui sta la vera differenza rispetto alle raccolte di agenti e skill che circolano in rete. Quelle spiegano come si dovrebbe lavorare, ma restano istruzioni scritte: un agente può ignorarle senza che nessuno se ne accorga, e a lavoro finito non c'è modo di distinguere le affermazioni verificate da quelle che non lo sono.
 
 Forgeyard invece è un programma, e questo gli permette di trasformare le regole in controlli veri e propri. Sono sei. Il primo garantisce che l'ambiente in funzione sia esattamente quello che hai approvato, e se uno dei suoi file cambia il lavoro si ferma. Il secondo assegna a ogni affermazione un livello di prova, e quelle fatte solo di parole non bastano a chiudere un lavoro. Il terzo lega ogni citazione al contenuto che l'agente ha letto davvero, così che la citazione scada quando il file cambia. Il quarto, con `forgeyard doctor`, si accorge di quando le istruzioni smettono di descrivere il codice.
 
-Il quinto misura tempo e costo con un metodo dichiarato, e li confronta con quelli di un lavoro umano solo se hai indicato tu una linea di base in `forgeyard.yaml`. L'ultimo, infine, rifiuta un ambiente incoerente prima ancora di scriverlo, per esempio quando contiene un link a un file inesistente o un segnaposto dimenticato.
+Il quinto misura tempo e costo con un metodo dichiarato, e li confronta con quelli di un lavoro umano se hai indicato una linea di base in `forgeyard.yaml`. L'ultimo, infine, rifiuta un ambiente incoerente prima ancora di scriverlo, per esempio quando contiene un link a un file inesistente o un segnaposto dimenticato.
 
-Ciascun controllo può fallire e, quando succede, lo segnala con un codice d'errore preciso. Li trovi tutti in [Garanzie](docs/guide/garanzie.md), mentre le ragioni del progetto sono raccontate per esteso in [Direzione](docs/DIREZIONE.md).
+Ciascun controllo, quando scatta, lo segnala con un codice d'errore preciso. Li trovi tutti in [Garanzie](docs/guide/garanzie.md), mentre le idee da cui nasce il progetto sono raccontate per esteso in [Direzione](docs/DIREZIONE.md).
 
 ## Cosa cambia nella tua cartella
 
@@ -71,11 +71,11 @@ Sono supportati anche i repository senza commit, i worktree collegati, i submodu
 
 Per aggiornare l'ambiente c'è `forgeyard update`, mentre per annullare l'ultima operazione c'è `forgeyard rollback`. Gli altri comandi sono raccolti in [Comandi avanzati](docs/percorsi-legacy.md), ma per cominciare non servono.
 
-## Cosa non fa
+## Cosa resta nelle tue mani
 
-Forgeyard non chiama modelli, non legge credenziali e non si sostituisce ad abbonamenti o quote, che restano affare del client. Non fa push, non lancia deploy e non apre issue di sua iniziativa, perché sono azioni che autorizzi tu nel momento in cui avvengono. E non invia alcuna telemetria.
+Modelli, credenziali, abbonamenti e quote restano affare del client, e Forgeyard non li tocca. Push, deploy e issue partono solo quando li autorizzi tu, nel momento in cui servono, e non viene inviata alcuna telemetria.
 
-Con il programma viene distribuito un catalogo di terze parti bloccato a una versione precisa, che comprende 202 agenti, 183 skill e 105 comandi. Durante la preparazione Forgeyard ne prende soltanto ciò che serve al tuo progetto, senza eseguirne hook o script. Origine e licenze sono documentate in [Provenienza](docs/provenance/catalog-sources.md).
+Insieme al programma arriva anche la materia prima: un catalogo di terze parti bloccato a una versione precisa, che comprende 202 agenti, 183 skill e 105 comandi. Durante la preparazione Forgeyard ne sceglie soltanto ciò che serve al tuo progetto, senza eseguirne hook o script. Origine e licenze sono documentate in [Provenienza](docs/provenance/catalog-sources.md).
 
 ## Per chi vuole mettere mano al codice
 
@@ -96,7 +96,7 @@ Per cominciare basta questa pagina, il resto è lì quando vuoi approfondire.
 | [Primo avvio](docs/guide/primo-avvio.md) | ogni riga dello schermo, e cosa succede se un passaggio non va a buon fine |
 | [Uso](docs/guide/uso.md) | il lavoro nel client, dal piano al verdetto |
 | [Problemi](docs/guide/problemi.md) | dal sintomo alla causa, e come rimediare |
-| [Garanzie](docs/guide/garanzie.md) | i sei controlli, come falliscono e cosa non promettono |
+| [Garanzie](docs/guide/garanzie.md) | i sei controlli, come scattano e che cosa coprono |
 | [Manifesto](docs/MANIFESTO.md) | il testo da cui è nato il progetto, in inglese |
 | [Direzione](docs/DIREZIONE.md) | la tesi e i confini del progetto |
 | [Stato](docs/STATO.md) | a che punto è ogni parte del progetto |
