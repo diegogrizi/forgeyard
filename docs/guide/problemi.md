@@ -324,6 +324,48 @@ schema.
 
 **Cosa fare.** Rimuovi quella directory di stato privata e ricomincia un lavoro: nessun file
 del progetto viene toccato, perché quello stato non ha mai vissuto nel repository.
+
+#### Ogni chiamata del protocollo risponde che la capsula è cambiata
+
+Uno strumento nativo qualsiasi — anche la sola lettura di `fy_context` — risponde con il
+codice `FY_CAPSULE_MIGRATION_REQUIRED`. Il caso tipico: una sessione era attaccata in
+scrittura, hai modificato la configurazione posseduta (`forgeyard.yaml`, per esempio
+`timeboxMinutes`) e hai eseguito `forgeyard update`.
+
+**Causa.** La capsula è indirizzata dal contenuto: il suo identificativo è l'impronta della
+policy, dei gate e dei file congelati. Lo stato privato ricorda l'identificativo sotto cui
+questo progetto ha lavorato, e `update` ne ha scritto uno nuovo. Il runtime **non accetta la
+sostituzione in silenzio**: un cambio di policy scivolato sotto un lavoro che una persona ha
+approvato contro la policy di prima è esattamente ciò che la capsula serve a impedire. Il
+rifiuto è quel controllo che funziona, non un guasto.
+
+**Cosa fare.** Accetta la nuova capsula in modo esplicito, con una conferma locale:
+
+```bash
+forgeyard reconcile-capsule --root .
+```
+
+Il dialogo mostra l'identificativo memorizzato, quello corrente e la **differenza fra le due
+policy** — i campi che si spostano, i gate che cambiano comando e quanti file congelati
+dell'imbracatura sono cambiati. Se la capsula precedente non è più sul disco, la differenza
+viene dichiarata `unavailable` invece di essere presentata come «nessuna differenza». Se
+accetti, il progetto passa a lavorare sotto la capsula corrente e il lease dello scrittore
+viene **rilasciato**: era stato preso sotto un'altra policy, quindi la sessione successiva si
+riattacca con `fy_attach` e ne prende uno nuovo sotto questa.
+
+Il comando **rifiuta**, con `FY_RECONCILIATION_REQUIRED`, se esiste già un lavoro registrato:
+quel lavoro porta un consenso umano dato contro la capsula memorizzata, e non viene spostato su
+un'altra. In quel caso la via è la riconciliazione di quel lavoro, che ha il proprio dialogo:
+
+```bash
+forgeyard reconcile --root . --run <id> --session <id>
+```
+
+Due note che risparmiano tempo. `forgeyard rollback` **non** è la via d'uscita da questo stato:
+si ferma con `FY_OWNERSHIP_CONFLICT` perché dovrebbe sostituire il file che hai modificato tu, e
+non sovrascrive modifiche locali. E rieseguire `forgeyard prepare` si ferma per la stessa
+ragione: l'imbracatura c'è già.
+
 ## Verdetti e controlli
 
 #### Un verdetto di consegna è `blocked` con `evidence:unsupported-verdict`

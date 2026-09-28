@@ -167,10 +167,17 @@ vecchio resta un documento storico, non una prova corrente.
 
 La scadenza di un lease non è un'acquisizione automatica. Il recupero passa da comandi
 locali espliciti (`reconcile`, `reconcile-writer`, `reconcile-install`,
-`reconcile-operation`), ognuno con la propria conferma umana. Un'identità di processo
-sconosciuta resta un blocco: la terminazione di un figlio diretto non prova che l'intero
-albero sia finito, e il recupero di un gate marca il tentativo come non verificato invece
-di dichiararlo riuscito.
+`reconcile-operation`, `reconcile-capsule`), ognuno con la propria conferma umana.
+Un'identità di processo sconosciuta resta un blocco: la terminazione di un figlio diretto
+non prova che l'intero albero sia finito, e il recupero di un gate marca il tentativo come
+non verificato invece di dichiararlo riuscito.
+
+Anche la capsula ha la sua via d'uscita, e ha la stessa forma: se cambia sotto quella che il
+progetto ha memorizzato — tipicamente dopo aver modificato `forgeyard.yaml` e aver eseguito
+`forgeyard update` — il runtime rifiuta ogni chiamata invece di accettare la sostituzione in
+silenzio. `reconcile-capsule` mostra la differenza di policy fra le due e chiede una conferma
+locale; **rifiuta se esiste già un lavoro registrato**, perché il consenso di quel lavoro è
+stato dato contro la capsula di prima e non viene spostato su un'altra.
 
 I sintomi osservabili, con la loro causa e cosa fare — dal comando non riconosciuto al
 verdetto bloccato, fino a come annullare — sono raccolti in
