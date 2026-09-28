@@ -49,8 +49,8 @@ export function capsuleDifference(previous: Capsule | null, current: Capsule): r
       ? [canonicalJson(before ?? null), canonicalJson(after ?? null)] : readable;
     lines.push(`gates.${id}: ${left} -> ${right}`);
   }
-  // Il conteggio e non l'elenco: un aggiornamento ne cambia decine, e una conferma lunga tre
-  // schermate non viene letta. Che siano cambiati va detto comunque.
+  // The count, not the list: one update changes dozens of them, and a confirmation three
+  // screens long is a confirmation nobody reads. That they changed still has to be said.
   const inventory = (capsule: Capsule) => new Map(capsule.payload.files.map((file) => [file.path, file.sha256]));
   const previousFiles = inventory(previous); const currentFiles = inventory(current);
   const changed = [...currentFiles].filter(([path, sha256]) => previousFiles.has(path) && previousFiles.get(path) !== sha256).length;
