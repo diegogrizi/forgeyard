@@ -224,20 +224,28 @@ Alla data di questo documento, e su questa macchina:
   del catalogo vendored, provenienza rigenerabile, audit di release e contenuto del
   pacchetto. La CI controlla Linux e Windows, e non rigenera i risultati attesi prima di
   confrontarli.
-- **Il 25 settembre 2026 `npm run verify` è passato interamente su questa macchina in 962,06 s,
-  con codice di uscita 0**: 80 file di test, 600 prove superate, una saltata e nessuna fallita;
+- **Il 28 settembre 2026 `npm run verify` è passato interamente su questa macchina in 950,60 s,
+  con codice di uscita 0**: 81 file di test, 612 prove superate, una saltata e nessuna fallita;
   catalogo verificato byte per byte (**1.007 file sorgente**, **211.594 righe fisiche**),
   provenienza rigenerabile senza differenze, audit di release passato (202 agenti, 183 skill e
   105 comandi) e contenuto del pacchetto controllato. La misura è stata presa ad albero fermo,
   senza nessun editor sul repository, e il codice di uscita è stato letto da `npm` e non da un
   `echo` — due difetti di metodo commessi poco prima, che insieme avevano prodotto un «exit 0»
   per un giro con un rosso dentro.
-  **La revisione è `35b022a`**, e nominarla serve: una misura è di un albero, non di una data.
+  **La revisione è `530d9d0`**, e nominarla serve: una misura è di un albero, non di una data.
   L'unica cosa cambiata dopo di essa è questa voce. Vale per questa macchina: non è
   un'attestazione riusabile per un'altra.
-- **Il costo della verifica non è cresciuto con il lavoro sui repository membri.** 962,06 s cade
+- **Un rosso ambientale, per una volta dimostrato invece che dichiarato.** Lo stesso albero
+  `530d9d0` è stato verificato due volte di seguito: il primo giro ha prodotto 22 prove rosse
+  in 2869 s, il secondo nessuna in 950,60 s. L'unica variabile misurata fra i due era la memoria
+  libera — 0,64 GB contro 5,77 GB su 15,66 — con CPU allo 0% e disco al 2% in entrambi. I rossi
+  erano `EBUSY` su `rmdir` e conteggi sbagliati in `discovery.test.ts`, che da solo passava in
+  303 s invece dei 23 s che gli costa il suo lavoro. Nessun commit fra i due giri è raggiungibile
+  da quel file. La regola resta quella che tre diagnosi sbagliate hanno scritto: «ambientale» va
+  sostenuto come qualunque altra affermazione, e qui la prova è il secondo giro, non il ragionamento.
+- **Il costo della verifica non è cresciuto con il lavoro sui repository membri.** 950,60 s cade
   **dentro** l'intervallo di 879-1047 s misurato il 24 settembre, quando la suite aveva 71 file
-  e 548 prove: quel lavoro ne ha aggiunti 9 e 52, incluse cinque prove che installano
+  e 548 prove: quel lavoro ne ha aggiunti 10 e 64, incluse cinque prove che installano
   un'imbracatura vera su due repository Git e percorrono l'intero protocollo con gate reali.
   **Misurata è la non crescita**, non la sua spiegazione: che le prove pesanti girino in
   parallelo e che quindi la più lenta non si sommi al totale è l'inferenza più semplice che la
