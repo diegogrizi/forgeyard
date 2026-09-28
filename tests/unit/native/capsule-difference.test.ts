@@ -27,6 +27,21 @@ function capsule(overrides: { policy?: Partial<CapsulePolicy>; gates?: readonly 
 }
 
 describe("what a human is shown before accepting a changed capsule", () => {
+  test("a policy field that disappeared is named, not called identical", () => {
+    // This module promises that a field it does not print still counts as a difference. A key
+    // whose value is null on the side that has it is the one case where `?? null` on both sides
+    // reads as equal, so the fallback would claim the policy is identical while its field set
+    // changed — an overclaim in the one function whose whole job is not overclaiming.
+    const withKey = capsule();
+    const withoutKey = capsule();
+    const policy = withoutKey.payload.policy as unknown as Record<string, unknown>;
+    delete policy["maxRecordedCostUsd"];
+
+    const lines = capsuleDifference(withKey, withoutKey);
+
+    expect(lines.join("\n")).toContain("policy.maxRecordedCostUsd");
+    expect(lines.join("\n")).not.toContain("identical");
+  });
   test("a policy field that moved is named with both values", () => {
     expect(capsuleDifference(capsule(), capsule({ policy: { timeboxMinutes: 240 } })))
       .toContain("policy.timeboxMinutes: 300 -> 240");

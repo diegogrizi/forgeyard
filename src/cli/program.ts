@@ -177,6 +177,7 @@ Comandi del runtime nativo:
   consent/human-review/reconcile --root <project> --run <id> --session <id>
   reconcile-install --root <project>
   reconcile-writer --root <project> --session <id>
+  reconcile-capsule --root <project>
   reconcile-operation --root <project> --operation <id>
 
 Le conferme umane native non hanno --yes.

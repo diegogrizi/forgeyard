@@ -42,6 +42,25 @@ describe("native command routing", () => {
     expect(defined.filter((name) => !NATIVE_COMMANDS.includes(name))).toEqual([]);
   });
 
+  /**
+   * A third enumeration, and the one a person actually reads: the main help text is the only
+   * browsable inventory of the advanced commands, and `AGENTS.md` promises they stay
+   * inspectable. It is not the routing list, so a name missing here misroutes nothing — it
+   * simply cannot be found. The two tests above bound the router to itself; this one binds the
+   * prose to the router, which is what stops the next command from being added in one place.
+   */
+  test("every routed name is listed in the help a person reads", () => {
+    // `helpInformation()` renders the generated part only; the block a person reads is added
+    // with `addHelpText`, which commander emits through the configured output writer.
+    let help = "";
+    const program = createProgram();
+    program.configureOutput({ writeOut: (value: string) => { help += value; } });
+    program.outputHelp();
+
+    expect(help).toContain("Comandi del runtime nativo:");
+    expect(NATIVE_COMMANDS.filter((name) => !help.includes(name))).toEqual([]);
+  });
+
   test("the legacy program defines none of them, so the router must consult the list", () => {
     const legacy = new Set(createProgram().commands.map((command) => command.name()));
 

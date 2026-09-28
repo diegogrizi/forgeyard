@@ -33,8 +33,12 @@ export function capsuleDifference(previous: Capsule | null, current: Capsule): r
   const was = previous.payload.policy as unknown as Record<string, unknown>;
   const now = current.payload.policy as unknown as Record<string, unknown>;
   for (const key of [...new Set([...Object.keys(was), ...Object.keys(now)])].sort(order)) {
-    if (canonicalJson(was[key] ?? null) !== canonicalJson(now[key] ?? null))
-      lines.push(`policy.${key}: ${canonicalJson(was[key] ?? null)} -> ${canonicalJson(now[key] ?? null)}`);
+    // Presence, not only value. A key removed from the policy whose value was `null` compares
+    // equal through `?? null` on both sides, and the fallback below would then call the policy
+    // identical while its field set changed — the one overclaim this function exists to avoid.
+    const render = (source: Record<string, unknown>) =>
+      key in source ? canonicalJson(source[key] ?? null) : "(absent)";
+    if (render(was) !== render(now)) lines.push(`policy.${key}: ${render(was)} -> ${render(now)}`);
   }
   const gateIds = [...new Set([...previous.payload.gates, ...current.payload.gates].map((gate) => gate.id))].sort(order);
   for (const id of gateIds) {
