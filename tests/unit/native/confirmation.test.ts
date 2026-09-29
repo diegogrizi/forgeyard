@@ -45,9 +45,68 @@ function clean(stdout: string): DialogOutcome {
   return { exitCode: 0, stdout };
 }
 
-/** The script decodes to this; the tests read the shipped argument, not a second copy. */
+/**
+ * The script decodes to this, with PowerShell's line comments removed.
+ *
+ * Stripping is the point, not tidiness. Assertions that read the raw text are blind to a
+ * commented-out line, so `# [Console]::Write('realized:')` left behind mid-debugging passed
+ * every structural check while the token was never emitted — and a token never emitted turns
+ * every genuine approval into `FY_CONFIRMATION_UNAVAILABLE`. The assertions have to see what
+ * PowerShell sees.
+ *
+ * The scan tracks quoting, so a `#` inside a string is text and not the start of a comment.
+ * There is none in the script today; doing it by construction means there is nothing to
+ * re-check when there is.
+ */
 function shippedScript(): string {
-  return Buffer.from(windowsDialogCommand(input("x")).argv[6]!, "base64").toString("utf16le");
+  return withoutPowerShellComments(
+    Buffer.from(windowsDialogCommand(input("x")).argv[6]!, "base64").toString("utf16le"));
+}
+
+function withoutPowerShellComments(raw: string): string {
+  let stripped = "";
+  let quote: "'" | '"' | null = null;
+  for (let at = 0; at < raw.length; at += 1) {
+    const character = raw[at]!;
+    if (quote !== null) {
+      stripped += character;
+      // PowerShell escapes a quote by doubling it, which keeps the string open.
+      if (character === quote) {
+        if (raw[at + 1] === quote) { stripped += quote; at += 1; } else quote = null;
+      }
+      continue;
+    }
+    if (character === "'" || character === '"') { quote = character; stripped += character; continue; }
+    if (character === "#") {
+      while (at < raw.length && raw[at] !== "\n") at += 1;
+      stripped += "\n";
+      continue;
+    }
+    stripped += character;
+  }
+  return stripped;
+}
+
+/**
+ * The body of `.Add_<Event>({ ... })`, delimited by its own braces.
+ *
+ * A fixed proximity window was doing this job, and a constant like that drifts the moment the
+ * handler grows: too small and a legitimate edit reds the suite, too large and the assertion
+ * stops meaning "inside the handler".
+ */
+function handlerBody(script: string, event: string): string {
+  const marker = `Add_${event}({`;
+  const start = script.indexOf(marker);
+  expect(start, `the script has no ${marker}`).toBeGreaterThan(-1);
+  let depth = 0;
+  for (let at = start + marker.length - 1; at < script.length; at += 1) {
+    if (script[at] === "{") depth += 1;
+    else if (script[at] === "}") {
+      depth -= 1;
+      if (depth === 0) return script.slice(start + marker.length, at);
+    }
+  }
+  throw new Error(`braces never balance after ${marker}`);
 }
 
 /** `dialogDecision` refuses by throwing, so the thrown value is what the tests inspect. */
@@ -174,11 +233,21 @@ describe("a window that was never realized cannot have been answered", () => {
   test("the realization token can only be written from inside the handler", () => {
     // Two independent `toContain`s let the token move to the top of the script and stay
     // green: it would then be written unconditionally, the guard would be decorative, and
-    // nothing would fail. The write site has to be one, and inside `HandleCreated`.
+    // nothing would fail. The write site has to be one, live, and inside `HandleCreated`.
     const script = shippedScript();
 
     expect(script.split("[Console]::Write('realized:')").length - 1).toBe(1);
-    expect(script).toMatch(/Add_HandleCreated\(\{[\s\S]{0,160}\[Console\]::Write\('realized:'\)/);
+    expect(handlerBody(script, "HandleCreated")).toContain("[Console]::Write('realized:')");
+  });
+
+  test("a hash inside a string is text, not the start of a comment", () => {
+    // The stripper is load-bearing for three guards now. If it ever ate a `#` that belonged
+    // to a string, it would quietly change what those guards read, so its one failure mode
+    // gets a red of its own rather than a note saying the script happens not to contain one.
+    expect(withoutPowerShellComments("$a = 'x#y' # gone")).toContain("'x#y'");
+    expect(withoutPowerShellComments("$a = 'x#y' # gone")).not.toContain("gone");
+    expect(withoutPowerShellComments("$a = 'it''s #1' # gone")).toContain("'it''s #1'");
+    expect(withoutPowerShellComments("[Console]::Write('a') # b")).toContain("[Console]::Write('a')");
   });
 
   test("the handler is subscribed before anything could create the handle", () => {
