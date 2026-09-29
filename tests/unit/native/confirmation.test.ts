@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { Capsule, CapsulePolicy, GateDefinition } from "../../../src/capsule/capsule.js";
 import type { ProductPlan } from "../../../src/native/contracts.js";
 import type { DialogOutcome } from "../../../src/native/confirmation.js";
-import { dialogDecision, dialogFailureCause, windowsDialogCommand, windowsDialogConfirmation } from "../../../src/native/confirmation.js";
+import { dialogDecision, dialogFailureCause, localDialogConfirmation, windowsDialogCommand, windowsDialogConfirmation } from "../../../src/native/confirmation.js";
 import { ForgeyardError } from "../../../src/core/errors.js";
 import { canonicalJson, sha256Text } from "../../../src/core/hash.js";
 
@@ -40,9 +40,14 @@ function input(text: string): Parameters<typeof windowsDialogCommand>[0] {
   return { title: "Forgeyard: approve this plan", description: text, plan: plan(text), capsule: capsule() };
 }
 
-/** A clean run of the dialog that reported the given word, and nothing else. */
+/** A clean run of the dialog that reported the given stdout, and nothing else. */
 function clean(stdout: string): DialogOutcome {
   return { exitCode: 0, stdout };
+}
+
+/** The script decodes to this; the tests read the shipped argument, not a second copy. */
+function shippedScript(): string {
+  return Buffer.from(windowsDialogCommand(input("x")).argv[6]!, "base64").toString("utf16le");
 }
 
 /** `dialogDecision` refuses by throwing, so the thrown value is what the tests inspect. */
@@ -79,8 +84,10 @@ describe("a dialog nobody saw is not a person who said no", () => {
   const neverAsked: readonly (readonly [string, DialogOutcome])[] = [
     ["a non-zero exit", { exitCode: 1, stdout: "" }],
     ["a timeout", { exitCode: undefined, stdout: "", failure: "timed out after 300000 ms" }],
-    ["stdout that is neither word", { exitCode: 0, stdout: "approved\r\nwhoops" }],
+    ["stdout that is neither word", { exitCode: 0, stdout: "realized:approved\r\nwhoops" }],
     ["silence", { exitCode: 0, stdout: "" }],
+    // The script exits 3 when it cannot decode its own payload, so it never reaches a form.
+    ["a payload the script could not decode", { exitCode: 3, stdout: "" }],
   ];
   for (const [name, outcome] of neverAsked) {
     test(`${name} means the question was never put`, () => {
@@ -112,18 +119,92 @@ describe("a dialog nobody saw is not a person who said no", () => {
     expect(dialogFailureCause({ exitCode: undefined, timedOut: false, isTerminated: true, signal: "SIGTERM" })).toContain("terminated");
     expect(dialogFailureCause({ exitCode: 1, timedOut: false, isTerminated: false })).toContain("exited with code 1");
   });
+
+  test("a decision that arrives with a failing exit code is not trusted", () => {
+    // Without this, deleting the exit-code guard leaves every other test green: no case
+    // paired a bad exit with a well-formed decision, so the guard had no red to lose.
+    expect(thrownBy({ exitCode: 1, stdout: "realized:approved" })).toMatchObject({ code: "FY_CONFIRMATION_UNAVAILABLE" });
+    expect(thrownBy({ exitCode: 1, stdout: "realized:rejected" })).toMatchObject({ code: "FY_CONFIRMATION_UNAVAILABLE" });
+  });
+});
+
+describe("a window that was never realized cannot have been answered", () => {
+  // Measured: `Form.ShowDialog()` can return `Yes` with `IsHandleCreated: False`, so the
+  // script's old `if/else` wrote `approved` for a modal loop that never ran. The decision
+  // words now only count when the script also reports that the handle was realized, which
+  // it writes from `HandleCreated` the moment the window exists.
+  for (const bare of ["approved", "rejected"]) {
+    test(`a bare ${bare} is not a decision`, () => {
+      expect(thrownBy(clean(bare))).toMatchObject({ code: "FY_CONFIRMATION_UNAVAILABLE" });
+    });
+  }
+
+  test("the refusal says the window was never realized, so nobody reads it as a denial", () => {
+    const error = thrownBy(clean("approved"));
+
+    expect((error as ForgeyardError).message).toContain("never realized");
+  });
+
+  test("a realized approval is an approval", () => {
+    expect(dialogDecision(clean("realized:approved"))).toEqual({ accepted: true, channel: "local-dialog" });
+  });
+
+  test("a realized refusal is a refusal, and does not throw", () => {
+    expect(dialogDecision(clean("realized:rejected"))).toEqual({ accepted: false, channel: "local-dialog" });
+  });
+
+  test("the script cannot turn a non-decision into a decision", () => {
+    // Structural, because the branch lives in PowerShell and cannot be imported. `else`
+    // swallowed `DialogResult::None` — which is exactly what a `ShowDialog` that never
+    // pumped returns — and reported it as a refusal. Same pathology, one layer down.
+    const script = shippedScript();
+
+    expect(script).toContain("Add_HandleCreated");
+    expect(script).toContain("[Console]::Write('realized:')");
+    expect(script).toContain("[Windows.Forms.DialogResult]::No");
+    expect(script).toContain("[Windows.Forms.DialogResult]::Cancel");
+    expect(script).not.toMatch(/else\s*\{\s*\[Console\]::Write/);
+  });
+
+  test("the script stops instead of drawing an empty window it cannot fill", () => {
+    // Measured: with no `$ErrorActionPreference`, a payload that is not base64 or not JSON
+    // left `$dialogData` null and the script carried on — empty title, empty body, two
+    // working buttons, exit 0. A grant would then bind a plan nobody was shown.
+    const script = shippedScript();
+
+    expect(script).toContain("$ErrorActionPreference = 'Stop'");
+    expect(script).toMatch(/trap\s*\{[^}]*exit 3/);
+    expect(script).toMatch(/\$null -eq \$dialogData/);
+  });
+});
+
+describe("the branch that has no dialog at all", () => {
+  test("a platform with no adapter refuses, and says so as itself", async () => {
+    // The branch CI actually runs, and the one that had no coverage.
+    const real = process.platform;
+    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+    try {
+      await expect(localDialogConfirmation(input("x"))).rejects.toMatchObject({
+        code: "FY_CONFIRMATION_UNAVAILABLE",
+        message: expect.stringContaining("not implemented for this OS"),
+      });
+    } finally {
+      Object.defineProperty(process, "platform", { value: real, configurable: true });
+    }
+  });
 });
 
 describe("a real refusal still reads as a refusal", () => {
   test("a clean run that reported rejected returns accepted false and does not throw", async () => {
-    // The script writes `rejected` and exits 0 both for the Reject button and for closing the
-    // window. That is a person declining, and it must not be promoted into an error.
-    await expect(windowsDialogConfirmation(input("x"), async () => clean("rejected")))
+    // The script reports `rejected` for the Reject button and for closing the window alike,
+    // because `CancelButton` is Reject. That is a person declining, and it must not be
+    // promoted into an error.
+    await expect(windowsDialogConfirmation(input("x"), async () => clean("realized:rejected")))
       .resolves.toEqual({ accepted: false, channel: "local-dialog" });
   });
 
   test("a clean run that reported approved returns accepted true", async () => {
-    await expect(windowsDialogConfirmation(input("x"), async () => clean("approved")))
+    await expect(windowsDialogConfirmation(input("x"), async () => clean("realized:approved")))
       .resolves.toEqual({ accepted: true, channel: "local-dialog" });
   });
 });
@@ -140,7 +221,11 @@ describe("the argument vector is bounded, so any plan can be confirmed", () => {
 
     expect(Math.abs(width(huge.argv) - width(tiny.argv))).toBeLessThanOrEqual(8);
     expect(huge.argv).toEqual(tiny.argv);
-    expect(width(huge.argv)).toBeLessThan(4096);
+    // A tripwire for the payload creeping back onto the command line, not a budget. The
+    // constant is 4828 characters today and grows only when the script does; a 200 000
+    // character plan back on the command line would be six figures, and the Windows cap
+    // is 32 767, so anything in between is still caught.
+    expect(width(huge.argv)).toBeLessThan(8192);
   });
 
   test("and the whole text still reaches the person, byte for byte", () => {

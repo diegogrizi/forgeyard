@@ -47,10 +47,31 @@ export type DialogSpawn = (command: DialogCommand) => Promise<DialogOutcome>;
  * truncate a programmatic assignment, not even once the handle is realized. It is pinned
  * anyway — the text shown must be byte for byte what the service composed, and that promise
  * should not rest on an undocumented behaviour of one Windows build.
+ *
+ * Three rules here exist because each was measured failing.
+ *
+ * `$ErrorActionPreference` and the trap: without them a payload that is not base64, or not
+ * JSON, left `$dialogData` null and execution carried on — a window with an empty title, an
+ * empty body and two working buttons, exiting 0. A consent grant would then bind the hash of
+ * a plan the person was never shown. Exit 3 instead, which reads as unavailable.
+ *
+ * `realized:` written from `HandleCreated`: `ShowDialog()` was measured returning `Yes` with
+ * `IsHandleCreated: False`, i.e. an approval from a modal loop that never ran. The token is
+ * emitted the moment the window actually exists, so a decision word only counts alongside
+ * proof that there was a window to decide in. It is written as it happens, not buffered to
+ * the end, so it can be observed on stdout while the dialog is still open.
+ *
+ * `No` and `Cancel` named explicitly: the `else` that used to close this branch reported
+ * `rejected` for every non-`Yes` value, `DialogResult::None` included — and `None` is what a
+ * `ShowDialog` that never pumped returns. That is the same defect as inferring a refusal
+ * from a failed launch, one layer down, on the denial side.
  */
 const DIALOG_SCRIPT = `$ProgressPreference = 'SilentlyContinue'
+      $ErrorActionPreference = 'Stop'
+      trap { exit 3 }
       Add-Type -AssemblyName System.Windows.Forms
       $dialogData = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd().Trim())) | ConvertFrom-Json
+      if ($null -eq $dialogData -or $null -eq $dialogData.message -or $null -eq $dialogData.title) { exit 3 }
       $dialogForm = New-Object Windows.Forms.Form
       $dialogForm.Text = $dialogData.title
       $dialogForm.Width = 760; $dialogForm.Height = 600; $dialogForm.StartPosition = 'CenterScreen'
@@ -66,7 +87,9 @@ const DIALOG_SCRIPT = `$ProgressPreference = 'SilentlyContinue'
       $dialogReject.DialogResult = [Windows.Forms.DialogResult]::No
       $dialogForm.Controls.AddRange(@($dialogText,$dialogApprove,$dialogReject))
       $dialogForm.CancelButton = $dialogReject
-      if ($dialogForm.ShowDialog() -eq [Windows.Forms.DialogResult]::Yes) { [Console]::Write('approved') } else { [Console]::Write('rejected') }
+      $dialogForm.Add_HandleCreated({ [Console]::Write('realized:') })
+      $dialogOutcome = $dialogForm.ShowDialog()
+      if ($dialogOutcome -eq [Windows.Forms.DialogResult]::Yes) { [Console]::Write('approved') } elseif ($dialogOutcome -eq [Windows.Forms.DialogResult]::No -or $dialogOutcome -eq [Windows.Forms.DialogResult]::Cancel) { [Console]::Write('rejected') }
       $dialogForm.Dispose()`;
 
 /** Exactly what the service composed. Never shortened: the transport adapts to the text. */
@@ -107,16 +130,23 @@ function unavailable(detail: string): ForgeyardError {
  * `execa` runs with `reject: false`, so a failure to launch, a timeout and a crash all arrive
  * as ordinary resolved values. Folding them into `accepted: false` made the caller answer
  * `FY_APPROVAL_DENIED — the local human confirmation was rejected`, naming a refusal by
- * somebody who was never asked. Only a clean run that wrote `rejected` is a refusal; every
- * other outcome is declared unavailable instead of inferred to be a denial.
+ * somebody who was never asked. Only a clean run whose window existed and was answered is a
+ * decision; every other outcome is declared unavailable instead of inferred to be one.
  */
 export function dialogDecision(outcome: DialogOutcome): HumanDecision {
   if (outcome.failure !== undefined) throw unavailable(outcome.failure);
   if (outcome.exitCode !== 0) throw unavailable(`the dialog exited with code ${outcome.exitCode ?? "none"}`);
-  // The script writes `rejected` and exits 0 for the Reject button and for closing the window
-  // alike, so this branch is a decision and must stay a returned value, not an error.
-  if (outcome.stdout === "rejected") return { accepted: false, channel: "local-dialog" };
-  if (outcome.stdout === "approved") return { accepted: true, channel: "local-dialog" };
+  // `realized:` comes from `HandleCreated`, so it is present only if a window existed to be
+  // answered. The script reports `rejected` for the Reject button and for closing the window
+  // alike, so that branch is a decision and must stay a returned value, not an error.
+  if (outcome.stdout === "realized:rejected") return { accepted: false, channel: "local-dialog" };
+  if (outcome.stdout === "realized:approved") return { accepted: true, channel: "local-dialog" };
+  // Measured: `ShowDialog()` can return `Yes` having never created a handle. A decision word
+  // without the realization token is that case, and it is the one outcome that must never be
+  // mistaken for consent, so it is named rather than folded into the generic refusal.
+  if (outcome.stdout === "approved" || outcome.stdout === "rejected") {
+    throw unavailable("the dialog reported a decision from a window that was never realized");
+  }
   throw unavailable("the dialog ended without reporting a decision");
 }
 
