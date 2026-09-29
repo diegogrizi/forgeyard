@@ -55,11 +55,25 @@ export type DialogSpawn = (command: DialogCommand) => Promise<DialogOutcome>;
  * empty body and two working buttons, exiting 0. A consent grant would then bind the hash of
  * a plan the person was never shown. Exit 3 instead, which reads as unavailable.
  *
- * `realized:` written from `HandleCreated`: `ShowDialog()` was measured returning `Yes` with
- * `IsHandleCreated: False`, i.e. an approval from a modal loop that never ran. The token is
- * emitted the moment the window actually exists, so a decision word only counts alongside
- * proof that there was a window to decide in. It is written as it happens, not buffered to
- * the end, so it can be observed on stdout while the dialog is still open.
+ * `realized:` written from `HandleCreated`: a decision word counts only alongside proof that
+ * a window existed to decide in. The token is emitted the moment the handle appears, not
+ * buffered to the end, so it can be observed on stdout while the dialog is still open. It is
+ * written once even if the handle is recreated, because two tokens would read as gibberish
+ * and be refused as if no decision had been reported.
+ *
+ * Be careful what this guard is and is not. **No instance of "decided with no window" has
+ * been measured.** An earlier reading of `IsHandleCreated: False` after `ShowDialog` returned
+ * was cited as one; it is withdrawn, because `ShowDialog` destroys the handle on its way out,
+ * so that value is `False` for a perfectly healthy interactive dialog too. The one case that
+ * really does report a decision with nobody present — spawning this argv through
+ * `Start-Process` with stdin redirected from a file — creates its handle and now emits
+ * `realized:approved`. **That hole is still open**, the mechanism is unknown, and this guard
+ * does not close it. It covers a narrower class that is so far only hypothetical.
+ *
+ * The subscription must stay above `ShowDialog`, and nothing above it may realize a handle.
+ * Nothing does today. If that changes, `realized:` never appears and every real approval
+ * becomes `FY_CONFIRMATION_UNAVAILABLE` — the consent channel dead with no failing test —
+ * so the ordering is pinned by `tests/unit/native/confirmation.test.ts`.
  *
  * `No` and `Cancel` named explicitly: the `else` that used to close this branch reported
  * `rejected` for every non-`Yes` value, `DialogResult::None` included — and `None` is what a
@@ -87,7 +101,8 @@ const DIALOG_SCRIPT = `$ProgressPreference = 'SilentlyContinue'
       $dialogReject.DialogResult = [Windows.Forms.DialogResult]::No
       $dialogForm.Controls.AddRange(@($dialogText,$dialogApprove,$dialogReject))
       $dialogForm.CancelButton = $dialogReject
-      $dialogForm.Add_HandleCreated({ [Console]::Write('realized:') })
+      $dialogRealized = @{ written = $false }
+      $dialogForm.Add_HandleCreated({ if (-not $dialogRealized.written) { $dialogRealized.written = $true; [Console]::Write('realized:') } })
       $dialogOutcome = $dialogForm.ShowDialog()
       if ($dialogOutcome -eq [Windows.Forms.DialogResult]::Yes) { [Console]::Write('approved') } elseif ($dialogOutcome -eq [Windows.Forms.DialogResult]::No -or $dialogOutcome -eq [Windows.Forms.DialogResult]::Cancel) { [Console]::Write('rejected') }
       $dialogForm.Dispose()`;
@@ -141,9 +156,10 @@ export function dialogDecision(outcome: DialogOutcome): HumanDecision {
   // alike, so that branch is a decision and must stay a returned value, not an error.
   if (outcome.stdout === "realized:rejected") return { accepted: false, channel: "local-dialog" };
   if (outcome.stdout === "realized:approved") return { accepted: true, channel: "local-dialog" };
-  // Measured: `ShowDialog()` can return `Yes` having never created a handle. A decision word
-  // without the realization token is that case, and it is the one outcome that must never be
-  // mistaken for consent, so it is named rather than folded into the generic refusal.
+  // A decision word with no realization token would be a decision from a window that never
+  // existed. No instance has been measured — see DIALOG_SCRIPT for the reading that was
+  // withdrawn — but it is the one outcome that must never be mistaken for consent, so it is
+  // named rather than folded into the generic refusal.
   if (outcome.stdout === "approved" || outcome.stdout === "rejected") {
     throw unavailable("the dialog reported a decision from a window that was never realized");
   }

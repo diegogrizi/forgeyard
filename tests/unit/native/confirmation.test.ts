@@ -129,10 +129,17 @@ describe("a dialog nobody saw is not a person who said no", () => {
 });
 
 describe("a window that was never realized cannot have been answered", () => {
-  // Measured: `Form.ShowDialog()` can return `Yes` with `IsHandleCreated: False`, so the
-  // script's old `if/else` wrote `approved` for a modal loop that never ran. The decision
-  // words now only count when the script also reports that the handle was realized, which
-  // it writes from `HandleCreated` the moment the window exists.
+  // A decision word counts only alongside `realized:`, which the script writes from
+  // `HandleCreated` the moment the window exists.
+  //
+  // What this does NOT rest on: an earlier report read `IsHandleCreated: False` after
+  // `ShowDialog` returned and called it proof that the loop never ran. `ShowDialog`
+  // destroys the handle on its way out, so that reading is `False` for a healthy
+  // interactive dialog too — it never discriminated anything, and it is withdrawn.
+  //
+  // So no instance of "decided without a window" has actually been measured. The one
+  // candidate turned out to realize its handle and now reports `realized:approved`: that
+  // case is still open. These tests pin the rule, not a reproduction of it.
   for (const bare of ["approved", "rejected"]) {
     test(`a bare ${bare} is not a decision`, () => {
       expect(thrownBy(clean(bare))).toMatchObject({ code: "FY_CONFIRMATION_UNAVAILABLE" });
@@ -159,11 +166,41 @@ describe("a window that was never realized cannot have been answered", () => {
     // pumped returns — and reported it as a refusal. Same pathology, one layer down.
     const script = shippedScript();
 
-    expect(script).toContain("Add_HandleCreated");
-    expect(script).toContain("[Console]::Write('realized:')");
     expect(script).toContain("[Windows.Forms.DialogResult]::No");
     expect(script).toContain("[Windows.Forms.DialogResult]::Cancel");
     expect(script).not.toMatch(/else\s*\{\s*\[Console\]::Write/);
+  });
+
+  test("the realization token can only be written from inside the handler", () => {
+    // Two independent `toContain`s let the token move to the top of the script and stay
+    // green: it would then be written unconditionally, the guard would be decorative, and
+    // nothing would fail. The write site has to be one, and inside `HandleCreated`.
+    const script = shippedScript();
+
+    expect(script.split("[Console]::Write('realized:')").length - 1).toBe(1);
+    expect(script).toMatch(/Add_HandleCreated\(\{[\s\S]{0,160}\[Console\]::Write\('realized:'\)/);
+  });
+
+  test("the handler is subscribed before anything could create the handle", () => {
+    // Nothing before `ShowDialog` realizes a handle today — `Controls.AddRange`,
+    // `SetBounds`, `Width`/`Height`/`StartPosition` and `CancelButton` are all handle-free.
+    // A later edit that touches `.Handle`, calls `Show()`, or sets a recreating property
+    // earlier would make `realized:` never appear, and then every genuine approval becomes
+    // `FY_CONFIRMATION_UNAVAILABLE` — the consent channel silently dead, with no red.
+    const script = shippedScript();
+
+    expect(script.indexOf("Add_HandleCreated")).toBeGreaterThan(0);
+    expect(script.indexOf("Add_HandleCreated")).toBeLessThan(script.indexOf("ShowDialog()"));
+  });
+
+  test("a handle created twice does not spoil the token", () => {
+    // WinForms can recreate a handle, and a second unguarded write would produce
+    // `realized:realized:approved` — which exact matching sends to "ended without
+    // reporting a decision", a wrong sentence for a decision that was in fact reported.
+    const script = shippedScript();
+
+    expect(script).toMatch(/Add_HandleCreated\(\{\s*if \(-not \$dialogRealized\.written\)/);
+    expect(script).toContain("$dialogRealized = @{ written = $false }");
   });
 
   test("the script stops instead of drawing an empty window it cannot fill", () => {
@@ -219,12 +256,14 @@ describe("the argument vector is bounded, so any plan can be confirmed", () => {
     const huge = windowsDialogCommand(input("x".repeat(200_000)));
     const width = (argv: readonly string[]): number => argv.join(" ").length;
 
-    expect(Math.abs(width(huge.argv) - width(tiny.argv))).toBeLessThanOrEqual(8);
+    // Independence of the message is carried entirely by this one line, which is strictly
+    // stronger than comparing the two lengths.
     expect(huge.argv).toEqual(tiny.argv);
-    // A tripwire for the payload creeping back onto the command line, not a budget. The
-    // constant is 4828 characters today and grows only when the script does; a 200 000
-    // character plan back on the command line would be six figures, and the Windows cap
-    // is 32 767, so anything in between is still caught.
+
+    // The numeric bound has a different job, and it is not about the message: it catches
+    // the *constant script* growing toward the Windows cap. A script edited up to 25 000
+    // characters would keep the equality above green while making every dialog fail to
+    // launch on every machine. It is 4828 today; the cap is 32 767.
     expect(width(huge.argv)).toBeLessThan(8192);
   });
 
