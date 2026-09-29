@@ -283,6 +283,61 @@ Se dopo tutto questo il client continua a ignorare la forgia, non stai inseguend
 difetto noto: sei oltre il confine di ciò che è stato verificato. Vedi
 [Stato](../STATO.md).
 
+#### La finestra di approvazione non si apre, e la risposta dice che la conferma non è disponibile
+
+L'assistente chiede di approvare il piano, non compare nessuna finestra, e la risposta porta
+il codice `FY_CONFIRMATION_UNAVAILABLE` con un messaggio che comincia così:
+
+```text
+The local confirmation dialog could not be shown, so nobody was asked and nothing was rejected: ...
+```
+
+Dopo i due punti c'è la causa in una clausola sola: un codice come `ENOENT` o
+`ENAMETOOLONG`, un'attesa scaduta, un codice di uscita.
+
+**Leggi bene cosa questo messaggio non dice.** Non dice che qualcuno abbia rifiutato. Il
+rifiuto ha un codice tutto suo — `FY_APPROVAL_DENIED`, `The local human confirmation was
+rejected.` — e lo emette **soltanto** una finestra che si è aperta e in cui hai scelto
+`Reject` o che hai chiuso. Finché non è quello il codice che leggi, nessuna persona ha detto
+di no: la domanda non è mai stata posta. La distinzione è il punto della pagina, ed è
+recente: prima ogni mancato avvio della finestra veniva contato come un rifiuto e riemergeva
+come `FY_APPROVAL_DENIED`, cioè attribuiva a te una risposta che non avevi dato.
+
+**Causa.** Il consenso passa da una finestra dedicata, e quella finestra non è partita.
+
+| Cosa manca | Come si riconosce |
+|---|---|
+| `powershell.exe` non raggiungibile | la causa è `the dialog process could not be started (ENOENT)` |
+| nessuna sessione desktop interattiva | la sessione è un servizio, un'attività pianificata o un accesso remoto senza interfaccia |
+| esecuzione bloccata da una policy | la causa nomina un codice di uscita e la finestra non compare mai |
+| finestra rimasta aperta troppo a lungo | `no decision arrived within 300 seconds` |
+| processo terminato dall'esterno | `the dialog process was terminated` |
+
+**La dimensione del piano non è più fra le cause.** Lo era: il testo del dialogo viaggiava
+sulla riga di comando, e `-EncodedCommand` lo gonfia di 8/3, quindi oltre circa ottomila
+caratteri si superava il tetto di 32 767 caratteri di Windows e la finestra non partiva —
+un piano con una dozzina di attività ci arriva senza sforzo. Oggi il testo viaggia sullo
+standard input e la riga di comando è una costante di lunghezza fissa. Se incontri questo
+errore su un piano grande, la versione che stai usando precede la correzione:
+
+```bash
+forgeyard update
+```
+
+**Cosa fare.** Prima stabilisci se il problema è Forgeyard o l'ambiente, con una finestra che
+non passa da noi:
+
+```bash
+powershell.exe -NoLogo -NoProfile -STA -Command "Add-Type -AssemblyName System.Windows.Forms; [Windows.Forms.MessageBox]::Show('Prova del canale di conferma')"
+```
+
+Se **anche questa** non compare, il canale grafico non è disponibile in questa sessione: apri
+il client da una sessione desktop normale. Se invece compare, ripeti la richiesta di
+approvazione nel client.
+
+In ogni caso **niente è stato approvato e niente è stato scritto**: un consenso mancato non
+apre nessun ambito di scrittura, e non esiste una scorciatoia da terminale per concederlo.
+
 #### L'assistente dice che una modifica è stata negata da Forgeyard
 
 Nel client uno strumento di scrittura (`Edit`, `Write`, `NotebookEdit`) viene rifiutato con un
