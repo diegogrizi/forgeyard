@@ -308,14 +308,17 @@ come `FY_APPROVAL_DENIED`, cioè attribuiva a te una risposta che non avevi dato
 | Cosa è successo | La clausola che lo dice |
 |---|---|
 | `powershell.exe` non raggiungibile | `the dialog process could not be started (ENOENT)` |
-| lo script si è fermato prima di poter costruire la finestra | `the dialog process exited with code 3` |
+| lo script si è fermato su un errore | `the dialog process exited with code 3` |
 | la finestra è rimasta aperta oltre cinque minuti | `no decision arrived within 300 seconds` |
 | il processo è stato terminato dall'esterno | `the dialog process was terminated` |
 | la finestra è finita senza riportare niente | `the dialog ended without reporting a decision` |
 | è arrivata una parola di decisione da una finestra mai realizzata | `the dialog reported a decision from a window that was never realized` |
 
-Nessuna sessione desktop interattiva — un servizio, un'attività pianificata, un accesso
-remoto senza interfaccia — non ha una clausola sua: si manifesta come una delle ultime tre.
+Una sessione senza desktop interattivo — un servizio, un'attività pianificata, un accesso
+remoto senza interfaccia — non ha una clausola sua, e **non è prevedibile quale delle righe
+sopra vedrai**: dipende da dove si ferma. Se la finestra non si riesce proprio a costruire
+esce `3`; se si costruisce e nessuno può cliccarla, scade dopo cinque minuti. Non escludere
+una riga perché ti sembra della famiglia sbagliata.
 
 Due cose che **non** sono la causa, per non farti cercare nel posto sbagliato. La prima è la
 *execution policy*: il dialogo arriva come `-EncodedCommand`, e quella regola governa i file
@@ -324,9 +327,13 @@ una frase in più: significa che lo script ha riportato `approved` o `rejected` 
 finestra sia mai esistita. **Non è un'approvazione**, ed è rifiutata apposta; se la vedi, il
 lavoro non è stato autorizzato da nessuno.
 
-L'uscita `3` è deliberata: se lo script non riesce a decodificare ciò che deve mostrarti, si
-ferma invece di aprire una finestra vuota con due pulsanti funzionanti. Una conferma data su
-un riquadro vuoto sarebbe indistinguibile da una vera per tutto ciò che sta sopra.
+L'uscita `3` è il modo in cui lo script si ferma su un errore invece di proseguire. Il caso
+per cui è nato è il payload che non si decodifica: meglio fermarsi che aprire una finestra
+vuota con due pulsanti funzionanti, perché una conferma data su un riquadro vuoto sarebbe
+indistinguibile da una vera per tutto ciò che sta sopra. Ma la regola è generale e può
+scattare in qualunque punto, anche dopo che la finestra è comparsa. In quel caso il codice
+di uscita vince comunque sulla parola eventualmente già scritta, e il risultato resta
+«non disponibile»: nella direzione prudente.
 
 **La dimensione del piano non è più fra le cause.** Lo era: il testo del dialogo viaggiava
 sulla riga di comando, e `-EncodedCommand` lo gonfia di 8/3, quindi oltre circa ottomila
