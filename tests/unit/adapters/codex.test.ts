@@ -16,12 +16,12 @@ async function renderedFoundation() {
   const adapter = createCodexAdapter();
   const files = await adapter.render(resolved.components, config);
   await adapter.validateOutput(files);
-  return { adapter, files };
+  return { adapter, files, pluginCount: registry.profiles.get("hackathon")!.catalog.plugins.length };
 }
 
 describe("Codex adapter", () => {
   test("maps the canonical foundation slots to project paths", async () => {
-    const { files } = await renderedFoundation();
+    const { files, pluginCount } = await renderedFoundation();
 
     expect(files.map((file) => file.path).slice(0, 14)).toEqual([
       "AGENTS.md",
@@ -39,7 +39,8 @@ describe("Codex adapter", () => {
       ".forgeyard/reports/RUN_REPORT.md",
       ".forgeyard/usage/README.md",
     ]);
-    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/"))).toHaveLength(pluginCount + 1);
+    expect(files.some((file) => file.path === ".agents/skills/developer-essentials--practice/references/checklist.md")).toBe(true);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
     expect(files.every((file) => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true);
   });
@@ -93,8 +94,9 @@ describe("Codex adapter", () => {
 
     const files = await adapter.render(resolved.components, config);
 
-    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(203);
-    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(289);
+    const pluginCount = registry.packs.get("ecosystem")!.entries.get("ecosystem.portable-catalog")!.externalCatalog!.plugins.length;
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/"))).toHaveLength(pluginCount + 1);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(pluginCount * 2 + 1);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
     await adapter.validateOutput(files);
   }, 30_000);

@@ -12,7 +12,7 @@ function rulesError(message: string, paths?: readonly string[], cause?: unknown)
   return new ForgeyardError({
     code: "FY_REGISTRY_INVALID",
     message,
-    remediation: "Correct the authored capability rules and keep every plugin pinned in the portable catalog.",
+    remediation: "Correct the authored capability rules and register every selected plugin in the external catalog reference.",
     exitCode: 3,
     ...(paths === undefined ? {} : { paths }),
     ...(cause === undefined ? {} : { cause }),
@@ -58,9 +58,10 @@ export async function loadCapabilityRules(registryRoot: string): Promise<Capabil
   const catalogPack = registry.packs.get("ecosystem");
   const catalogComponent = catalogPack?.manifest.components.find((component) => component.kind === "catalog");
   const catalogEntry = catalogComponent === undefined ? undefined : catalogPack?.entries.get(catalogComponent.id);
-  if (catalogEntry?.files === undefined) throw rulesError("The ecosystem catalog is unavailable.");
+  if (catalogEntry === undefined || (catalogEntry.files === undefined && catalogEntry.externalCatalog === undefined))
+    throw rulesError("The ecosystem catalog reference is unavailable.");
   const available = new Set(
-    catalogEntry.files
+    catalogEntry.externalCatalog?.plugins ?? (catalogEntry.files ?? [])
       .map((file) => /^plugins\/([^/]+)\//.exec(file.relativePath)?.[1])
       .filter((id): id is string => id !== undefined),
   );
@@ -85,7 +86,6 @@ export async function loadCapabilityRules(registryRoot: string): Promise<Capabil
   const referenced = new Set([
     ...normalized.baseline.map((choice) => choice.id),
     ...normalized.rules.flatMap((rule) => rule.include.map((choice) => choice.id)),
-    ...normalized.exclusions.map((choice) => choice.id),
   ]);
   const missing = [...referenced].filter((id) => !available.has(id)).sort((left, right) => left.localeCompare(right, "en"));
   if (missing.length > 0) throw rulesError(`Capability rules reference missing catalog plugin '${missing[0]}'.`);

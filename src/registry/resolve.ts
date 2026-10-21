@@ -99,6 +99,7 @@ export function resolveProfile(
   const slots = new Map<string, string>();
   for (const loadedPack of packs) {
     for (const declaration of loadedPack.manifest.components) {
+      if (declaration.kind === "catalog" && catalogSelection !== "all" && catalogSelection.length === 0) continue;
       if (nodes.has(declaration.id)) throw conflict(`Duplicate component ID '${declaration.id}'.`, [declaration.id]);
       const slotKey = declaration.slot.normalize("NFKC").toLocaleLowerCase("en-US");
       const existingSlot = slots.get(slotKey);
@@ -113,13 +114,13 @@ export function resolveProfile(
       const treeFiles = entry.files;
       if (declaration.kind === "catalog" && catalogSelection !== "all") {
         const available = new Set(
-          (treeFiles ?? [])
+          entry.externalCatalog?.plugins ?? (treeFiles ?? [])
             .map((file) => /^plugins\/([^/]+)\//.exec(file.relativePath)?.[1])
             .filter((name): name is string => name !== undefined),
         );
         const missing = catalogSelection.filter((name) => !available.has(name));
         if (missing.length > 0) {
-          throw selectionError(`Catalog plugin '${missing[0]}' is not available in the pinned snapshot.`);
+          throw selectionError(`Catalog plugin '${missing[0]}' is not registered in the external source reference.`);
         }
       }
       nodes.set(declaration.id, {
@@ -129,6 +130,7 @@ export function resolveProfile(
         sourcePath: entry.sourcePath,
         sha256: entry.sha256,
         ...(treeFiles === undefined ? {} : { treeFiles }),
+        ...(entry.externalCatalog === undefined ? {} : { externalCatalog: entry.externalCatalog }),
         ...(declaration.kind === "catalog" ? { catalogSelection } : {}),
       });
       slots.set(slotKey, declaration.id);

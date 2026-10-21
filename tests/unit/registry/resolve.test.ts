@@ -10,7 +10,6 @@ import type {
 import type { LoadedPack, RegistrySnapshot } from "../../../src/registry/load.js";
 import { loadRegistry } from "../../../src/registry/load.js";
 import { resolveProfile } from "../../../src/registry/resolve.js";
-import { loadPortableMarketplace } from "../../../src/catalog/load-portable-marketplace.js";
 
 function component(
   id: string,
@@ -164,31 +163,35 @@ describe("profile resolver", () => {
     expect(resolved.packIds).toEqual(expect.arrayContaining(["foundation", "delivery", "ecosystem"]));
   });
 
-  test("resolves the minimal kernel and the curated hackathon selection", async () => {
+  test("resolves the minimal kernel and the curated hackathon reference without downloading plugin bytes", async () => {
     const registry = await loadRegistry(path.resolve("."));
     const minimal = resolveProfile(registry, "minimal", "codex");
     const hackathon = resolveProfile(registry, "hackathon", "codex");
     const catalog = hackathon.components.find((component) => component.kind === "catalog")!;
-    const marketplace = await loadPortableMarketplace(catalog.treeFiles!, { defaultLicense: "MIT" });
-    const selected = new Set(catalog.catalogSelection === "all" ? marketplace.plugins.map((plugin) => plugin.name) : catalog.catalogSelection);
-    const roleCount = marketplace.plugins
-      .filter((plugin) => selected.has(plugin.name))
-      .reduce((sum, plugin) => sum + plugin.agents.length, 0);
 
     expect(minimal.packIds).toEqual(["foundation"]);
     expect(minimal.components.some((component) => component.kind === "catalog")).toBe(false);
     expect(hackathon.packIds).toContain("ecosystem");
     expect(catalog.catalogSelection).not.toBe("all");
-    expect(roleCount).toBeGreaterThanOrEqual(32);
+    expect(catalog.entryType).toBe("external");
+    expect(catalog.treeFiles).toBeUndefined();
+    expect(catalog.externalCatalog?.plugins).toEqual(expect.arrayContaining(catalog.catalogSelection as string[]));
     expect(hackathon.defaults.orchestration.maxConcurrency).toBe(4);
   });
 
-  test("rejects an explicit catalog plugin that is not in the pinned snapshot", async () => {
+  test("rejects an explicit catalog plugin that is not in the external reference", async () => {
     const registry = await loadRegistry(path.resolve("."));
     expect(() => resolveProfile(registry, "hackathon", "codex", {
       selection: "curated",
       plugins: ["missing-plugin"],
     })).toThrowError(expect.objectContaining({ code: "FY_UNSUPPORTED_SELECTION" }));
+  });
+
+  test("an explicit empty selection omits external catalogs even when their pack is present", async () => {
+    const registry = await loadRegistry(path.resolve("."));
+    const resolved = resolveProfile(registry, "minimal", "codex", { selection: "none", plugins: [] }, ["foundation", "ecosystem"]);
+    expect(resolved.components.some(component => component.kind === "catalog")).toBe(false);
+    expect(resolved.components.some(component => component.packId === "foundation")).toBe(true);
   });
 
   test("resolves only the exact stored tailored pack set", async () => {

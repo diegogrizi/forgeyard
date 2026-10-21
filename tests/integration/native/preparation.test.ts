@@ -75,6 +75,33 @@ test("two concurrent native applies cannot enter two installer transactions", as
   expect(rejected.reason).toMatchObject({ code: expect.stringMatching(/FY_REVISION_CONFLICT|FY_PREPARATION_BUSY/) });
 });
 
+test("native consent installs the previewed source revision even if upstream changes before the final apply", async () => {
+  const upstreamFetch = globalThis.fetch;
+  const endpoint = "https://api.github.com/repos/wshobson/agents/commits/HEAD";
+  const originalRevision = (await (await upstreamFetch(endpoint)).json() as { sha: string }).sha;
+  const laterRevision = "f".repeat(40);
+  let resolutions = 0;
+  vi.stubGlobal("fetch", async (input: Parameters<typeof fetch>[0], options: Parameters<typeof fetch>[1]) => {
+    const url = String(input);
+    if (url === endpoint) return Response.json({ sha: ++resolutions < 4 ? originalRevision : laterRevision });
+    return upstreamFetch(url.replace(laterRevision, originalRevision), options);
+  });
+  try {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "forgeyard-upstream-race-")); directories.push(directory);
+    const root = path.join(directory, "project"); await mkdir(root);
+    let approvedId = "";
+    const service = await createProjectService({ root, stateDirectory: path.join(directory, "state"),
+      confirmation: async input => { approvedId = input.capsule.id; return { accepted: true, channel: "test-fixture" }; } });
+    services.push(service);
+    const result = await service.execute({ protocolVersion: "0.2", requestId: "source-race", tool: "fy_apply", payload: {
+      brief: "Prepare this new project", adapter: "codex", expectedRevision: 0,
+      proposal: { intent: "new-project", risk: "medium", needs: [], evidence: [] },
+    } });
+    expect(result.result).toMatchObject({ applied: true, capsuleId: approvedId });
+    expect(resolutions).toBe(1);
+  } finally { vi.unstubAllGlobals(); }
+});
+
 test("nested Spring module preserves a project-relative gate working directory end to end", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "forgeyard-native-java-")); directories.push(directory);
   const root = path.join(directory, "project"); await mkdir(path.join(root, "backend"), { recursive: true });

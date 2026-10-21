@@ -9,6 +9,7 @@ import type {
   PortableSkill,
 } from "../catalog/contracts.js";
 import { loadPortableMarketplace } from "../catalog/load-portable-marketplace.js";
+import { materializeExternalCatalog, type CatalogDownloadOptions } from "../catalog/acquire.js";
 import type { ComponentTreeFile, PlannedFile, ResolvedComponent } from "../core/contracts.js";
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Bytes, sha256Text } from "../core/hash.js";
@@ -218,7 +219,9 @@ function hookCounts(plugins: readonly PortablePlugin[]): { importedHookFiles: nu
 export async function renderClaudeCodeCatalog(
   component: ResolvedComponent,
   selection: readonly string[] | "all",
+  options: CatalogDownloadOptions = {},
 ): Promise<readonly PlannedFile[]> {
+  component = await materializeExternalCatalog(component, options);
   if (
     component.kind !== "catalog" ||
     component.entryType !== "tree" ||

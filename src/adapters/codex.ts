@@ -10,6 +10,7 @@ import type {
 import { ForgeyardError } from "../core/errors.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { renderCodexCatalog } from "./codex-catalog.js";
+import type { CatalogDownloadOptions } from "../catalog/acquire.js";
 import {
   compositionVariables,
   continuityVariables,
@@ -237,7 +238,7 @@ function assertUniquePaths(files: readonly PlannedFile[]): void {
   }
 }
 
-export function createCodexAdapter(): HarnessAdapter {
+export function createCodexAdapter(catalogOptions: CatalogDownloadOptions = {}): HarnessAdapter {
   return {
     id: "codex",
     capabilities: {
@@ -274,7 +275,7 @@ export function createCodexAdapter(): HarnessAdapter {
         if (component.kind === "catalog") {
           if (
             component.slot !== "catalog.portable.primary" ||
-            component.entryType !== "tree" ||
+            !["tree", "external"].includes(component.entryType ?? "") ||
             component.format !== "portable-plugin-marketplace-v1"
           ) {
             throw adapterError(`Codex cannot transform catalog component '${component.id}'.`);
@@ -295,7 +296,7 @@ export function createCodexAdapter(): HarnessAdapter {
         files.push(await renderComponent(component, target, variablesFor(slot, config, renderedSlots)));
       }
       for (const catalog of catalogComponents) {
-        files.push(...await renderCodexCatalog(catalog, catalog.catalogSelection ?? "all"));
+        files.push(...await renderCodexCatalog(catalog, catalog.catalogSelection ?? "all", catalogOptions));
       }
       assertUniquePaths(files);
       return files;

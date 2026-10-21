@@ -126,10 +126,14 @@ ogni mutazione possibile di una shell non sarebbe sicuro.
 
 ## Il catalogo non è il prodotto
 
-Forgeyard distribuisce uno snapshot pinnato e attestato di un catalogo di terzi: **202
-agenti, 183 skill e 105 comandi**. È conoscenza della fabbrica, non un menù da studiare
-prima di iniziare, e non un obiettivo di crescita. La provenienza esatta e il confine di
-verifica sono in [Provenienza del catalogo](../provenance/catalog-sources.md).
+Forgeyard distribuisce soltanto il riferimento alla fonte e i nomi dei plugin
+selezionabili. `src/catalog/acquire.ts` risolve HEAD in un commit esatto e recupera
+licenza e file dei soli plugin selezionati. La cache verificata sta fuori dal repository;
+gli adapter trasformano quei file come prima. L'indice installato registra la revisione:
+il riuso la conserva, mentre `update` cerca la versione corrente e presenta il cambiamento.
+Caricare il registry, ispezionare il progetto e verificare la factory non richiede rete.
+La provenienza esatta e il confine di verifica sono in
+[Provenienza del catalogo](../provenance/catalog-sources.md).
 
 La dimensione del catalogo non è la dimensione del prompt. Il caricamento è progressivo:
 le istruzioni radice restano una mappa breve; il client scopre prima nomi e descrizioni

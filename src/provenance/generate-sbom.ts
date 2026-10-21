@@ -176,6 +176,10 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
       sourceId: vendor.sourceId,
       attestation: vendor.attestation,
     })),
+    externalReferences: validated.externalSources.map((external) => ({
+      sourceId: external.sourceId,
+      reference: external.reference,
+    })),
   }));
   const document = {
     spdxVersion: "SPDX-2.3",
@@ -189,6 +193,16 @@ export function renderSpdxSbom(workspace: ProvenanceWorkspace): string {
     },
     packages,
     relationships: uniqueRelationships,
+    ...(validated.externalSources.length === 0 ? {} : {
+      annotations: validated.externalSources.map((external) => ({
+        annotationDate: creationDate(workspace),
+        annotationType: "OTHER",
+        annotator: "Tool: Forgeyard provenance generator",
+        comment: `External catalog reference only; catalog payload is not distributed with Forgeyard. ${canonicalJson({
+          sourceId: external.sourceId, referencePath: external.referenceRelativePath, ...external.reference,
+        })}`,
+      })),
+    }),
   };
   return `${JSON.stringify(document, null, 2)}\n`;
 }

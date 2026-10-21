@@ -122,7 +122,7 @@ export type ComponentKind =
   | "reference"
   | "catalog";
 
-export type ComponentEntryType = "file" | "tree";
+export type ComponentEntryType = "file" | "tree" | "external";
 
 export type ComponentFormat = "portable-plugin-marketplace-v1";
 
@@ -184,6 +184,7 @@ export interface ResolvedComponent extends ComponentDeclaration {
   sha256: string;
   treeFiles?: readonly ComponentTreeFile[];
   catalogSelection?: readonly string[] | "all";
+  externalCatalog?: import("../catalog/acquire.js").ExternalCatalogReference;
 }
 
 export interface ComponentTreeFile {

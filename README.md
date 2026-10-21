@@ -75,7 +75,9 @@ Per aggiornare l'ambiente c'è `forgeyard update`, mentre per annullare l'ultima
 
 Modelli, credenziali, abbonamenti e quote restano affare del client, e Forgeyard non li tocca. Push, deploy e issue partono solo quando li autorizzi tu, nel momento in cui servono, e non viene inviata alcuna telemetria.
 
-Insieme al programma arriva anche la materia prima: un catalogo di terze parti bloccato a una versione precisa, che comprende 202 agenti, 183 skill e 105 comandi. Durante la preparazione Forgeyard ne sceglie soltanto ciò che serve al tuo progetto, senza eseguirne hook o script. Origine e licenze sono documentate in [Provenienza](docs/provenance/catalog-sources.md).
+Forgeyard conserva un elenco di fonti e capacità selezionabili. Durante una nuova preparazione risolve la versione corrente della fonte e scarica soltanto i plugin selezionati, insieme alla licenza, in una cache locale esterna al repository. I contenuti non sono incorporati nel programma e nessuno script o hook scaricato viene eseguito. Serve Internet per recuperare una nuova versione; una versione già presente e registrata nel progetto può essere riutilizzata offline.
+
+L'indice del progetto registra il commit esatto della fonte e le impronte dei file installati. Riprendere il lavoro conserva quella versione; `forgeyard update` cerca la versione corrente e presenta le differenze prima di applicarle. Origine, cache e licenze sono documentate in [Provenienza](docs/provenance/catalog-sources.md).
 
 ## Per chi vuole mettere mano al codice
 
@@ -85,7 +87,7 @@ Il punto di partenza è [AGENTS.md](AGENTS.md), che raccoglie le regole del prog
 npm run verify
 ```
 
-Esegue typecheck, test e build, controlla il catalogo byte per byte, rigenera la provenienza e verifica il contenuto del pacchetto. L'ultimo esito misurato, con la sua data, è riportato in [Stato](docs/STATO.md). Per contribuire c'è [CONTRIBUTING.md](CONTRIBUTING.md), per le segnalazioni di sicurezza [SECURITY.md](SECURITY.md).
+Esegue typecheck, test e build, controlla offline i riferimenti del catalogo, confronta la provenienza generata e verifica il contenuto del pacchetto. L'ultimo esito misurato, con la sua data, è riportato in [Stato](docs/STATO.md). Per contribuire c'è [CONTRIBUTING.md](CONTRIBUTING.md), per le segnalazioni di sicurezza [SECURITY.md](SECURITY.md).
 
 ## Documentazione
 

@@ -3,11 +3,11 @@ sources:
   - id: github.wshobson-agents
     name: Agentic Plugin Marketplace
     url: https://github.com/wshobson/agents
-    revision: 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620
+    revision: HEAD
     license: MIT
-    provenance: vendored-unmodified
-    retrievedAt: 2026-09-15
-    notes: Pinned English portable plugin catalog distributed unchanged with its MIT license.
+    provenance: reference-only
+    retrievedAt: 2026-10-21
+    notes: External English portable plugin source. New preparations resolve HEAD for selected components; installed projects preserve their exact acquired revision and MIT license until explicit update. No upstream catalog payload is distributed with Forgeyard.
   - id: npm.inquirer-prompts
     name: "@inquirer/prompts"
     url: https://github.com/SBoudrias/Inquirer.js

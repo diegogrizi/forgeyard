@@ -8,6 +8,8 @@ import type { ComponentTreeFile } from "../../../src/core/contracts.js";
 import { sha256Text } from "../../../src/core/hash.js";
 import { loadPortableMarketplace } from "../../../src/catalog/load-portable-marketplace.js";
 import { loadRegistry } from "../../../src/registry/load.js";
+import { resolveProfile } from "../../../src/registry/resolve.js";
+import { materializeExternalCatalog } from "../../../src/catalog/acquire.js";
 
 const temporaryRoots: string[] = [];
 
@@ -23,34 +25,31 @@ afterEach(async () => {
 });
 
 describe("portable plugin marketplace loader", () => {
-  test("discovers every component in the pinned ecosystem catalog", async () => {
+  test("discovers every component downloaded from the controlled external catalog fixture", async () => {
     const registry = await loadRegistry(path.resolve("."));
-    const files = registry.packs.get("ecosystem")?.entries.get("ecosystem.portable-catalog")?.files;
-    expect(files).toBeDefined();
+    const resolved = resolveProfile(registry, "hackathon", "codex", { selection: "all", plugins: [] });
+    const reference = resolved.components.find((component) => component.kind === "catalog")!;
+    const catalog = await materializeExternalCatalog(reference);
+    const pluginCount = reference.externalCatalog!.plugins.length;
 
-    const marketplace = await loadPortableMarketplace(files ?? [], { defaultLicense: "MIT" });
+    const marketplace = await loadPortableMarketplace(catalog.treeFiles!, { defaultLicense: "MIT" });
 
-    expect(marketplace.plugins).toHaveLength(92);
+    expect(marketplace.plugins).toHaveLength(pluginCount);
     expect(marketplace.counts).toEqual({
-      plugins: 92,
-      agents: 202,
-      skills: 183,
-      commands: 105,
-      supportingFiles: 242,
-      manifestFiles: 184,
-      otherFiles: 91,
+      plugins: pluginCount,
+      agents: pluginCount,
+      skills: pluginCount,
+      commands: pluginCount,
+      supportingFiles: pluginCount,
+      manifestFiles: pluginCount,
+      otherFiles: 0,
     });
     expect(marketplace.plugins.map((plugin) => plugin.name)).toEqual(
       [...marketplace.plugins.map((plugin) => plugin.name)].sort((left, right) => left.localeCompare(right, "en")),
     );
-    expect([...new Set(marketplace.plugins.map((plugin) => plugin.license))].sort()).toEqual([
-      "Apache-2.0",
-      "MIT",
-    ]);
-    expect(marketplace.plugins.filter((plugin) => plugin.license === "Apache-2.0").map((plugin) => plugin.name)).toEqual([
-      "conductor",
-      "superself",
-    ]);
+    expect(marketplace.plugins.map((plugin) => plugin.name)).toEqual(reference.externalCatalog!.plugins);
+    expect([...new Set(marketplace.plugins.map((plugin) => plugin.license))]).toEqual(["MIT"]);
+    expect(marketplace.plugins.every((plugin) => plugin.skills[0]?.supportingFiles[0]?.relativeToSkill === "references/checklist.md")).toBe(true);
   });
 
   test("rejects duplicate declared agent names within one plugin", async () => {

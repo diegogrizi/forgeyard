@@ -3,13 +3,13 @@ id: ecosystem
 version: 1.0.0
 license: MIT
 provenance:
-  mode: vendored-unmodified
+  mode: reference-only
   sourceId: github.wshobson-agents
 components:
   - id: ecosystem.portable-catalog
     kind: catalog
-    entry: vendor
-    entryType: tree
+    entry: source.json
+    entryType: external
     format: portable-plugin-marketplace-v1
     slot: catalog.portable.primary
     template: false

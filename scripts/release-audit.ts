@@ -1,15 +1,14 @@
 import { access, lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { loadPortableMarketplace } from "../src/catalog/load-portable-marketplace.js";
-import { loadRegistry } from "../src/registry/load.js";
-import { readVendorAttestation, verifyVendorTree } from "../src/provenance/vendor-catalog.js";
+import { verifyExternalCatalogReference, type ExternalCatalogSummary } from "../src/provenance/external-catalog.js";
 
 type RuleId =
   | "release.private-deny-term"
   | "release.unfinished-prose"
   | "release.unresolved-template"
   | "release.committed-output"
+  | "release.bundled-catalog";
 
 interface AuditOptions {
   root: string;
@@ -52,7 +51,7 @@ async function repositoryFiles(root: string): Promise<string[]> {
     const stats = await lstat(current);
     if (stats.isSymbolicLink()) continue;
     if (stats.isFile()) {
-      if (!BINARY_EXTENSIONS.has(path.extname(current).toLocaleLowerCase("en-US"))) files.push(current);
+      files.push(current);
       continue;
     }
     if (!stats.isDirectory()) continue;
@@ -72,46 +71,24 @@ function intentionalTokenContext(relativePath: string): boolean {
     // GitHub Actions expression syntax uses doubled braces: they are the platform's own
     // interpolation, not a template marker we failed to resolve. Naming the sequence in
     // this comment would make the rule flag its own implementation.
-    || relativePath.startsWith(".github/workflows/")
-    || relativePath.startsWith("packs/ecosystem/vendor/");
+    || relativePath.startsWith(".github/workflows/");
 }
 
 function intentionalRuleFixture(relativePath: string): boolean {
   return relativePath === "scripts/release-audit.ts"
-    || relativePath.startsWith("tests/")
-    || relativePath.startsWith("packs/ecosystem/vendor/");
+    || relativePath.startsWith("tests/");
 }
 
-interface CatalogMetrics {
-  files: number;
-  physicalLines: number;
-  agents: number;
-  skills: number;
-  commands: number;
-}
-
-async function verifiedCatalogMetrics(root: string): Promise<CatalogMetrics | undefined> {
-  const vendorRoot = path.join(root, "packs", "ecosystem", "vendor");
-  const attestationPath = path.join(vendorRoot, "UPSTREAM.json");
-  try {
-    await access(attestationPath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw error;
+async function verifiedCatalogReference(root: string): Promise<ExternalCatalogSummary | undefined> {
+  for (const filename of ["source.json", "pack.yaml"]) {
+    try {
+      await access(path.join(root, "packs", "ecosystem", filename));
+      return verifyExternalCatalogReference(root);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
   }
-  const attestation = await readVendorAttestation(attestationPath);
-  const summary = await verifyVendorTree(vendorRoot, attestation);
-  const registry = await loadRegistry(root);
-  const entry = registry.packs.get("ecosystem")?.entries.get("ecosystem.portable-catalog");
-  if (entry?.files === undefined) throw new Error("The ecosystem catalog component is unavailable.");
-  const marketplace = await loadPortableMarketplace(entry.files, { defaultLicense: "MIT" });
-  return {
-    files: summary.fileCount,
-    physicalLines: summary.physicalLines,
-    agents: marketplace.counts.agents,
-    skills: marketplace.counts.skills,
-    commands: marketplace.counts.commands,
-  };
+  return undefined;
 }
 
 function recordedOutput(relativePath: string): boolean {
@@ -135,6 +112,10 @@ async function runAudit(options: AuditOptions): Promise<Map<RuleId, Set<string>>
   for (const filePath of await repositoryFiles(root)) {
     const relativePath = portableRelative(root, filePath);
     if (recordedOutput(relativePath)) addFinding(findings, "release.committed-output", relativePath);
+    if (/^packs\/ecosystem\/(?:vendor|npm-carriers)(?:\/|$)/i.test(relativePath)) {
+      addFinding(findings, "release.bundled-catalog", relativePath);
+    }
+    if (BINARY_EXTENSIONS.has(path.extname(filePath).toLocaleLowerCase("en-US"))) continue;
     const bytes = await readFile(filePath);
     if (bytes.includes(0)) continue;
     const source = bytes.toString("utf8");
@@ -190,17 +171,17 @@ async function main(): Promise<number> {
     root: parsed.root,
     ...(denyTerm === undefined ? {} : { denyTerm }),
   });
-  let metrics: CatalogMetrics | undefined;
+  let catalog: ExternalCatalogSummary | undefined;
   try {
-    metrics = await verifiedCatalogMetrics(path.resolve(parsed.root));
+    catalog = await verifiedCatalogReference(path.resolve(parsed.root));
   } catch {
-    process.stderr.write("release.vendor-integrity\n");
+    process.stderr.write("release.catalog-reference\n");
     return 1;
   }
   if (findings.size === 0) {
-    const catalogSummary = metrics === undefined
+    const catalogSummary = catalog === undefined
       ? ""
-      : ` Catalog: ${metrics.files.toLocaleString("en-US")} files, ${metrics.physicalLines.toLocaleString("en-US")} physical lines, ${metrics.agents.toLocaleString("en-US")} agents, ${metrics.skills.toLocaleString("en-US")} skills, ${metrics.commands.toLocaleString("en-US")} commands.`;
+      : ` External catalog reference: ${catalog.curatedPlugins} curated plugins; ${catalog.reference.repository}@${catalog.reference.revision}.`;
     process.stdout.write(redact(`Release audit passed.${catalogSummary}\n`, denyTerm));
     return 0;
   }

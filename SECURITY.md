@@ -23,7 +23,7 @@ Prompt-level tool permissions and reviewer instructions are policy guidance, not
 - Do not put credentials, tokens, private deny terms, or personal data in answer files, prompts, task definitions, generated output, journals, issues, or evidence receipts.
 - Pass a private release deny term only through the named process environment variable accepted by the release audit; the value is never printed or serialized.
 - Verification stdout and stderr remain local to the process and are represented only by hashes and byte counts in receipts.
-- Forgeyard has no telemetry, analytics, update check, or runtime pack download.
+- Forgeyard has no telemetry or analytics. Setup and explicit update retrieve selected catalog files from their registered public GitHub source; ordinary project work uses the installed revision. Downloaded scripts and hooks are never executed during acquisition or rendering.
 
 ## Unsupported automatic effects
 

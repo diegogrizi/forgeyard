@@ -44,8 +44,9 @@ describe("generated public provenance artifacts", () => {
     expect(rendered).toBe(checkedIn);
     expect(headings).toEqual([...headings].sort((left, right) => left.localeCompare(right, "en")));
     expect(rendered).toContain("https://github.com/wshobson/agents");
-    expect(rendered).toContain("4236bb91f8395b0435f1d8b8baf9e8e4c69a8620");
-    expect(rendered).toContain("1,007 files and 211,594 physical lines");
+    expect(rendered).toContain("HEAD (external catalog reference)");
+    expect(rendered).toContain("Catalog payload is not distributed with Forgeyard.");
+    expect(rendered).not.toContain("Verified content:");
   });
 
   test("SPDX contains the root and complete lock graph with stable relationships", async () => {
@@ -57,13 +58,14 @@ describe("generated public provenance artifacts", () => {
       dataLicense: string;
       packages: Array<Record<string, unknown>>;
       relationships: Array<Record<string, unknown>>;
+      annotations: Array<Record<string, unknown>>;
     };
     const lockEntries = Object.entries(workspace.packageLock.packages);
 
     expect(rendered).toBe(checkedIn);
     expect(spdx.spdxVersion).toBe("SPDX-2.3");
     expect(spdx.dataLicense).toBe("CC0-1.0");
-    expect(spdx.packages).toHaveLength(lockEntries.length + 1);
+    expect(spdx.packages).toHaveLength(lockEntries.length);
     for (const [lockPath, locked] of lockEntries) {
       const expectedName = lockPath === "" ? workspace.packageManifest.name : locked.name;
       const found = spdx.packages.find((entry) => entry.name === expectedName && entry.versionInfo === locked.version);
@@ -74,15 +76,11 @@ describe("generated public provenance artifacts", () => {
     expect(spdx.relationships).toContainEqual(
       expect.objectContaining({ spdxElementId: "SPDXRef-DOCUMENT", relationshipType: "DESCRIBES" }),
     );
-    const vendor = spdx.packages.find((entry) => entry.name === "Agentic Plugin Marketplace");
-    expect(vendor).toEqual(expect.objectContaining({
-      versionInfo: "4236bb91f8395b0435f1d8b8baf9e8e4c69a8620",
-      downloadLocation: "https://github.com/wshobson/agents",
-      licenseDeclared: "MIT",
-    }));
-    expect(spdx.relationships).toContainEqual(expect.objectContaining({
-      relationshipType: "CONTAINS",
-      relatedSpdxElement: vendor?.SPDXID,
+    expect(spdx.packages.find((entry) => entry.name === "Agentic Plugin Marketplace")).toBeUndefined();
+    expect(spdx.relationships.some((entry) => entry.relationshipType === "CONTAINS")).toBe(false);
+    expect(spdx.annotations).toContainEqual(expect.objectContaining({
+      annotationType: "OTHER",
+      comment: expect.stringContaining('"repository":"https://github.com/wshobson/agents"'),
     }));
     expect(spdx.relationships).toEqual([...spdx.relationships].sort((left, right) =>
       JSON.stringify(left).localeCompare(JSON.stringify(right), "en")));

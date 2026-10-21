@@ -50,7 +50,25 @@ export function renderThirdPartyNotices(workspace: ProvenanceWorkspace): string 
       ],
     };
   });
-  const entries = [...packageEntries, ...vendorEntries]
+  const externalEntries: NoticeEntry[] = validated.externalSources.map((external) => {
+    const source = sourceById.get(external.sourceId)!;
+    return {
+      heading: `${source.name} ${external.reference.revision} (external catalog reference)`,
+      name: source.name,
+      version: external.reference.revision,
+      license: external.reference.license,
+      lockPath: external.referenceRelativePath,
+      projectUrl: external.reference.repository,
+      notes: source.notes,
+      extraLines: [
+        `- Source reference: ${external.referenceRelativePath}`,
+        `- Requested revision for new preparations: ${external.reference.revision}`,
+        "- Catalog payload is not distributed with Forgeyard.",
+        "- Each acquired installation preserves its exact upstream revision, license notice and file hashes.",
+      ],
+    };
+  });
+  const entries = [...packageEntries, ...vendorEntries, ...externalEntries]
     .sort((left, right) => left.heading.localeCompare(right.heading, "en"));
   const sections = entries.map((entry) => [
     `## ${entry.heading}`,
@@ -65,7 +83,7 @@ export function renderThirdPartyNotices(workspace: ProvenanceWorkspace): string 
   return `${[
     "# Third-Party Notices",
     "",
-    "This file is generated from `package-lock.json`, installed package metadata, `sources/catalog.yaml`, and verified vendor attestations.",
+    "This file is generated from `package-lock.json`, installed package metadata, `sources/catalog.yaml`, verified vendor attestations and external catalog references.",
     "Lockfile versions remain authoritative. Each package remains subject to its own license terms.",
     "",
     ...sections.flatMap((section) => [section, ""]),

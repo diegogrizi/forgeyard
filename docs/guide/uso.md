@@ -25,9 +25,11 @@ npm link
 ```
 
 Il collegamento di sviluppo usa il checkout locale: una modifica al programma richiede
-una nuova compilazione. La preparazione è offline. Forgeyard non contatta un servizio di
-aggiornamento, non scarica pack, non invia dati d'uso e non attiva gli script o gli hook
-del catalogo di terzi.
+una nuova compilazione. Una nuova preparazione risolve e scarica dalla fonte GitHub i
+soli plugin selezionati e la licenza; la cache resta fuori dal repository. Una revisione
+già installata può essere riutilizzata offline se la sua cache è disponibile. `update`
+propone esplicitamente la revisione corrente. Forgeyard non invia dati d'uso e non attiva
+gli script o gli hook del catalogo di terzi.
 
 ## Percorso ordinario: un solo ingresso
 

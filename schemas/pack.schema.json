@@ -76,7 +76,7 @@
             ]
           },
           "entry": { "type": "string", "minLength": 1, "maxLength": 260 },
-          "entryType": { "enum": ["file", "tree"] },
+          "entryType": { "enum": ["file", "tree", "external"] },
           "format": { "enum": ["portable-plugin-marketplace-v1"] },
           "slot": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
           "template": { "type": "boolean" },
@@ -103,14 +103,14 @@
             "then": {
               "required": ["entryType", "format"],
               "properties": {
-                "entryType": { "const": "tree" },
+                "entryType": { "enum": ["tree", "external"] },
                 "format": { "const": "portable-plugin-marketplace-v1" }
               }
             }
           },
           {
             "if": {
-              "properties": { "entryType": { "const": "tree" } },
+              "properties": { "entryType": { "enum": ["tree", "external"] } },
               "required": ["entryType"]
             },
             "then": {

@@ -14,12 +14,14 @@ import type {
 import { ForgeyardError } from "../core/errors.js";
 import { sha256Bytes, sha256Text } from "../core/hash.js";
 import { assertNoCaseCollisions, normalizePortablePath, resolveInsideRoot } from "../core/paths.js";
+import { validateExternalCatalogReference, type ExternalCatalogReference } from "../catalog/acquire.js";
 
 export interface LoadedEntry {
   sourcePath: string;
   sha256: string;
   entryType?: "tree";
   files?: readonly ComponentTreeFile[];
+  externalCatalog?: ExternalCatalogReference;
 }
 
 export interface LoadedPack {
@@ -235,7 +237,8 @@ async function loadEntries(packDirectory: string, manifest: PackManifest): Promi
     const canonicalEntry = await realpath(candidate);
     ensureInside(canonicalPackDirectory, canonicalEntry, `Component entry '${component.entry}'`);
     const source = (await readFile(canonicalEntry, "utf8")).replaceAll("\r\n", "\n").replaceAll("\r", "\n");
-    entries.set(component.id, { sourcePath: canonicalEntry, sha256: sha256Text(source) });
+    entries.set(component.id, { sourcePath: canonicalEntry, sha256: sha256Text(source),
+      ...(component.entryType === "external" ? { externalCatalog: validateExternalCatalogReference(JSON.parse(source)) } : {}) });
   }
 
   return entries;

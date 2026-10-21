@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/wshobson/agents",
+  "revision": "HEAD",
+  "license": "MIT",
+  "plugins": [
+    "accessibility-compliance",
+    "application-performance",
+    "backend-development",
+    "cloud-infrastructure",
+    "comprehensive-review",
+    "data-engineering",
+    "data-validation-suite",
+    "database-design",
+    "debugging-toolkit",
+    "deployment-validation",
+    "developer-essentials",
+    "documentation-generation",
+    "frontend-mobile-development",
+    "frontend-mobile-security",
+    "git-pr-workflows",
+    "jvm-languages",
+    "llm-application-dev",
+    "security-scanning",
+    "tdd-workflows",
+    "ui-design",
+    "unit-testing"
+  ]
+}

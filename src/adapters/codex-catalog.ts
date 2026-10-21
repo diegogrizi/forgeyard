@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { stringify as stringifyYaml } from "yaml";
 
 import { loadPortableMarketplace } from "../catalog/load-portable-marketplace.js";
+import { materializeExternalCatalog, type CatalogDownloadOptions } from "../catalog/acquire.js";
 import type {
   PortableAgent,
   PortableCommand,
@@ -318,7 +319,9 @@ function assertUniqueOutputPaths(files: readonly PlannedFile[]): void {
 export async function renderCodexCatalog(
   component: ResolvedComponent,
   selection: readonly string[] | "all",
+  options: CatalogDownloadOptions = {},
 ): Promise<readonly PlannedFile[]> {
+  component = await materializeExternalCatalog(component, options);
   if (
     component.kind !== "catalog" ||
     component.entryType !== "tree" ||

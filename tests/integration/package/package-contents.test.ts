@@ -1,3 +1,5 @@
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { beforeAll, describe, expect, test, vi } from "vitest";
@@ -89,8 +91,8 @@ describe("public npm package contents", () => {
       "profiles/tailored.yaml",
       "packs/foundation/pack.yaml",
       "packs/foundation/templates/COMPOSITION.md.tpl",
-      "packs/ecosystem/vendor/UPSTREAM.json",
-      "packs/ecosystem/vendor/LICENSE",
+      "packs/ecosystem/pack.yaml",
+      "packs/ecosystem/source.json",
       "sources/catalog.yaml",
       "sources/capabilities.yaml",
       "dist/native/service.d.ts",
@@ -99,7 +101,9 @@ describe("public npm package contents", () => {
       "dist/workspace/entry.d.ts",
       "dist/workspace/personal.d.ts",
     ]));
-    expect(paths.filter((filePath) => filePath.startsWith("packs/ecosystem/vendor/"))).toHaveLength(1_009);
+    expect(paths.filter((filePath) => filePath.startsWith("packs/ecosystem/"))).toEqual([
+      "packs/ecosystem/pack.yaml", "packs/ecosystem/source.json",
+    ]);
   });
 
   test("contains only allow-listed publish paths", () => {
@@ -113,8 +117,38 @@ describe("public npm package contents", () => {
     const forbidden = paths.filter((filePath) =>
       (/^(?:src|tests|fixtures|docs|scripts|coverage|\.forgeyard)\//.test(filePath) && !publicGuides.has(filePath))
       || /^(?:evidence|state|screenshots?)(?:\/|$)/i.test(filePath)
+      || /(?:^|\/)(?:vendor|npm-carriers|\.cache)(?:\/|$)/i.test(filePath)
       || /\.(?:log|png|jpe?g|webp|gif|mp4|mov)$/i.test(filePath));
 
     expect(forbidden).toEqual([]);
+  });
+
+  test("keeps accidentally acquired payload out of the npm package", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "forgeyard-publish-reference-"));
+    try {
+      await cp(path.join(repositoryRoot, "package.json"), path.join(root, "package.json"));
+      for (const relativePath of [
+        "packs/ecosystem/pack.yaml", "packs/ecosystem/source.json",
+        "packs/ecosystem/vendor/plugins/example/SKILL.md",
+        "packs/ecosystem/npm-carriers/example.gitignore",
+        "packs/ecosystem/.cache/download.json",
+      ]) {
+        const destination = path.join(root, relativePath);
+        await mkdir(path.dirname(destination), { recursive: true });
+        const content = relativePath.endsWith("pack.yaml") || relativePath.endsWith("source.json")
+          ? await readFile(path.join(repositoryRoot, relativePath), "utf8")
+          : "accidental local payload\n";
+        await writeFile(destination, content, "utf8");
+      }
+      const result = await runProcess("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], root);
+      expect(result.exitCode).toBe(0);
+      const files = (JSON.parse(result.stdout) as PackResult[])[0]!.files.map((file) => file.path);
+
+      expect(files.filter((filePath) => filePath.startsWith("packs/ecosystem/"))).toEqual([
+        "packs/ecosystem/pack.yaml", "packs/ecosystem/source.json",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

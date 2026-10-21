@@ -1,12 +1,9 @@
 import path from "node:path";
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
-// Ogni prova di questo file compone l'intero catalogo vendored e rende centinaia di file.
-// Cronometrate su questa macchina a riposo costano 7,9 s e 9,3 s: sotto il tetto globale di
-// 30 s, ma con un margine di tre volte che si esaurisce su un runner piu' lento. Il tetto e'
-// dichiarato qui con la sua misura, invece di restare implicito.
-vi.setConfig({ testTimeout: 240_000, hookTimeout: 240_000 });
+// These tests acquire the controlled external catalog fixture and render the
+// selected plugin documents before hashing their install metadata.
 
 import { createCodexAdapter } from "../../../src/adapters/codex.js";
 import { loadConfig, serializeConfig } from "../../../src/config/config.js";
@@ -22,6 +19,7 @@ async function makePlan(operationId: string) {
   const renderedFiles = await createCodexAdapter().render(resolved.components, config);
   return {
     config,
+    catalogPluginCount: registry.profiles.get("hackathon")!.catalog.plugins.length,
     plan: buildInstallPlan({
       targetRoot: path.resolve("fixture-target"),
       config,
@@ -73,7 +71,8 @@ describe("install metadata", () => {
       ".forgeyard/usage/README.md",
     ]);
     expect(first.plan.files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
-    expect(first.plan.files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBeGreaterThanOrEqual(33);
+    expect(first.plan.files.filter((file) => file.path.startsWith(".codex/agents/")))
+      .toHaveLength(first.catalogPluginCount + 1);
     expect(first.plan.files[0]).toEqual(
       expect.objectContaining({
         componentId: "forgeyard.config",

@@ -443,17 +443,23 @@ export class ProjectService {
     if (installed) return this.response(envelope, { status: "already-frozen", capsuleId: installed.id,
       applied: false, next: "Use fy_plan for a new feature. Updating the factory/catalog does not update this harness." });
     const noPrompt = async (): Promise<never> => { throw nativeError("FY_PRODUCT_INPUT_REQUIRED", "Provide the software outcome; native preparation never asks you to choose skill authors/frameworks."); };
-    const factory = createForgeyardService({
+    const factoryOptions = {
       prompts: { input: noPrompt, number: noPrompt, select: noPrompt, confirm: noPrompt },
       operationId: () => `native-apply-${sha256Text(canonicalJson(envelope)).slice(0, 24)}`,
-    });
+    };
+    let factory = createForgeyardService(factoryOptions);
     const input = { targetRoot: this.identity.root, brief: request,
       specificationPaths: (payload.specificationPaths ?? []) as string[], needsProposal: payload.proposal,
       ...((payload.constraints ?? {}) as ComposeProjectOptions),
       adapter: client, yes: true, dryRun: true, nonInteractive: true };
     const preview = await factory.prepare(input);
+    // One approval binds one source revision. Further renders may check local changes,
+    // but must never re-resolve a moving remote HEAD after showing the preview.
+    const catalogOptions = preview.catalogRevision === undefined ? {} : { revision: preview.catalogRevision };
+    factory = createForgeyardService({ ...factoryOptions, catalogOptions });
     const config = preparationConfig(preview.inspection, preview.decision);
-    const rendered = await renderFactoryPlan(this.identity.root, config, preview.operationId);
+    const renderPrepared = () => renderFactoryPlan(this.identity.root, config, preview.operationId, undefined, undefined, catalogOptions);
+    const rendered = await renderPrepared();
     const proposed = JSON.parse(rendered.files.find((file) => file.path === ".forgeyard/capsule.json")!.content) as Capsule;
     if (envelope.tool === "fy_prepare") return this.response(envelope, { status: "preview", applied: false,
       profile, composition, changes: preview.changes, decision: preview.decision, capsuleId: proposed.id,
@@ -491,7 +497,7 @@ export class ProjectService {
     if ((await workspaceSnapshot(this.identity.root)).sha256 !== before.sha256 ||
       afterInspection.analysisSha256 !== preview.inspection.analysisSha256)
       throw nativeError("FY_APPROVAL_STALE", "Project inputs changed while approving installation.");
-    const currentRender = await renderFactoryPlan(this.identity.root, config, preview.operationId);
+    const currentRender = await renderPrepared();
     if (sha256Text(canonicalJson(currentRender.files.map((file) => ({ path: file.path, sha256: file.sha256, ownership: file.ownership })))) !== installationSha256)
       throw nativeError("FY_APPROVAL_STALE", "The factory/catalog changed while approving installation.");
     const result = await factory.prepare({ ...input, dryRun: false });

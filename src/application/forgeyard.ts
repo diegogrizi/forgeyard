@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { createHarnessAdapter } from "../adapters/create.js";
+import type { CatalogDownloadOptions } from "../catalog/acquire.js";
+import { readRegularProjectFile } from "../capsule/capsule.js";
 import { loadConfig } from "../config/config.js";
 import { collectInitRequest, type PromptDriver } from "../config/wizard.js";
 import type { CheckResult, DoctorReport, ForgeyardConfig, HarnessId, VerificationReceipt } from "../core/contracts.js";
@@ -114,6 +116,7 @@ export interface PrepareCommandResult extends WriteCommandResult {
   command: "prepare";
   inspection: ProjectInspection;
   decision: PreparationDecision;
+  catalogRevision?: string;
 }
 
 export interface UpdateCommandResult extends WriteCommandResult {
@@ -184,6 +187,7 @@ export interface ForgeyardApplicationOptions {
   operationId?: (kind: "prepare" | "init" | "update") => string;
   doctorRunner?: (input: DoctorInput) => Promise<DoctorReport>;
   verificationRunner?: (input: VerificationInput) => Promise<VerificationResult>;
+  catalogOptions?: CatalogDownloadOptions;
 }
 
 export function packagedRegistryRoot(metaUrl = import.meta.url): string {
@@ -259,11 +263,25 @@ async function chooseWriteStatus(
 }
 
 export async function renderFactoryPlan(root: string, config: ForgeyardConfig, nextOperationId: string,
-  forgeyardVersion = "0.1.0", registryRoot = packagedRegistryRoot()) {
+  forgeyardVersion = "0.1.0", registryRoot = packagedRegistryRoot(), catalogOptions: CatalogDownloadOptions = {}, refreshCatalog = false) {
   const registry = await loadRegistry(registryRoot);
   const adapterId = config.harnesses[0];
   const resolved = resolveProfile(registry, config.profile, adapterId, config.catalog, config.composition?.packs);
-  const adapter = createHarnessAdapter(adapterId);
+  let revision = catalogOptions.revision;
+  if (!refreshCatalog && resolved.components.some(component => component.externalCatalog)) {
+    let raw: string | undefined;
+    try { raw = await readRegularProjectFile(root, ".forgeyard/catalog/ecosystem.json"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    if (raw !== undefined) {
+      const installed = JSON.parse(raw) as { source?: { source?: string; revision?: string } };
+      const reference = resolved.components.find(component => component.externalCatalog)!.externalCatalog!;
+      if (installed.source?.source !== reference.repository || !/^[a-f0-9]{40}$/.test(installed.source?.revision ?? ""))
+        throw new ForgeyardError({ code: "FY_CATALOG_INTEGRITY", message: "La revisione del catalogo installato non è valida.",
+          remediation: "Controlla l'indice del progetto prima di aggiornare l'ambiente.", exitCode: 3 });
+      revision = installed.source!.revision;
+    }
+  }
+  const adapter = createHarnessAdapter(adapterId, { ...catalogOptions, ...(revision === undefined ? {} : { revision }) });
   const renderedFiles = await adapter.render(resolved.components, config);
   await adapter.validateOutput(renderedFiles);
   return buildInstallPlan({ targetRoot: root, config, resolved, renderedFiles,
@@ -300,8 +318,8 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
     throw doctorFailure(report, true, doctorError);
   }
 
-  async function renderPlan(root: string, config: ForgeyardConfig, nextOperationId: string) {
-    return renderFactoryPlan(root, config, nextOperationId, forgeyardVersion, registryRoot);
+  async function renderPlan(root: string, config: ForgeyardConfig, nextOperationId: string, refreshCatalog = false) {
+    return renderFactoryPlan(root, config, nextOperationId, forgeyardVersion, registryRoot, options.catalogOptions, refreshCatalog);
   }
 
   return {
@@ -371,6 +389,9 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
       const config = preparationConfig(analysis.inspection, analysis.decision);
       const nextOperationId = operationId("prepare");
       const plan = await renderPlan(root, config, nextOperationId);
+      const catalogIndex = plan.files.find(file => file.path === ".forgeyard/catalog/ecosystem.json");
+      const catalogRevision = catalogIndex === undefined ? undefined :
+        (JSON.parse(catalogIndex.content) as { source: { revision: string } }).source.revision;
       const preview = await applyInstallPlan(plan, { dryRun: true });
       const status = await chooseWriteStatus(
         preview.created.length,
@@ -398,6 +419,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
           },
           doctor,
           ...analysis,
+          ...(catalogRevision === undefined ? {} : { catalogRevision }),
         };
       }
 
@@ -422,6 +444,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
         },
         doctor,
         ...analysis,
+        ...(catalogRevision === undefined ? {} : { catalogRevision }),
       };
     },
 
@@ -525,7 +548,7 @@ export function createForgeyardService(options: ForgeyardApplicationOptions): Fo
       const root = path.resolve(input.root);
       const config = await loadConfig(path.join(root, "forgeyard.yaml"));
       const nextOperationId = operationId("update");
-      const next = await renderPlan(root, config, nextOperationId);
+      const next = await renderPlan(root, config, nextOperationId, true);
       const plan = await planUpdate(root, next);
       const preview = await applyUpdate(plan, { dryRun: true });
       const changeCount = preview.created.length + preview.updated.length + preview.removed.length;

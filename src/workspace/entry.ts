@@ -230,6 +230,7 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
   if (plan === null) {
     io.writeOut("  Solo il collegamento nativo: l'imbracatura presente non viene reinstallata.\n");
   } else {
+    io.writeOut("  Le capacità selezionate vengono recuperate dalla fonte esterna; la revisione installata resta registrata nel progetto.\n");
     io.writeOut(`  Capacità selezionate: ${plan.decision.selected.length}    escluse: ${plan.decision.excluded.length}\n`);
     const checks = plan.inspection.qualityCommands.map((command) => command.argv.join(" "));
     if (checks.length > 0) io.writeOut(`  Verifiche: ${checks.join(" · ")}\n`);

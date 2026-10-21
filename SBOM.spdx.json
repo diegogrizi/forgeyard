@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "forgeyard-0.1.0",
-  "documentNamespace": "https://forgeyard.dev/spdx/forgeyard-0.1.0-a51b4f031f8f11fc76363a7b717bebbf91700ef6e064fa7de8e16a1f2a39a030",
+  "documentNamespace": "https://forgeyard.dev/spdx/forgeyard-0.1.0-645c20c071e6a24863e9caad20a98240778a9b49718c74445b70bfe5d15a238b",
   "creationInfo": {
-    "created": "2026-09-16T00:00:00Z",
+    "created": "2026-10-21T00:00:00Z",
     "creators": [
       "Tool: Forgeyard provenance generator"
     ]
@@ -7778,30 +7778,6 @@
           "referenceLocator": "pkg:npm/zod-to-json-schema@3.25.2"
         }
       ]
-    },
-    {
-      "SPDXID": "SPDXRef-Vendor-github.wshobson-agents",
-      "name": "Agentic Plugin Marketplace",
-      "versionInfo": "4236bb91f8395b0435f1d8b8baf9e8e4c69a8620",
-      "downloadLocation": "https://github.com/wshobson/agents",
-      "filesAnalyzed": false,
-      "licenseConcluded": "MIT",
-      "licenseDeclared": "MIT",
-      "copyrightText": "NOASSERTION",
-      "checksums": [
-        {
-          "algorithm": "SHA256",
-          "checksumValue": "cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97"
-        }
-      ],
-      "homepage": "https://github.com/wshobson/agents",
-      "externalRefs": [
-        {
-          "referenceCategory": "OTHER",
-          "referenceType": "vcs",
-          "referenceLocator": "git+https://github.com/wshobson/agents@4236bb91f8395b0435f1d8b8baf9e8e4c69a8620"
-        }
-      ]
     }
   ],
   "relationships": [
@@ -8524,11 +8500,6 @@
       "spdxElementId": "SPDXRef-Package-fix-dts-default-cjs-exports-e23504e7cc52",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-rollup-b24e83403df2"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-forgeyard",
-      "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-Vendor-github.wshobson-agents"
     },
     {
       "spdxElementId": "SPDXRef-Package-forgeyard",
@@ -10219,6 +10190,14 @@
       "spdxElementId": "SPDXRef-Package-zod-to-json-schema-57d48f5ba9f8",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-zod-1a876f5989ed"
+    }
+  ],
+  "annotations": [
+    {
+      "annotationDate": "2026-10-21T00:00:00Z",
+      "annotationType": "OTHER",
+      "annotator": "Tool: Forgeyard provenance generator",
+      "comment": "External catalog reference only; catalog payload is not distributed with Forgeyard. {\"license\":\"MIT\",\"plugins\":[\"accessibility-compliance\",\"application-performance\",\"backend-development\",\"cloud-infrastructure\",\"comprehensive-review\",\"data-engineering\",\"data-validation-suite\",\"database-design\",\"debugging-toolkit\",\"deployment-validation\",\"developer-essentials\",\"documentation-generation\",\"frontend-mobile-development\",\"frontend-mobile-security\",\"git-pr-workflows\",\"jvm-languages\",\"llm-application-dev\",\"security-scanning\",\"tdd-workflows\",\"ui-design\",\"unit-testing\"],\"referencePath\":\"packs/ecosystem/source.json\",\"repository\":\"https://github.com/wshobson/agents\",\"revision\":\"HEAD\",\"schemaVersion\":1,\"sourceId\":\"github.wshobson-agents\"}"
     }
   ]
 }

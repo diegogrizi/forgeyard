@@ -38,7 +38,7 @@ export interface CapabilityResolution {
   contextTokens: number;
 }
 
-// Curated mapping over existing first-party and pinned MIT vendored definitions.
+// Curated references to first-party procedures and externally acquired MIT plugins.
 // Context values are policy reservations, not measured model usage or live/evaluated support.
 function bundled(id: string, provides: readonly string[], source: NonNullable<CapabilityCandidate["source"]>, orchestration = false): CapabilityCandidate {
   return { id, provides, admitted: true, license: source.pluginId === undefined ? "Apache-2.0" : "MIT", clients: ["codex", "claude-code"], permissions: [], contextTokens: 4096, dependencies: [], conflicts: [], orchestration, ...(orchestration ? { exclusiveGroup: "workflow.primary" } : {}), source };
@@ -51,7 +51,7 @@ export const BUNDLED_CAPABILITIES: readonly CapabilityCandidate[] = [
   bundled("frontend-mobile-development", ["domain.react"], { sourceId: "github.wshobson-agents", pluginId: "frontend-mobile-development", support: "descriptor-only" }),
   bundled("jvm-languages", ["domain.java", "domain.spring"], { sourceId: "github.wshobson-agents", pluginId: "jvm-languages", support: "descriptor-only" }),
 ];
-/** Offline default registry checked against the pinned manifest and real vendored inventory by the intake suite. */
+/** Authored source references checked offline; actual bytes are validated when acquired. */
 export const BUNDLED_CAPABILITY_SOURCES: readonly CapabilitySourceRecord[] = [
   { sourceId: "github.wshobson-agents", license: "MIT", pluginIds: ["unit-testing", "comprehensive-review", "documentation-generation", "frontend-mobile-development", "jvm-languages"] },
 ];

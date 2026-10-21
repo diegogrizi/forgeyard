@@ -99,7 +99,10 @@ export async function runBuiltCli(
   args: readonly string[],
   cwd: string,
 ): Promise<CliProcessResult> {
-  const result = await execa(process.execPath, [path.join(repositoryRoot, "dist", "cli", "main.js"), ...args], {
+  const result = await execa(process.execPath, [
+    "--import", new URL("./catalog-fixture.mjs", import.meta.url).href,
+    path.join(repositoryRoot, "dist", "cli", "main.js"), ...args,
+  ], {
     cwd,
     shell: false,
     reject: false,

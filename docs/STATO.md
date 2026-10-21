@@ -1,5 +1,23 @@
 # Stato di Forgeyard
 
+## Aggiornamento del 21 ottobre 2026: catalogo esterno
+
+Il catalogo incorporato è stato sostituito con riferimenti alle fonti. Le nuove
+preparazioni scaricano i soli plugin selezionati e la licenza dalla revisione corrente;
+il progetto registra il commit esatto. Il riuso conserva la revisione installata,
+mentre `update` propone quella corrente. I contenuti scaricati sono conservati in una
+cache esterna al repository. I test della factory usano una piccola fonte controllata,
+senza dipendere da Internet. È stato provato anche il recupero reale da GitHub e il
+rendering del profilo curato, senza scrivere un progetto di prova. Questo non è una
+prova live in un client AI autenticato.
+
+La verifica locale dell'incremento (`npm run verify`) è terminata con uscita 0:
+85 file di test, 656 prove superate e una saltata; fase test in 55,29 s. Sono passati
+anche typecheck, build, riferimenti esterni, provenienza, audit e controllo del pacchetto.
+
+Le sezioni seguenti conservano le misure storiche di settembre, compresi i conteggi
+del vecchio snapshot: non descrivono il contenuto del pacchetto corrente.
+
 Registrato il **23 settembre 2026** sul branch `refactor/forgia-personale-workspace`.
 Questo documento vale alla data indicata: il prodotto è in ristrutturazione, e va riletto
 insieme al registro dei commit. Per la tesi e i confini di progetto, vedere
@@ -288,5 +306,5 @@ attestazione di questo documento va riusata per una revisione diversa.
   `unmeasured`, mai zero.
 - Non esegue push, deploy, pubblicazioni, acquisti o messaggi: sono effetti esterni
   separati e autorizzati.
-- Non esegue hook o script del catalogo di terzi. I byte vendored restano invariati
-  sotto la loro licenza.
+- Non esegue hook o script del catalogo di terzi. I file recuperati mantengono provenienza,
+  impronte e licenza; il loro contenuto non è incorporato nel pacchetto della factory.

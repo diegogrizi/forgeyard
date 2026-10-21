@@ -36,8 +36,9 @@ describe("Codex hackathon golden output", () => {
       );
       expect(actual.get(relativePath), relativePath).toBe(expected.replaceAll("\r\n", "\n"));
     }
-    expect(files.filter((file) => file.path.startsWith(".codex/agents/")).length).toBe(40);
-    expect(files.filter((file) => file.path.endsWith("/SKILL.md")).length).toBe(79);
+    const pluginCount = registry.profiles.get("hackathon")!.catalog.plugins.length;
+    expect(files.filter((file) => file.path.startsWith(".codex/agents/"))).toHaveLength(pluginCount + 1);
+    expect(files.filter((file) => file.path.endsWith("/SKILL.md"))).toHaveLength(pluginCount * 2 + 1);
     expect(actual.has(".forgeyard/catalog/ecosystem.json")).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { parse } from "yaml";
 import { describe, expect, test } from "vitest";
 import { resolveCapabilities, BUNDLED_CAPABILITIES, BUNDLED_CAPABILITY_SOURCES, type CapabilityCandidate } from "../../../src/intake/capabilities.js";
@@ -40,9 +40,10 @@ describe("bounded need-level capability resolver", () => {
     expect(result.excluded).toContainEqual({ id: "dangling-source", reason: "source-unavailable" });
     expect(result.excluded).toContainEqual({ id: "dangling-plugin", reason: "plugin-unavailable" });
   });
-  test("binds every bundled non-original descriptor to the actual sources manifest and vendored plugin inventory", async () => {
+  test("binds every non-original descriptor to the sources manifest and external plugin reference", async () => {
     const catalog = parse(await readFile(new URL("../../../sources/catalog.yaml", import.meta.url), "utf8")) as { sources: { id: string; license: string }[] };
-    const plugins = new Set((await readdir(new URL("../../../packs/ecosystem/vendor/plugins/", import.meta.url), { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name));
+    const reference = JSON.parse(await readFile(new URL("../../../packs/ecosystem/source.json", import.meta.url), "utf8")) as { plugins: string[] };
+    const plugins = new Set(reference.plugins);
     for (const registered of BUNDLED_CAPABILITY_SOURCES) {
       expect(catalog.sources.find((record) => record.id === registered.sourceId)?.license).toBe(registered.license);
       expect(registered.pluginIds.every((plugin) => plugins.has(plugin))).toBe(true);

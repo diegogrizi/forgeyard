@@ -176,8 +176,11 @@ contratto con obiettivo, criteri, argv di verifica e ambiti, non un pezzo di sch
 Il guard di scrittura è diventato nativo soltanto: il suo ramo legacy era il più
 permissivo dei due percorsi che proteggono la stessa cosa.
 
-Il catalogo vendored resta uno snapshot MIT pinnato e attestato: la potatura richiede
-di rigenerare `UPSTREAM.json`, SBOM e notices, ed è un incremento a sé.
+Dal 21 ottobre 2026 il catalogo contiene soltanto riferimenti alle fonti e nomi di plugin.
+Una nuova preparazione recupera i contenuti selezionati dalla revisione corrente esterna;
+il commit risolto viene registrato nel progetto. Il riuso conserva quella revisione e
+`update` propone l'aggiornamento. Il vecchio snapshot MIT non fa più parte del repository
+né del pacchetto. Cache e scaricamento non eseguono i contenuti recuperati.
 
 ## 6. Architettura di arrivo
 

@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import { validateExternalCatalogReference, type ExternalCatalogReference } from "../catalog/acquire.js";
 import type { PackManifest, SourceRecord } from "../core/contracts.js";
+import { resolveInsideRoot } from "../core/paths.js";
 import type { VendorAttestation, VendorTreeSummary } from "./vendor-catalog.js";
 
 const EXACT_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -58,6 +60,7 @@ export interface ProvenanceValidationInput {
   packs: PackManifest[];
   installedPackages: InstalledPackageMetadata[];
   vendoredSources?: readonly VendoredSourceMetadata[];
+  externalSources?: readonly ExternalSourceMetadata[];
 }
 
 export interface ProvenanceWorkspace extends ProvenanceValidationInput {
@@ -69,6 +72,14 @@ export interface ValidatedProvenance {
   directDependencies: readonly SourceRecord[];
   referencedSourceIds: readonly string[];
   vendoredSources: readonly VendoredSourceMetadata[];
+  externalSources: readonly ExternalSourceMetadata[];
+}
+
+export interface ExternalSourceMetadata {
+  packId: string;
+  sourceId: string;
+  referenceRelativePath: string;
+  reference: ExternalCatalogReference;
 }
 
 export interface VendoredSourceMetadata {
@@ -252,6 +263,40 @@ export function validateProvenance(input: ProvenanceValidationInput): ValidatedP
     }
   }
 
+  const externalSources = [...(input.externalSources ?? [])]
+    .sort((left, right) => left.sourceId.localeCompare(right.sourceId, "en"));
+  const externalPackIds = new Set<string>();
+  const externalSourceIds = new Set<string>();
+  for (const external of externalSources) {
+    if (externalPackIds.has(external.packId)) issues.push(`External pack '${external.packId}' has duplicate references.`);
+    if (externalSourceIds.has(external.sourceId)) issues.push(`External source '${external.sourceId}' has duplicate references.`);
+    externalPackIds.add(external.packId);
+    externalSourceIds.add(external.sourceId);
+    const pack = input.packs.find((candidate) => candidate.id === external.packId);
+    const source = sourceById.get(external.sourceId);
+    if (pack?.provenance.mode !== "reference-only" || pack.provenance.sourceId !== external.sourceId) {
+      issues.push(`External reference for '${external.packId}' does not match its pack provenance.`);
+    }
+    let reference: ExternalCatalogReference | undefined;
+    try {
+      reference = validateExternalCatalogReference(external.reference);
+    } catch {
+      issues.push(`External reference for '${external.sourceId}' is invalid.`);
+    }
+    if (
+      source === undefined || reference === undefined
+      || normalizeRepositoryUrl(source.url) !== normalizeRepositoryUrl(reference.repository)
+      || source.revision !== reference.revision || source.license !== reference.license
+      || pack?.license !== reference.license
+    ) {
+      issues.push(`External reference for '${external.sourceId}' does not match its source catalog record.`);
+    }
+  }
+  for (const pack of input.packs.filter((candidate) => candidate.provenance.mode === "reference-only"
+    && candidate.components.some((component) => component.kind === "catalog" && component.entryType === "external"))) {
+    if (!externalPackIds.has(pack.id)) issues.push(`Catalog pack '${pack.id}' is missing an external reference.`);
+  }
+
   for (const source of input.catalog.sources) {
     if (!referenced.has(source.id)) issues.push(`Catalog source '${source.id}' is not referenced by a package or component.`);
   }
@@ -263,6 +308,7 @@ export function validateProvenance(input: ProvenanceValidationInput): ValidatedP
     directDependencies: direct.sort((left, right) => left.name.localeCompare(right.name, "en")),
     referencedSourceIds: [...referenced].sort((left, right) => left.localeCompare(right, "en")),
     vendoredSources,
+    externalSources,
   };
 }
 
@@ -360,5 +406,23 @@ export async function loadProvenanceWorkspace(root: string): Promise<ProvenanceW
     });
   }
 
-  return { packageManifest, packageLock, catalog, packs, installedPackages, installedByPath, vendoredSources };
+  const externalSources: ExternalSourceMetadata[] = [];
+  for (const loaded of loadedPacks.filter((entry) => entry.manifest.provenance.mode === "reference-only")) {
+    const components = loaded.manifest.components.filter((component) => component.kind === "catalog" && component.entryType === "external");
+    if (components.length === 0) continue;
+    const sourceId = loaded.manifest.provenance.sourceId;
+    if (sourceId === undefined || components.length !== 1) {
+      throw new ProvenanceValidationError([
+        `External catalog pack '${loaded.manifest.id}' must declare one source and one external catalog component.`,
+      ]);
+    }
+    const referencePath = resolveInsideRoot(loaded.directory, components[0]!.entry);
+    const reference = validateExternalCatalogReference(JSON.parse(await readFile(referencePath, "utf8")));
+    externalSources.push({
+      packId: loaded.manifest.id, sourceId, reference,
+      referenceRelativePath: path.relative(absoluteRoot, referencePath).replaceAll("\\", "/"),
+    });
+  }
+
+  return { packageManifest, packageLock, catalog, packs, installedPackages, installedByPath, vendoredSources, externalSources };
 }

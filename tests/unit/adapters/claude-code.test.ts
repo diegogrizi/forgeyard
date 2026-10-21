@@ -109,9 +109,10 @@ describe("Claude Code adapter", () => {
     const files = await adapter.render(resolved.components, config);
     await adapter.validateOutput(files);
 
-    expect(files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(203);
-    expect(files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(184);
-    expect(files.filter((file) => /^\.claude\/commands\/.*\.md$/.test(file.path))).toHaveLength(105);
+    const pluginCount = registry.packs.get("ecosystem")!.entries.get("ecosystem.portable-catalog")!.externalCatalog!.plugins.length;
+    expect(files.filter((file) => /^\.claude\/agents\/.*\.md$/.test(file.path))).toHaveLength(pluginCount + 1);
+    expect(files.filter((file) => /^\.claude\/skills\/.*\/SKILL\.md$/.test(file.path))).toHaveLength(pluginCount + 1);
+    expect(files.filter((file) => /^\.claude\/commands\/.*\.md$/.test(file.path))).toHaveLength(pluginCount);
     expect(files.some((file) => file.path === ".forgeyard/catalog/ecosystem.json")).toBe(true);
   }, 30_000);
 

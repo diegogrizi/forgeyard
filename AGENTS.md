@@ -80,6 +80,13 @@ Conservare byte e attribuzioni dei componenti esterni. Nessuna esecuzione di hoo
 durante la ricognizione. Non modificare lockfile o dipendenze per adattarli incidentalmente
 all'ambiente di sviluppo: se cambiano, rigenerare anche provenienza e avvisi.
 
+Il catalogo contiene soltanto riferimenti (`packs/ecosystem/source.json`), mai snapshot di
+skill o plugin. La preparazione può recuperare da GitHub soltanto i componenti selezionati
+e la loro licenza; questo accesso alla rete è parte del setup dichiarato, non della
+ricognizione. HEAD viene risolto in un commit esatto. La cache resta fuori dal repository;
+il progetto conserva la revisione installata fino a `update`. Test, audit e caricamento
+del registry restano offline e non dipendono da contenuti remoti correnti.
+
 ---
 
 ## 🏗️ L'architettura, e cosa non reintrodurre

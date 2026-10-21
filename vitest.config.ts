@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    setupFiles: ["tests/helpers/catalog-fixture.mjs"],
     // I file girano in parallelo: il pool e' a processi, quindi ogni file ha il proprio,
     // e ogni fixture ha gia' la propria cartella temporanea e il proprio stato privato.
     // Era spento dal 15 settembre senza una ragione scritta. Misurato: 2400 s in serie

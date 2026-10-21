@@ -1,8 +1,8 @@
-import { cp, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { stringify } from "yaml";
 
 import { renderComponent } from "../../../src/adapters/render.js";
@@ -76,6 +76,21 @@ afterEach(async () => {
 });
 
 describe("registry loader", () => {
+  test("loads and hashes an external reference without fetching its plugin bytes", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch");
+    const sourcePath = await realpath(path.resolve("packs/ecosystem/source.json"));
+    const content = (await readFile(sourcePath, "utf8")).replaceAll("\r\n", "\n");
+
+    const entry = (await loadRegistry(path.resolve("."))).packs.get("ecosystem")?.entries.get("ecosystem.portable-catalog");
+
+    expect(entry).toEqual({
+      sourcePath,
+      sha256: sha256Text(content),
+      externalCatalog: JSON.parse(content),
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   test("loads the packaged tailored profile", async () => {
     const registry = await loadRegistry(path.resolve("."));
 

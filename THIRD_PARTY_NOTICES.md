@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file is generated from `package-lock.json`, installed package metadata, `sources/catalog.yaml`, and verified vendor attestations.
+This file is generated from `package-lock.json`, installed package metadata, `sources/catalog.yaml`, verified vendor attestations and external catalog references.
 Lockfile versions remain authoritative. Each package remains subject to its own license terms.
 
 ## @esbuild/aix-ppc64 0.27.2 (node_modules/@esbuild/aix-ppc64)
@@ -744,15 +744,15 @@ Lockfile versions remain authoritative. Each package remains subject to its own 
 - License: MIT
 - Locked package: https://registry.npmjs.org/acorn/-/acorn-8.18.0.tgz
 
-## Agentic Plugin Marketplace 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620 (vendored catalog)
+## Agentic Plugin Marketplace HEAD (external catalog reference)
 
 - License: MIT
 - Project source: https://github.com/wshobson/agents
-- Forgeyard use: Pinned English portable plugin catalog distributed unchanged with its MIT license.
-- Verified content: 1,007 files and 211,594 physical lines (6,737,904 bytes)
-- Pinned revision: 4236bb91f8395b0435f1d8b8baf9e8e4c69a8620
-- Tree SHA-256: cf4df3cf9f4412a2ce2024c83c58df09dbf16de2327cf7df841a8081bf044c97
-- Preserved license notice: packs/ecosystem/vendor/LICENSE
+- Forgeyard use: External English portable plugin source. New preparations resolve HEAD for selected components; installed projects preserve their exact acquired revision and MIT license until explicit update. No upstream catalog payload is distributed with Forgeyard.
+- Source reference: packs/ecosystem/source.json
+- Requested revision for new preparations: HEAD
+- Catalog payload is not distributed with Forgeyard.
+- Each acquired installation preserves its exact upstream revision, license notice and file hashes.
 
 ## ajv 8.20.0 (node_modules/ajv)
 

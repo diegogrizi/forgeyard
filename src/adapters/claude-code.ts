@@ -11,6 +11,7 @@ import { ForgeyardError } from "../core/errors.js";
 import { sha256Text } from "../core/hash.js";
 import { assertNoCaseCollisions, normalizePortablePath } from "../core/paths.js";
 import { renderClaudeCodeCatalog } from "./claude-code-catalog.js";
+import type { CatalogDownloadOptions } from "../catalog/acquire.js";
 import {
   compositionVariables,
   continuityVariables,
@@ -241,7 +242,7 @@ function validateTask(content: string, filePath: string, expectedId: string): vo
   }
 }
 
-export function createClaudeCodeAdapter(): HarnessAdapter {
+export function createClaudeCodeAdapter(catalogOptions: CatalogDownloadOptions = {}): HarnessAdapter {
   return {
     id: "claude-code",
     capabilities: {
@@ -275,7 +276,7 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         if (component.kind === "catalog") {
           if (
             component.slot !== "catalog.portable.primary" ||
-            component.entryType !== "tree" ||
+            !["tree", "external"].includes(component.entryType ?? "") ||
             component.format !== "portable-plugin-marketplace-v1"
           ) throw adapterError(`Claude Code cannot transform catalog component '${component.id}'.`);
         } else if (!SLOT_ORDER.includes(component.slot as ClaudeSlot)) {
@@ -320,7 +321,7 @@ export function createClaudeCodeAdapter(): HarnessAdapter {
         files.push(rendered);
       }
       for (const catalog of catalogComponents) {
-        files.push(...await renderClaudeCodeCatalog(catalog, catalog.catalogSelection ?? "all"));
+        files.push(...await renderClaudeCodeCatalog(catalog, catalog.catalogSelection ?? "all", catalogOptions));
       }
       assertUniquePaths(files);
       return files;
