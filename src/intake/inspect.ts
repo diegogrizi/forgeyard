@@ -16,6 +16,7 @@ function excludedPath(candidate: string): boolean {
   return candidate.split("/").some((part) => EXCLUDED_DIRECTORIES.has(part) || /^\.env(?:\.|$)/i.test(part) || /(?:^|[._-])(?:secrets?|credentials?)(?:[._-]|$)/i.test(part) || /\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(part));
 }
 const PRIMARY_MUTABLE_ROOTS = ["api", "app", "apps", "backend", "client", "frontend", "lib", "packages", "server", "src"];
+const TEST_MUTABLE_ROOTS = ["__tests__", "test", "tests"];
 const HOST_INSTRUCTIONS = new Map([
   ["AGENTS.md", "host-instructions:codex"],
   ["CLAUDE.md", "host-instructions:claude-code"],
@@ -407,11 +408,13 @@ export async function inspectProject(input: InspectProjectInput): Promise<Projec
   else if (specificationPurpose.length > 0) addEvidence(evidence, specifications[0]!.path, "input:purpose");
   else if (readmePurpose.length > 0) addEvidence(evidence, "README.md", "input:purpose");
 
-  const mutableRoots = sorted(PRIMARY_MUTABLE_ROOTS.filter((candidate) => {
+  const presentDirectory = (candidate: string) => {
     const entry = children.find((child) => child.name === candidate);
     return entry?.isDirectory() === true;
-  }));
-  if (mutableRoots.length === 0) mutableRoots.push("src");
+  };
+  const productionRoots = PRIMARY_MUTABLE_ROOTS.filter(presentDirectory);
+  const mutableRoots = sorted([...(productionRoots.length === 0 ? ["src"] : productionRoots),
+    ...TEST_MUTABLE_ROOTS.filter(presentDirectory)]);
 
   const kind = classify(frameworks, request, topLevel);
   const questions = request.length === 0 ? ["What outcome should this software deliver?"] : [];

@@ -162,7 +162,7 @@ export function nativeHarness(options: { requestPrefix: string; runId?: string }
   let index = 0;
   afterAll(async () => {
     // Services first: a gate still running holds a handle inside the directory being removed.
-    for (const service of services.splice(0)) await service.close();
+    for (const service of services.splice(0)) await service.shutdown();
     for (const fixture of fixtures.splice(0)) await rm(fixture.directory, { recursive: true, force: true });
   });
   function registerFixture(fixture: { directory: string }): void { fixtures.push(fixture); }

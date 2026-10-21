@@ -1,5 +1,59 @@
 # Stato di Forgeyard
 
+## Collaudo del 21 ottobre 2026: pacchetto e Codex
+
+Il pacchetto npm locale è stato installato in una directory temporanea separata dal
+checkout, senza pubblicarlo su npm. L'ingresso ordinario ha preparato un piccolo
+repository JavaScript, recuperando sei capacità dalla fonte reale e fissandone il commit.
+
+La prova ha trovato due difetti, ora corretti con test prima rossi e poi verdi:
+
+- le capacità generate fuori da `.forgeyard` restavano visibili a Git. Il collegamento
+  esclude ora i soli file installati, invariati e non tracciati; i seed preesistenti e i
+  file estranei restano visibili. Le esclusioni sono locali e il distacco le rimuove;
+- la ricognizione ometteva le cartelle dei test dagli ambiti modificabili. Le cartelle
+  esistenti `test`, `tests` e `__tests__` sono ora riconosciute insieme al codice.
+
+La revisione ha corretto anche due casi limite: con soli test resta disponibile la radice
+predefinita `src`; con più worktree già collegati, le nuove esclusioni della suite vengono
+rifiutate prima di scrivere il collegamento (`FY_PRIVACY_SCOPE`), perché `info/exclude` è
+condiviso e potrebbe nascondere file personali negli altri alberi. Non è stata introdotta
+una configurazione Git alternativa. Prima di aggiungere worktree a un repository già
+preparato, rimuovere il collegamento posseduto: le sue esclusioni sono comuni, non isolate.
+
+L'anteprima dichiara anche le superfici generate fuori da `.forgeyard`. Nel repository
+temporaneo corretto è stato committato soltanto il puntatore portabile aggiunto ad
+`AGENTS.md`, non la suite.
+
+**Il giro completo con Codex resta non verificato.** Codex CLI autenticato, versione
+`0.163.0-alpha.11`, ha prima rifiutato una configurazione personale estranea alla factory;
+isolata quella configurazione per la sola invocazione, le sessioni risultavano in sola
+lettura e rifiutavano perfino la lettura della skill. Nessuna impostazione globale è stata
+cambiata. Dalla sessione Codex corrente, il protocollo locale alternativo ha attraversato
+contesto, acquisizione del writer e piano reale. La conferma successiva non è apparsa
+all'utente: il processo non esponeva una finestra e il tentativo è stato chiuso senza
+consenso (`FY_CONFIRMATION_UNAVAILABLE`). Una diagnostica senza finestra ha verificato
+il trasporto del piano fino al punto di visualizzazione, non la visualizzazione stessa.
+
+Non sono stati modificati i sorgenti del prodotto di prova, né eseguiti gate di consegna.
+Implementazione, interruzione/ripresa durante il lavoro e consegna certificata restano
+da provare da un client interattivo in grado di mostrare il consenso. Non sono stati
+aggiunti aggiramenti del consenso o modificati i permessi dell'account.
+
+La pausa prima dell'implementazione è stata registrata con `fy_pause` e riletta con
+`fy_context` da un processo nuovo. Non è una prova di ripresa dopo un consenso.
+
+Un giro della verifica completa ha trovato anche una race preesistente nel test di pausa:
+la prova tentava di fermare un gate ancora in preparazione, mentre il suo avvio cambiava
+la revisione. Il rifiuto del runtime era corretto; il test aspetta ora l'avvio effettivo.
+La pulizia delle fixture cancella i propri job prima di chiudere i servizi, così una
+prova fallita non resta sospesa su un gate fittizio in attesa di cancellazione. Nessun
+controllo di revisione del prodotto è stato indebolito.
+
+Verifica finale locale: `npm run verify` con uscita 0, 85 file di test,
+663 prove superate e una saltata; fase test in 57,03 s. Catalogo esterno, provenienza,
+audit di release e contenuto del pacchetto verificati. Non è un esito di CI o del giro live.
+
 ## Aggiornamento del 21 ottobre 2026: catalogo esterno
 
 Il catalogo incorporato è stato sostituito con riferimenti alle fonti. Le nuove
@@ -33,7 +87,7 @@ Tre livelli, tenuti distinti in tutto il documento:
 
 ## Il confine più importante
 
-**Nessuna prova live con account Claude Code o Codex è mai stata eseguita.** Tutto ciò
+**Nessuna prova live completa con account Claude Code o Codex è stata conclusa.** Tutto ciò
 che è dichiarato verificato in questo repository è verificato da test strutturali,
 locali o di CI: rendering deterministico, confini di scrittura, integrità delle
 impronte, riproducibilità della provenienza. Un test di trasporto sull'SDK ufficiale

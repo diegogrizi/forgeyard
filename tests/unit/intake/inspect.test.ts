@@ -33,6 +33,24 @@ afterEach(async () => {
 });
 
 describe("project inspection", () => {
+  test("keeps existing test directories writable alongside production sources", async () => {
+    const project = await fixture();
+    for (const directory of ["src", "test", "tests", "__tests__", "unrelated"]) await project.dir(directory);
+    const result = await inspectProject({ root: project.root, brief: "Correct the name normalizer and add regression tests." });
+    expect(result.mutableRoots).toEqual(["__tests__", "src", "test", "tests"]);
+  });
+
+  test.each([
+    { directory: "test", expected: ["src", "test"] },
+    { directory: "tests", expected: ["src", "tests"] },
+    { directory: "__tests__", expected: ["__tests__", "src"] },
+  ])("keeps the default source root when only $directory exists", async ({ directory, expected }) => {
+    const project = await fixture();
+    await project.dir(directory);
+    const result = await inspectProject({ root: project.root, brief: "Implement the module described by the existing tests." });
+    expect(result.mutableRoots).toEqual(expected);
+  });
+
   test("recursively recognizes Spring Gradle and suggests a wrapper without executing it", async () => {
     const project = await fixture();
     await project.file("services/api/build.gradle.kts", 'plugins { id("org.springframework.boot") version "3.5.0" }');

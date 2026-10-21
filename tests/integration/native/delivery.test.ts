@@ -104,10 +104,18 @@ test.concurrent("retrying a gate does not spawn it twice, and a later failed att
 });
 
 test.concurrent("a running gate is canceled by pause without releasing the writer; it can resume after termination", async () => {
+  let markRunning!: () => void;
+  const running = new Promise<void>((resolve) => { markRunning = resolve; });
   const fixture = await setup("low", async ({ signal }) => new Promise((resolve) => {
-    signal.addEventListener("abort", () => resolve({ exitCode: 130, stdout: "", stderr: "", canceled: true }), { once: true });
+    markRunning();
+    const canceled = () => resolve({ exitCode: 130, stdout: "", stderr: "", canceled: true });
+    if (signal.aborted) canceled();
+    else signal.addEventListener("abort", canceled, { once: true });
   }));
   const gate = await mutation(fixture.service, "fy_verify", { taskId: "T1", gateId: "G001" });
+  // Preparation returns before the background gate-started transition advances the revision.
+  // Pause a genuinely running gate, not one still racing that transition.
+  await running;
   await mutation(fixture.service, "fy_pause", { note: "User pause" });
   await fixture.service.waitForOperations();
   expect((await call(fixture.service, "fy_operation", { action: "status", operationId: gate.result.operationId })).result.operation)

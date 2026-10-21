@@ -64,7 +64,8 @@ processo ostile che gira con i tuoi privilegi.
 
 **Che il collegamento sia stato scritto non significa che un client lo abbia letto.** Il
 messaggio finale lo dice: se il client chiede di abilitare il server, va fatto con i suoi
-controlli. Nessuna prova con un account reale è mai stata eseguita.
+controlli. Il percorso completo con un account reale non è ancora verificato: gli esiti
+dei tentativi sono registrati nello [stato](../STATO.md).
 
 ### Dove puoi usarlo
 

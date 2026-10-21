@@ -126,6 +126,7 @@ function declaredCause(error: unknown): string {
   const paths = Array.isArray(source?.paths)
     ? source.paths.filter((item): item is string => typeof item === "string").slice(0, 4) : [];
   if (code === null) return "causa locale non identificata";
+  if (code === "FY_PRIVACY_SCOPE") return "FY_PRIVACY_SCOPE: le esclusioni sarebbero condivise con altri worktree e potrebbero nascondere loro file; nessun collegamento scritto";
   return paths.length === 0 ? code : `${code} (${paths.join(", ")})`;
 }
 
@@ -203,8 +204,8 @@ function connectionEffects(client: HarnessId, present: boolean, insideRepository
     // `.gitignore`, che è un file diverso e visibile. Chiamarli con lo stesso nome
     // farebbe cercare all'utente un file che non c'è.
     insideRepository
-      ? "un'esclusione in .git/info/exclude per la sola configurazione del client"
-      : "una regola in .gitignore per la sola configurazione del client",
+      ? "esclusioni locali in .git/info/exclude per la configurazione del client e i file dell'imbracatura creati e non tracciati"
+      : "regole in .gitignore per la configurazione del client e i file dell'imbracatura creati e non tracciati",
   ];
 }
 
@@ -238,9 +239,14 @@ function writePlanSummary(io: WorkspaceCliIo, plan: PrepareCommandResult | null,
   }
   writeNativeWorkBlocker(io, nativeBlocker);
   writeProvidedByClient(io, provided);
-  if (connection !== null)
-    io.writeOut(`  Fuori da .forgeyard: ${connection.join("; ")}. Ogni scrittura è delimitata e reversibile.\n`);
-  io.writeOut("  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.\n");
+  const harnessSurfaces = [...new Set((plan?.changes.created ?? []).filter((file) => !file.startsWith(".forgeyard/"))
+    .map((file) => file.startsWith(".agents/skills/") ? "file generati in .agents/skills/"
+      : file.startsWith(".codex/agents/") ? "file generati in .codex/agents/"
+      : file.startsWith(".claude/") ? "file generati in .claude/" : file))];
+  const outside = [...harnessSurfaces, ...(connection ?? [])];
+  if (outside.length > 0)
+    io.writeOut(`  Fuori da .forgeyard: ${outside.join("; ")}. Ogni scrittura è delimitata e reversibile.\n`);
+  io.writeOut("  Lo stato operativo resta in .forgeyard e l'imbracatura resta locale; il codice e i repository figli non vengono modificati.\n");
 }
 
 function prepareInput(root: string, brief: string | null, apply: boolean,

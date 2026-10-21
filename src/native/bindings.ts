@@ -5,9 +5,10 @@ import path from "node:path";
 import os from "node:os";
 import { execa } from "execa";
 import { parse as parseToml } from "smol-toml";
-import { canonicalJson, sha256Text } from "../core/hash.js";
+import { canonicalJson, sha256Bytes, sha256Text } from "../core/hash.js";
 import { resolveInsideRoot } from "../core/paths.js";
-import { assertDirectoryChain, atomicText, optionalText } from "./files.js";
+import { assertDirectoryChain, atomicText, optionalText, regularBytes } from "./files.js";
+import { parseInstallManifest, parseOperationJournal, type InstallManifest } from "../installer/manifest.js";
 import { workspaceIdentity } from "./workspace.js";
 import { nativeError } from "./store.js";
 
@@ -78,6 +79,31 @@ async function ownedEntries(binding: Binding): Promise<void> {
   }
 }
 
+/** Exact installed paths only: never hide a whole client directory or a preserved user seed. */
+async function privateHarnessPaths(root: string, manifest: InstallManifest | null): Promise<string[]> {
+  const paths: string[] = [];
+  const createdSeeds = new Map<string, Set<string>>();
+  for (const file of manifest?.files ?? []) {
+    if (file.path.startsWith(".forgeyard/")) continue;
+    if (file.ownership === "seed") {
+      if (!createdSeeds.has(file.operationId)) {
+        const journalPath = resolveInsideRoot(root, `.forgeyard/state/operations/${file.operationId}.json`);
+        const source = await optionalText(journalPath);
+        const journal = source === null ? null : parseOperationJournal(source, journalPath);
+        createdSeeds.set(file.operationId, new Set(journal?.status === "completed"
+          ? journal.entries.filter((entry) => entry.action === "create").map((entry) => entry.path) : []));
+      }
+      if (!createdSeeds.get(file.operationId)!.has(file.path)) continue;
+    }
+    if (sha256Bytes(await regularBytes(root, file.path, 16_777_216)) === file.installedSha256) paths.push(file.path);
+  }
+  return paths;
+}
+
+function ignoreLiteral(relativePath: string): string {
+  return "/" + relativePath.replace(/[\\*?\[\]!# ]/g, "\\$&");
+}
+
 export async function connectNativeClient(input: BindingInput): Promise<Record<string, unknown>> {
   const { identity, metadata, text, binding } = await inputs(input);
   if (binding) {
@@ -117,10 +143,10 @@ export async function connectNativeClient(input: BindingInput): Promise<Record<s
   }
   const instructionsTarget = resolveInsideRoot(identity.root, input.client === "codex" ? "AGENTS.md" : "CLAUDE.md");
   const instructions = await optionalText(instructionsTarget);
-  let factoryOwned = false;
-  const manifest = await optionalText(resolveInsideRoot(identity.root, ".forgeyard/manifest.json"));
-  if (manifest) factoryOwned = (JSON.parse(manifest) as { files: { path: string; ownership: string }[] }).files
-    .some((file) => file.path === path.basename(instructionsTarget) && file.ownership === "managed");
+  const manifestPath = resolveInsideRoot(identity.root, ".forgeyard/manifest.json");
+  const manifestSource = await optionalText(manifestPath);
+  const manifest = manifestSource === null ? null : parseInstallManifest(manifestSource, manifestPath);
+  const factoryOwned = manifest?.files.some((file) => file.path === path.basename(instructionsTarget) && file.ownership === "managed") ?? false;
   if (!factoryOwned) {
     if (instructions?.includes("Forgeyard native binding begin")) throw nativeError("FY_NAMESPACE_CONFLICT", "An instruction binding block has no matching local ownership.");
     const pointer = block("<!--", "Use Forgeyard for project work. Start with fy_context; inspect/prepare if unconfigured, then fy_plan for each new request.\n" +
@@ -131,22 +157,32 @@ export async function connectNativeClient(input: BindingInput): Promise<Record<s
       .replaceAll("<!-- Forgeyard native binding end", "<!-- Forgeyard native binding end -->");
     entries.push({ target: instructionsTarget, original: instructions, installed: (instructions ?? "") + validPointer, kind: "block", block: validPointer });
   }
-  // Machine paths/configurations are not part of the portable capsule. Only
-  // untracked project configs can be excluded; already tracked files are refused.
+  const privatePaths = await privateHarnessPaths(identity.root, manifest);
+  // Machine paths and the personal harness stay local. Only exact owned and untracked
+  // artifacts may be excluded; existing product/client files remain visible to Git.
   if (identity.commonDirectory !== null) {
     const relativeConfig = path.relative(identity.root, configTarget).replaceAll("\\", "/");
-    const tracked = await execa("git", ["ls-files", "--error-unmatch", "--", relativeConfig], { cwd: identity.root, reject: false, shell: false, stdin: "ignore" });
-    if (tracked.exitCode === 0) throw nativeError("FY_BINDING_TRACKED", "This native config is already tracked. Forgeyard will not commit machine paths into it or untrack foreign settings. Use the JSON fallback or a deliberately untracked project config.");
+    const tracked = await execa("git", ["ls-files", "-z"], { cwd: identity.root, shell: false, stdin: "ignore", maxBuffer: 16_777_216 });
+    const trackedPaths = new Set(tracked.stdout.split("\0").filter(Boolean));
+    if (trackedPaths.has(relativeConfig)) throw nativeError("FY_BINDING_TRACKED", "This native config is already tracked. Forgeyard will not commit machine paths into it or untrack foreign settings. Use the JSON fallback or a deliberately untracked project config.");
+    const privateExclusions = privatePaths.filter((relative) => !trackedPaths.has(relative));
+    if (privateExclusions.length > 0) {
+      const worktrees = await execa("git", ["worktree", "list", "--porcelain"], { cwd: identity.root, shell: false, stdin: "ignore" });
+      if ((worktrees.stdout.match(/^worktree /gm) ?? []).length !== 1)
+        throw nativeError("FY_PRIVACY_SCOPE", "Harness exclusions would be shared with other linked worktrees and could hide their user files. No binding was written. An isolated exclusion setup is required; common Git exclusions are not safe here.");
+    }
     const excludeResult = await execa("git", ["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], { cwd: identity.root, shell: false, stdin: "ignore" });
     const excludeTarget = path.resolve(excludeResult.stdout.trim());
     if (!excludeTarget.startsWith(identity.commonDirectory + path.sep)) throw nativeError("FY_PATH_UNSAFE", "Git exclude is outside the authorized common Git directory.");
     const exclude = await optionalText(excludeTarget);
-    const exclusion = `\n# Forgeyard machine binding ${randomUUID()}\n/${relativeConfig}\n`;
+    const excluded = [relativeConfig, ...privateExclusions];
+    const exclusion = `\n# Forgeyard personal binding ${randomUUID()}\n${[...new Set(excluded)].map(ignoreLiteral).join("\n")}\n`;
     entries.push({ target: excludeTarget, original: exclude, installed: (exclude ?? "") + exclusion, kind: "block", block: exclusion });
   } else {
     const ignoreTarget = resolveInsideRoot(identity.root, ".gitignore");
     const ignore = await optionalText(ignoreTarget);
-    const exclusion = block("#", `/${path.relative(identity.root, configTarget).replaceAll("\\", "/")}`);
+    const excluded = [path.relative(identity.root, configTarget).replaceAll("\\", "/"), ...privatePaths];
+    const exclusion = block("#", [...new Set(excluded)].map(ignoreLiteral).join("\n"));
     entries.push({ target: ignoreTarget, original: ignore, installed: (ignore ?? "") + exclusion, kind: "block", block: exclusion });
   }
   const proposed: Binding = { schemaVersion: 1, root: identity.root, client: input.client, phase: "prepared", entries };

@@ -120,8 +120,8 @@ Verrà preparato:
   Capacità selezionate: 6    escluse: 4
   Verifiche: git diff --check
   File dell'imbracatura da creare: 80
-  Fuori da .forgeyard: .codex/config.toml; una regola in .gitignore per la sola configurazione del client. Ogni scrittura è delimitata e reversibile.
-  I file privati restano in .forgeyard; il codice e i repository figli non vengono modificati.
+  Fuori da .forgeyard: forgeyard.yaml; forgeyard.lock; file generati in .agents/skills/; file generati in .codex/agents/; AGENTS.md; PROJECT.md; .codex/config.toml; regole in .gitignore per la configurazione del client e i file dell'imbracatura creati e non tracciati. Ogni scrittura è delimitata e reversibile.
+  Lo stato operativo resta in .forgeyard e l'imbracatura resta locale; il codice e i repository figli non vengono modificati.
 Confermi la preparazione di questa cartella?
 ```
 
@@ -194,14 +194,16 @@ non compare, perché qui non vale. Se il registro non è leggibile la riga lo di
 finge che tu non abbia niente. Per Codex la riga non compare: non ha un registro del genere.
 
 **`  Fuori da .forgeyard: ...`** — le scritture che escono dall'area personale, elencate
-prima della domanda e non scoperte dopo in `git status`: la configurazione MCP del client,
-un'esclusione in `.git/info/exclude` per quella sola configurazione — o una regola in
-`.gitignore` se la cartella non è un repository, perché lì quel file non esiste — e, **soltanto se un file di
-istruzioni esiste già**, un blocco delimitato aggiunto in coda. Se la forgia crea da sé quel
-file, il puntatore è già dentro e non viene annunciato niente.
+prima della domanda e non scoperte dopo in `git status`: i file generati della suite,
+la configurazione MCP del client e le esclusioni dei soli file creati, invariati e non
+tracciati. Queste regole sono in `.git/info/exclude`, oppure in `.gitignore` se la cartella
+non è un repository. **Soltanto se un file di istruzioni esiste già**, viene annunciato
+anche il blocco delimitato aggiunto in coda. Se la forgia crea da sé quel file, il puntatore
+è già dentro. Con più worktree collegati le nuove esclusioni vengono rifiutate: Git le
+condivide fra gli alberi e non sarebbe sicuro nascondere quei percorsi negli altri.
 
-**L'ultima riga del riepilogo** — `I file privati restano in .forgeyard; il codice e i
-repository figli non vengono modificati.` — è il confine di scrittura, ripetuto dove
+**L'ultima riga del riepilogo** — `Lo stato operativo resta in .forgeyard e l'imbracatura
+resta locale; il codice e i repository figli non vengono modificati.` — è il confine di scrittura, ripetuto dove
 serve: appena prima di chiedere il permesso.
 
 **`Confermi la preparazione di questa cartella?`** — l'**unica** conferma, e la risposta
@@ -278,8 +280,9 @@ configurazione che dichiara al client come avviare il server locale di Forgeyard
 
 Insieme al namespace viene aggiunto un puntatore alle istruzioni in `CLAUDE.md` o
 `AGENTS.md` — a meno che quel file non sia già posseduto dalla forgia — e un'esclusione
-Git **locale** per la configurazione del client, perché contiene percorsi di *questa*
-macchina e non deve finire nei commit: `info/exclude` nella directory Git comune quando
+Git **locale** per la configurazione del client e i file dell'imbracatura creati e non
+tracciati. Non vengono nascoste directory intere, file estranei o seed preesistenti:
+`info/exclude` nella directory Git comune quando
 c'è un repository, il `.gitignore` altrimenti. Una configurazione del client **già
 tracciata** viene rifiutata, non sovrascritta.
 
@@ -345,7 +348,7 @@ scrittura, gate, review, verdetto — è descritto in [Uso](uso.md).
 Hai visto cosa fa e perché può essere utile. Qui c'è il confine, detto per intero, prima
 che tu ci appoggi del lavoro vero.
 
-**Nessuna prova live con un account Claude Code o Codex reale è mai stata eseguita.** I
+**Nessuna prova live completa con un account Claude Code o Codex reale è stata conclusa.** I
 tre passi descritti sopra hanno i loro test, e ciò che scrivono è osservabile sul disco.
 Il quarto passo — il client che *legge* quel namespace, ti chiede la fiducia che deve
 chiederti e attraversa il workflow — alla data non è verificato. Tutto ciò che questo

@@ -188,7 +188,7 @@ test("l'anteprima nomina le scritture fuori dall'area personale prima di chieder
     expect(summary).toContain("CLAUDE.md: un blocco delimitato in coda");
     // Fuori da un repository la regola finisce in un `.gitignore`, non in
     // `.git/info/exclude`: la fixture di questa prova non e' un repository.
-    expect(summary).toContain("una regola in .gitignore");
+    expect(summary).toContain("in .gitignore");
     // La riga di chiusura non può più affermare che Git non viene toccato.
     expect(summary).not.toContain("Git e repository figli non vengono modificati");
   }));
