@@ -443,6 +443,35 @@ si ferma con `FY_OWNERSHIP_CONFLICT` perché dovrebbe sostituire il file che hai
 non sovrascrive modifiche locali. E rieseguire `forgeyard prepare` si ferma per la stessa
 ragione: l'imbracatura c'è già.
 
+### Accenti o virgolette diventano punti interrogativi
+
+**Sintomo.** Nel riepilogo compare `richieder?` invece di `richiederà`, o le virgolette
+diventano `?`. Controlla anche la richiesta restituita da `fy_context`: se è già corrotta,
+il problema precede la finestra e non si risolve cambiando font.
+
+**Causa osservata.** Uno script di collaudo inviava JSON da una funzione di Windows
+PowerShell tramite pipe. Nella prova con PowerShell 5.1, impostare UTF-8 soltanto nello
+script non bastava: alcuni caratteri erano sostituiti prima di arrivare al processo Node.
+L'ingresso di Forgeyard richiede JSON UTF-8 e non può recuperare caratteri già persi.
+
+**Rimedio per chi costruisce uno script di integrazione.** Serializza il tuo envelope
+e rappresenta i caratteri non ASCII con gli escape Unicode standard di JSON:
+
+```powershell
+$json = $envelope | ConvertTo-Json -Depth 24 -Compress
+$wire = [regex]::Replace($json, '[^\x00-\x7F]', {
+    param($match)
+    '\u' + ([int][char]$match.Value).ToString('x4')
+})
+$wire | forgeyard tool --root . --json
+```
+
+Non è una traduzione né una sostituzione degli accenti: dopo la lettura del JSON il testo
+torna identico, comprese le coppie surrogate delle emoji. Il rimedio è stato verificato
+con il codice reale dello script e `fy_inspect` in sola lettura. Non modificare un piano,
+una capsula o il database già approvati per riparare il testo: un nuovo piano richiede
+un nuovo consenso. Lo stato precedente resta una registrazione di ciò che fu mostrato.
+
 ## Verdetti e controlli
 
 #### Un verdetto di consegna è `blocked` con `evidence:unsupported-verdict`

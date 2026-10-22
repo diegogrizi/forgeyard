@@ -1,5 +1,41 @@
 # Stato di Forgeyard
 
+## Collaudo del 22 ottobre 2026: prima consegna locale da Codex
+
+Un nuovo repository temporaneo, separato dai tentativi precedenti, ha completato
+preparazione, piano, consenso, implementazione, test, revisione e consegna. Le due
+conferme Windows sono state cliccate dall'utente; il servizio ha poi ammesso `fy_next`.
+La preparazione e i consensi sono passati da uno script locale di collaudo avviato
+dall'utente. Questa conversazione Codex ha svolto il lavoro usando il protocollo JSON
+alternativo documentato, non il collegamento MCP automatico del client.
+
+Nel piano `nomi-chiari-20261022`, quattro test riproducevano il difetto prima della
+correzione. Sulla revisione committata il gate ufficiale `G001` ha osservato sette test,
+uscita 0 e stato `passed`. Criteri e revisione sono legati alle impronte dei file.
+`fy_finalize` ha restituito `delivered`, senza lacune; un processo nuovo ha riletto lo
+stesso stato e l'attività completata. Il servizio aveva correttamente rifiutato il
+tentativo di certificare una revisione non ancora committata.
+
+Una revisione ausiliaria in sola lettura non ha trovato rilievi nel software di prova.
+Il runtime conserva comunque `independent: false` e provenienza non attestata: il
+rischio basso ammette questo livello di revisione. Non è una revisione umana verificata.
+
+Il collaudo ha trovato anche un difetto nello script di avvio: una pipe da funzione di
+Windows PowerShell perdeva accenti e virgolette prima dell'ingresso in Forgeyard.
+Il testo era già corrotto nell'artefatto salvato, non soltanto nella finestra. Lo script
+trasmette ora JSON con escape Unicode ASCII; il suo codice reale è stato provato con
+`fy_inspect` in sola lettura, conservando esattamente accenti, greco, giapponese ed emoji.
+Il piano e la capsula già approvati non sono stati riscritti. Vedere
+[il rimedio per PowerShell](guide/problemi.md#accenti-o-virgolette-diventano-punti-interrogativi).
+
+Restano non collaudati il percorso automatico MCP, Claude Code, la pausa/ripresa durante
+questa implementazione e il giro live su più repository. Costi e quote del provider
+restano non misurati. Nessun prodotto di prova è stato pubblicato e nessun nuovo motore
+o dipendenza è stato aggiunto alla factory.
+
+Verifica locale della factory dopo il collaudo: `npm run verify`, uscita 0,
+85 file di test, 674 prove superate e una saltata; fase test in 57,40 s.
+
 ## Aggiornamento del 22 ottobre 2026: consenso leggibile
 
 Il dialogo Windows presenta un riepilogo in italiano: progetto, operazione richiesta,
@@ -27,9 +63,9 @@ sostituiscono il clic di una persona nella nuova interfaccia.
 
 Il primo consenso reale è riuscito avviando il comando da una PowerShell aperta dall'utente.
 La riconciliazione è stata riletta dallo stato; il vecchio piano si è poi fermato per
-`timebox-exhausted`, senza azzerare il limite. Il nuovo piano di collaudo è in attesa di
-approvazione. Il prodotto temporaneo non è stato implementato e il giro completo con
-Codex resta non verificato.
+`timebox-exhausted`, senza azzerare il limite. Il nuovo piano di quel tentativo era
+rimasto in attesa di approvazione, senza implementazione. Il successivo collaudo in un
+repository distinto, concluso tramite protocollo locale, è descritto sopra.
 
 Verifica della nuova interfaccia: `npm run verify` con uscita 0, 85 file di test,
 674 prove superate e una saltata; ultima fase test in 57,81 s. Superati anche catalogo,
@@ -86,7 +122,7 @@ L'anteprima dichiara anche le superfici generate fuori da `.forgeyard`. Nel repo
 temporaneo corretto è stato committato soltanto il puntatore portabile aggiunto ad
 `AGENTS.md`, non la suite.
 
-**Il giro completo con Codex resta non verificato.** Codex CLI autenticato, versione
+**In questo tentativo il giro completo con Codex era rimasto non verificato.** Codex CLI autenticato, versione
 `0.163.0-alpha.11`, ha prima rifiutato una configurazione personale estranea alla factory;
 isolata quella configurazione per la sola invocazione, le sessioni risultavano in sola
 lettura e rifiutavano perfino la lettura della skill. Nessuna impostazione globale è stata
@@ -148,12 +184,12 @@ Tre livelli, tenuti distinti in tutto il documento:
 
 ## Il confine più importante
 
-**Nessuna prova live completa con account Claude Code o Codex è stata conclusa.** Tutto ciò
-che è dichiarato verificato in questo repository è verificato da test strutturali,
-locali o di CI: rendering deterministico, confini di scrittura, integrità delle
-impronte, riproducibilità della provenienza. Un test di trasporto sull'SDK ufficiale
-non è una sessione autenticata; un controllo strutturale non prova il comportamento di
-un client reale, delle sue autorizzazioni o della sua interfaccia.
+**Il ciclo locale da questa conversazione Codex è stato concluso il 22 ottobre tramite
+protocollo JSON alternativo, come descritto in apertura.** Questo non prova il caricamento
+automatico MCP, l'esperienza ordinaria senza lo script di collaudo, Claude Code o tutti i
+permessi del client. I test strutturali, locali e di CI restano evidenze distinte:
+rendering deterministico, confini di scrittura, integrità delle impronte e provenienza
+non dimostrano da soli il comportamento di un client reale.
 
 Dove questo documento dice «sul percorso», intende *il percorso del programma*. Non
 intende che qualcuno abbia visto Claude Code o Codex attraversarlo.
@@ -185,7 +221,7 @@ con un costo umano compare **soltanto** se qualcuno ha dichiarato una linea di b
 | P1 | ricognizione in sola lettura del workspace | implementato |
 | P2a | ingresso senza argomenti, riepilogo italiano, registrazione privata | implementato |
 | P2b | installazione della suite nell'area personale | implementato |
-| P3 | collegamento nativo ai client dall'area personale | implementato, **mai provato live** |
+| P3 | collegamento nativo ai client dall'area personale | implementato; giro JSON locale provato, MCP automatico non collaudato |
 | P4 | inventario e riuso dei componenti globali già presenti | inventario fatto; il riuso è un'altra cosa (sotto) |
 | P5 | esecuzione su più repository membri | implementato, **mai provato live** |
 | P6 | selezione unificata e profili pertinenti | la contraddizione fra le due sedi è chiusa (sotto); l'unificazione no |
@@ -198,10 +234,10 @@ quelli mancanti.
 
 **Il confine di P3 resta quello che conta.** Il collegamento scrive un namespace MCP
 posseduto nel progetto, e questo è stato verificato: l'osservazione dello stato riconosce
-ciò che lo scrittore reale produce, per entrambi i client. Ma **nessuno ha mai aperto una
-cartella così preparata in un Claude Code o in un Codex autenticato.** Che il client legga
-quel namespace, chieda la fiducia che deve chiedere e attraversi il workflow è, alla data
-di questo documento, non verificato. Il messaggio finale dell'ingresso lo dichiara invece
+ciò che lo scrittore reale produce, per entrambi i client. Il collaudo JSON locale non
+dimostra che il client carichi automaticamente quel namespace, chieda la fiducia prevista
+e attraversi il workflow tramite MCP: questa esperienza resta non verificata.
+Il messaggio finale dell'ingresso lo dichiara invece
 di dedurlo, e lo stesso confine è dichiarato a chi prova per la prima volta in
 [Primo avvio](guide/primo-avvio.md).
 
