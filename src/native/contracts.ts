@@ -77,8 +77,12 @@ export interface NativeResponse {
   result: Record<string, unknown>;
 }
 export interface HumanDecision { accepted: boolean; channel: "local-dialog" | "test-fixture" }
+export type ConfirmationKind = "install" | "plan" | "resume" | "review" |
+  "recover-installation" | "accept-capsule" | "recover-writer" | "recover-operation";
 export type HumanConfirmation = (input: {
   title: string; description: string; plan: ProductPlan; capsule: Capsule;
+  kind: ConfirmationKind; projectRoot: string; paths?: readonly string[]; deadlineAt?: string;
+  membersByTask?: Readonly<Record<string, string>>;
 }) => Promise<HumanDecision>;
 export interface GateRunnerResult {
   exitCode: number; stdout: string; stderr: string; canceled?: boolean; timedOut?: boolean;

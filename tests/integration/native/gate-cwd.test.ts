@@ -9,7 +9,7 @@ import { expect, test, vi } from "vitest";
 vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
 
 import { createProjectService } from "../../../src/native/service.js";
-import type { NativeGateRunner, ProductPlan } from "../../../src/native/contracts.js";
+import type { HumanConfirmation, NativeGateRunner, ProductPlan } from "../../../src/native/contracts.js";
 import { commitAll, git, nativeFixture, nativeHarness } from "../../helpers/native.js";
 
 const { registerFixture, registerService, call, mutation } = nativeHarness({ requestPrefix: "gate-cwd", runId: "gate-cwd-check" });
@@ -25,12 +25,13 @@ test("un gate gira con la cwd del membro della sua attivita', non la radice del 
   const root = await realpath(fixture.root);
 
   const seenCwds: string[] = [];
+  const confirmations: Parameters<HumanConfirmation>[0][] = [];
   const gateRunner: NativeGateRunner = async ({ cwd }) => {
     seenCwds.push(cwd);
     return { exitCode: 0, stdout: "# tests 1\n# pass 1\n", stderr: "" };
   };
   const service = await createProjectService({ ...fixture,
-    confirmation: async () => ({ accepted: true, channel: "test-fixture" }), gateRunner });
+    confirmation: async (input) => { confirmations.push(input); return { accepted: true, channel: "test-fixture" }; }, gateRunner });
   registerService(service);
 
   // `fy_attach` snapshots the root as member ".": it must still be a clean, ordinary working
@@ -72,6 +73,7 @@ test("un gate gira con la cwd del membro della sua attivita', non la radice del 
   // of the member would fail this exact comparison, since the two are different directories.
   expect(seenCwds).toEqual([memberAbsolute]);
   expect(seenCwds[0]).not.toBe(root);
+  expect(confirmations[0]).toMatchObject({ kind: "plan", projectRoot: root, membersByTask: { T1: "src/member-b" } });
 });
 
 test("un'attivita' senza ambiti di scrittura gira il gate alla radice del workspace", async () => {

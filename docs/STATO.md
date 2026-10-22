@@ -1,5 +1,33 @@
 # Stato di Forgeyard
 
+## Aggiornamento del 22 ottobre 2026: consenso leggibile
+
+Il dialogo Windows presenta un riepilogo in italiano: progetto, operazione richiesta,
+file interessati, comandi previsti, limiti e autorizzazioni escluse. Preparazione,
+approvazione del piano, ripresa e recuperi hanno testi e pulsanti specifici. Nei recuperi
+che non autorizzano sviluppo, i comandi non sono presentati come eseguibili.
+
+La finestra resta nativa, senza browser, server o nuove dipendenze. I dettagli tecnici
+conservano piano esatto, impronte, informazioni della richiesta e politica completa in
+sola lettura. Il testo del progetto resta un dato, mai codice da eseguire. Nessun pulsante
+di approvazione è associato automaticamente a Invio; Annulla e la chiusura restano rifiuti.
+
+Le prove Windows costruiscono i controlli senza mostrare un consenso né registrare
+autorizzazioni. Verificano anche Unicode, ritorni a capo, riepiloghi mancanti e un percorso
+lungo nella finestra stretta. Le anteprime isolate sono renderizzate dai controlli reali;
+il dettaglio è stato aperto e confrontato con il contenuto completo. Queste prove non
+sostituiscono il clic di una persona nella nuova interfaccia.
+
+Il primo consenso reale è riuscito avviando il comando da una PowerShell aperta dall'utente.
+La riconciliazione è stata riletta dallo stato; il vecchio piano si è poi fermato per
+`timebox-exhausted`, senza azzerare il limite. Il nuovo piano di collaudo è in attesa di
+approvazione. Il prodotto temporaneo non è stato implementato e il giro completo con
+Codex resta non verificato.
+
+Verifica della nuova interfaccia: `npm run verify` con uscita 0, 85 file di test,
+674 prove superate e una saltata; fase test in 198,13 s. Superati anche catalogo,
+provenienza, audit di release e controllo del pacchetto. Nessuna nuova dipendenza.
+
 ## Collaudo del 22 ottobre 2026: visibilità del consenso Windows
 
 La ripetizione ha isolato un difetto concreto nell'avvio della finestra: `execa`
@@ -11,15 +39,15 @@ la console di PowerShell, non il dialogo.
 
 La correzione è coperta da un test prima rosso e poi verde sul contratto di avvio.
 La finestra del comando reale corretto espone ora titolo e handle e risulta
-visibile secondo le API di Windows. **L'utente non ha però
-confermato di vederla né effettuato un clic**; il tentativo è scaduto senza
+visibile secondo le API di Windows. **Nel primo tentativo avviato dalla chat l'utente
+non ha confermato di vederla né effettuato un clic**; il tentativo è scaduto senza
 decisione, senza consenso e senza cambiare il writer o i sorgenti di prova.
 La causa della mancata visibilità dal lato utente resta da chiarire: questa
 correzione non dimostra il giro completo con Codex.
 
 Non sono stati azzerati il limite temporale del vecchio piano, i permessi o le
-verifiche del consenso. Il vecchio collaudo resta in pausa; per ripartire serve
-la riconciliazione umana e un nuovo piano entro il proprio limite temporale.
+verifiche del consenso. In quel momento il collaudo è rimasto in pausa; la successiva
+riconciliazione umana da PowerShell e il nuovo piano sono descritti nell'aggiornamento sopra.
 
 Verifica locale: `npm run verify` con uscita 0, 85 file di test,
 664 prove superate e una saltata; fase test in 219,55 s. Catalogo, provenienza,

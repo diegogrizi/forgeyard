@@ -13,10 +13,15 @@ export function gateEnvironment(environment = process.env): Record<string, strin
   return result;
 }
 
+/** Shared by execution and its human confirmation; cwd is relative to the task's member. */
+export function gateWorkingDirectory(root: string, relative?: string): string {
+  return relative === undefined ? root : resolveInsideRoot(root, relative);
+}
+
 export const nativeGateRunner: NativeGateRunner = async ({ gate, cwd, signal, onSpawn }) => {
   let observerFailed = false;
   try {
-    const workingDirectory = gate.cwd === undefined ? cwd : resolveInsideRoot(cwd, gate.cwd);
+    const workingDirectory = gateWorkingDirectory(cwd, gate.cwd);
     await assertDirectoryChain(workingDirectory);
     const execution = execa(gate.argv[0], gate.argv.slice(1), {
       cwd: workingDirectory, shell: false, reject: false, stdin: "ignore", extendEnv: false,

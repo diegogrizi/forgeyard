@@ -298,7 +298,7 @@ Dopo i due punti c'è la causa in una clausola sola: un codice come `ENOENT` o
 **Leggi bene cosa questo messaggio non dice.** Non dice che qualcuno abbia rifiutato. Il
 rifiuto ha un codice tutto suo — `FY_APPROVAL_DENIED`, `The local human confirmation was
 rejected.` — e lo emette **soltanto** una finestra che si è aperta e in cui hai scelto
-`Reject` o che hai chiuso. Finché non è quello il codice che leggi, nessuna persona ha detto
+`Annulla` o che hai chiuso. Finché non è quello il codice che leggi, nessuna persona ha detto
 di no: la domanda non è mai stata posta. La distinzione è il punto della pagina, ed è
 recente: prima ogni mancato avvio della finestra veniva contato come un rifiuto e riemergeva
 come `FY_APPROVAL_DENIED`, cioè attribuiva a te una risposta che non avevi dato.

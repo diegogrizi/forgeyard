@@ -484,7 +484,8 @@ export class ProjectService {
         requirementIds: ["harness"], dependsOn: [], writeScopes: config.paths.mutableRoots,
         role: "factory", criteria: [{ id: "prepared", description: "Ownership, provenance and doctor checks pass", gateIds: proposed.payload.gates.map((gate) => gate.id) }] }] };
     const before = await workspaceSnapshot(this.identity.root);
-    const decision = await this.confirmation({ title: "Forgeyard: install this harness", plan, capsule: proposed,
+    const decision = await this.confirmation({ title: "Forgeyard · Prepara l'ambiente", plan, capsule: proposed,
+      kind: "install", projectRoot: this.identity.root, paths: preview.changes.created,
       description: `Target: ${this.identity.root}\nExact installation: ${installationSha256}\nCreate ${preview.changes.created.length} previewed files. Preserve existing files.\n` +
         preview.changes.created.join("\n") + "\nThis does not implement an application or launch an AI client." });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Harness installation was rejected in the local confirmation.");
@@ -533,7 +534,8 @@ export class ProjectService {
     if (sha256Text(artifact) !== run.artifactSha256) throw nativeError("FY_PLAN_DRIFT", "The product artifact differs from the stored proposed plan.");
     const members = Object.keys(run.baselineHeads);
     const snapshot = await workspaceSnapshot(this.identity.root, members);
-    const decision = await this.confirmation({ title: "Forgeyard: approve this plan", description:
+    const decision = await this.confirmation({ title: "Forgeyard · Autorizza il piano",
+      kind: "plan", projectRoot: this.identity.root, deadlineAt: run.deadlineAt, membersByTask: run.membersByTask, description:
       `Approve this exact plan/policy/baseline for local implementation and finite gates?\nBaseline fingerprint: ${snapshot.sha256}`, plan: run.plan, capsule });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "The local human confirmation was rejected.");
     const after = await workspaceSnapshot(this.identity.root, members);
@@ -583,7 +585,8 @@ export class ProjectService {
       requirements: [{ id: "R1", description: "Resolve only the ceased recorded installer" }], tasks: [{ id: "T1", role: "factory",
         title: "Reconcile installation", objective: "Adopt verified completed installation or release verified non-applied reservation",
         requirementIds: ["R1"], dependsOn: [], writeScopes: [], criteria: [{ id: "C1", description: "Journal and exact capsule agree", gateIds: capsule.payload.gates.map((gate) => gate.id) }] }] };
-    const decision = await this.confirmation({ title: "Forgeyard: resolve interrupted installation", plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Recupera la preparazione", plan, capsule,
+      kind: "recover-installation", projectRoot: this.identity.root,
       description: `Root: ${this.identity.root}\nOperation: ${intent.operationId}\nJournal: ${journal?.status ?? "not created"}\n` +
         `Capsule: ${capsule.id}\nConfirm the old installer has ceased. ${installed ? "Adopt this verified completed harness." : "Release this verified non-applied reservation."} No installer is replayed and no file is deleted.` });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Installation reconciliation was rejected.");
@@ -648,7 +651,8 @@ export class ProjectService {
         objective: "Store the current capsule and release the lease taken under the previous one",
         requirementIds: ["R1"], dependsOn: [], writeScopes: [],
         criteria: [{ id: "C1", description: "A human accepted this exact policy difference", gateIds: capsule.payload.gates.map((gate) => gate.id) }] }] };
-    const decision = await this.confirmation({ title: "Forgeyard: accept this project's changed capsule", plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Controlla le regole", plan, capsule,
+      kind: "accept-capsule", projectRoot: this.identity.root,
       description: [`Root: ${this.identity.root}`, `Stored capsule: ${before.capsuleId}`, `Current capsule: ${capsule.id}`,
         ...capsuleDifference(await this.previousCapsule(before.capsuleId), capsule),
         `Accepted policy: ${canonicalJson(capsule.payload.policy)}`,
@@ -685,7 +689,8 @@ export class ProjectService {
       requirements: [{ id: "R1", description: "Only the previous writer lease is transferred" }], tasks: [{ id: "T1", role: "factory",
         title: "Recover idle writer", objective: "Transfer cooperative ownership without approving product writes", requirementIds: ["R1"], dependsOn: [],
         writeScopes: [], criteria: [{ id: "C1", description: "Human confirms old native writer stopped", gateIds: capsule.payload.gates.map((gate) => gate.id) }] }] };
-    const decision = await this.confirmation({ title: "Forgeyard: recover idle writer", plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Recupera la sessione", plan, capsule,
+      kind: "recover-writer", projectRoot: this.identity.root,
       description: `Confirm the previous native conversation has stopped writing. Old writer: ${before.writer?.sessionId ?? "none"}. New writer: ${sessionId}. No feature or gate is approved by this transfer.` });
     if (!decision.accepted) throw nativeError("FY_APPROVAL_DENIED", "Writer reconciliation was rejected.");
     if ((await workspaceSnapshot(this.identity.root)).sha256 !== snapshot.sha256 || (await this.capsule()).id !== capsule.id)
@@ -722,7 +727,8 @@ export class ProjectService {
       return `# member: ${member}\n${result.stdout}`;
     }))).filter((section) => section !== null);
     const findings = run.reviews.filter((review) => review.inputSha256 === snapshot.sha256).flatMap((review) => review.findings);
-    const decision = await this.confirmation({ title: "Forgeyard: human review of this revision", plan: run.plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Revisione delle modifiche", plan: run.plan, capsule,
+      kind: "review", projectRoot: this.identity.root, deadlineAt: run.deadlineAt, membersByTask: run.membersByTask,
       description: `Approve only after personally reviewing this exact revision and artifact. You confirm that all listed important/blocking findings are resolved.\n` +
         `Git: ${baselines.map(([member, head]) => `${member}@${head}`).join(" ")}\n` +
         `Input: ${snapshot.sha256}\nArtifact: ${artifact.path} ${artifact.sha256}\n` +
@@ -754,7 +760,8 @@ export class ProjectService {
     const changed = await changedSince(this.identity.root, run.baselineHeads);
     if (changed.some((file) => !run.plan.tasks.some((task) => task.writeScopes.some((scope) => contains(scope, file))) &&
       !before.artifacts.some((artifact) => artifact.path === file))) throw nativeError("FY_SCOPE_DENIED", "Reconciliation found unapproved path changes.");
-    const decision = await this.confirmation({ title: "Forgeyard: explicitly resume this project", plan: run.plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Riprendi il lavoro", plan: run.plan, capsule,
+      kind: "resume", projectRoot: this.identity.root, deadlineAt: run.deadlineAt, membersByTask: run.membersByTask,
       description: `Confirm that the previous native writer has stopped writing and resume this exact plan with session ${sessionId}.\n` +
         `Previous writer: ${before.writer?.sessionId ?? "none"}\nRevision: ${snapshot.sha256}\n` +
         "Forgeyard cannot stop or observe AI conversations. This transfers only the cooperative lease; budgets and prior evidence remain unchanged." });
@@ -784,7 +791,8 @@ export class ProjectService {
       throw nativeError("FY_OPERATION_BUSY", "A recorded Forgeyard service/gate may still be alive. Stop it normally and inspect it; no process will be killed or writer automatically released.");
     const run = findRun(before, operation.runId); const members = Object.keys(run.baselineHeads);
     const snapshot = await workspaceSnapshot(this.identity.root, members);
-    const decision = await this.confirmation({ title: "Forgeyard: reconcile ceased gate", plan: run.plan, capsule,
+    const decision = await this.confirmation({ title: "Forgeyard · Recupera la verifica", plan: run.plan, capsule,
+      kind: "recover-operation", projectRoot: this.identity.root, deadlineAt: run.deadlineAt, membersByTask: run.membersByTask,
       description: `Operation: ${operation.id}\nRecorded HF service PID: ${operation.ownerPid}\nRecorded gate PID: ${operation.gatePid ?? "not observed"}\n` +
         `Old input: ${operation.inputSha256}\nCurrent input: ${snapshot.sha256}\n` +
         "Known recorded processes are absent, but child-process termination is not proven by Forgeyard. Personally confirm the old gate and all its children have stopped, inspect any effects, and mark this attempt UNVERIFIED. This does not approve automatic retries, release a native conversation or certify a pass." });

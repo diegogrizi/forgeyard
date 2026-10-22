@@ -43,8 +43,149 @@ function plan(text: string): ProductPlan {
 }
 
 function input(text: string): Parameters<typeof windowsDialogCommand>[0] {
-  return { title: "Forgeyard: approve this plan", description: text, plan: plan(text), capsule: capsule() };
+  return { title: "Forgeyard: approva il piano", description: text, plan: plan(text), capsule: capsule(),
+    kind: "plan", projectRoot: "C:/Projects/my-app", membersByTask: { T1: "." } };
 }
+
+function payload(composed = input("Correggere gli spazi nei nomi")): {
+  title: string; message: string;
+  view: { heading: string; intro: string; projectRoot: string; goal: string;
+    scopeLabel: string; paths: string[]; commandLabel: string; commands: string[];
+    limits: string[]; boundary: string; approveLabel: string; deadlineAt: string | null };
+} {
+  return JSON.parse(Buffer.from(windowsDialogCommand(composed).stdin, "base64").toString("utf8"));
+}
+
+describe("a person can understand what the click authorizes", () => {
+  test("puts the real project, requested change, paths and commands before technical identifiers", () => {
+    const { view, message } = payload();
+
+    expect(view).toMatchObject({ projectRoot: "C:/Projects/my-app", goal: "Correggere gli spazi nei nomi",
+      paths: ["src/native"], commands: ["node --test\nCartella: C:/Projects/my-app"], approveLabel: "Autorizza il piano" });
+    expect(view.boundary).toContain("non autorizza");
+    expect(view.boundary).toContain("push");
+    expect(view.limits.join("\n")).toContain("non misurati");
+    expect(view.goal).not.toContain("Capsule:");
+    expect(message).toContain(JSON.stringify(plan("Correggere gli spazi nei nomi"), null, 2));
+    expect(message).toContain(JSON.stringify(policy, null, 2));
+  });
+
+  test("recovery explains the ownership transfer instead of presenting a new implementation approval", () => {
+    const composed = { ...input("Riprendere la correzione"), kind: "resume" as const,
+      deadlineAt: "2026-10-22T18:00:00.000Z" };
+    const { view } = payload(composed);
+
+    expect(view.approveLabel).toBe("Riprendi il lavoro");
+    expect(view.intro).toContain("non sta più scrivendo");
+    expect(view.intro).toContain("non azzera");
+    expect(view.deadlineAt).toBe("2026-10-22T18:00:00.000Z");
+  });
+
+  test("installation shows actual harness creations, not the product's mutable roots", () => {
+    const composed = { ...input("Preparare il progetto"), kind: "install" as const,
+      paths: [".agents/skills/forgeyard-workflow/SKILL.md", ".codex/config.toml"] };
+    const { view } = payload(composed);
+
+    expect(view.paths).toEqual(composed.paths);
+    expect(view.commandLabel).toContain("non eseguiti");
+    expect(view.approveLabel).toBe("Prepara l'ambiente");
+  });
+
+  test("idle-writer recovery never labels test commands as approved to run", () => {
+    const { view } = payload({ ...input("Recover an idle cooperative writer"), kind: "recover-writer" });
+
+    expect(view.commandLabel).toContain("non eseguiti");
+    expect(view.intro).toContain("Nessuna modifica al prodotto");
+    expect(view.goal).toBe("Passare il controllo del progetto alla sessione attuale, senza avviare lo sviluppo.");
+  });
+
+  test("untrusted project text is carried as data without losing symbols or original details", () => {
+    const text = 'Èlia & <script> $(not-a-command) 日本語';
+    const { view, message } = payload(input(text));
+
+    expect(view.goal).toBe(text);
+    expect(message).toContain(text);
+    expect(windowsDialogCommand(input(text)).argv).toEqual(windowsDialogCommand(input("x")).argv);
+  });
+
+  test("shows the actual member and gate subdirectory instead of implying the aggregate project root", () => {
+    const root = process.platform === "win32" ? "C:/Workspace" : "/workspace";
+    const composed = { ...input("Verificare due repository"), projectRoot: root,
+      membersByTask: { T1: "services/api", T2: "apps/web" } };
+    composed.plan = { ...composed.plan, tasks: [composed.plan.tasks[0]!, { ...composed.plan.tasks[0]!, id: "T2" }] };
+    composed.capsule = { ...composed.capsule, payload: { ...composed.capsule.payload,
+      gates: [{ ...gate, cwd: "checks" }] } };
+
+    expect(payload(composed).view.commands).toEqual([
+      `node --test\nCartella: ${root}/services/api/checks`,
+      `node --test\nCartella: ${root}/apps/web/checks`,
+    ]);
+  });
+
+  test("never rounds a small nonzero recorded spending limit down to zero", () => {
+    const composed = input("Verificare il limite");
+    composed.capsule = { ...composed.capsule, payload: { ...composed.capsule.payload,
+      policy: { ...policy, maxRecordedCostUsd: 0.0004 } } };
+    expect(payload(composed).view.limits).toContain("Tetto di spesa registrata: 0,0004 USD.");
+  });
+});
+
+describe.skipIf(process.platform !== "win32")("the real Windows controls, without showing or approving a dialog", () => {
+  async function inspectWindow(removeView = false, compact = false) {
+    const { execa: run } = await vi.importActual<typeof import("execa")>("execa");
+    const composed = input('Èlia & <test> $(not-a-command) 日本語');
+    if (compact) composed.projectRoot = "C:/Projects/a-very-long-project-directory-with-many-subfolders/customer-facing-services/source/backend";
+    const command = windowsDialogCommand(composed);
+    if (removeView) {
+      const data = JSON.parse(Buffer.from(command.stdin, "base64").toString("utf8"));
+      delete data.view;
+      command.stdin = Buffer.from(JSON.stringify(data), "utf8").toString("base64");
+    }
+    const inspect = `
+      ${compact ? "$dialogForm.Size = New-Object Drawing.Size(660,600); $dialogForm.PerformLayout(); & $resize" : ""}
+      $projectBox = $dialogForm.Controls.Find('project-root', $true)[0]
+      $probe = @{ project = [string]($dialogForm.Controls.Find('project-root', $true).Text);
+        goal = [string]($dialogForm.Controls.Find('requested-change', $true).Text);
+        commands = [string]($dialogForm.Controls.Find('verification-commands', $true).Text);
+        projectScrollBars = $dialogForm.Controls.Find('project-root', $true).ScrollBars.ToString();
+        approve = $dialogApprove.Text; reject = $dialogReject.Text;
+        details = $dialogForm.Controls.Find('technical-details', $true).Count;
+        automaticAccept = ($null -ne $dialogForm.AcceptButton);
+        projectHeight = $projectBox.Height; projectFontHeight = $projectBox.Font.Height;
+        projectLines = 1 + $projectBox.GetLineFromCharIndex($projectBox.TextLength-1) }
+      [Console]::Error.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($probe | ConvertTo-Json -Compress))))
+      $dialogForm.Dispose(); exit 0`;
+    const script = Buffer.from(command.argv[6]!, "base64").toString("utf16le")
+      .replace("trap { exit 3 }", "trap { [Console]::Error.WriteLine($_.ToString() + $_.InvocationInfo.PositionMessage); exit 3 }")
+      .replace("$dialogOutcome = $dialogForm.ShowDialog()", inspect);
+    const argv = [...command.argv]; argv[6] = Buffer.from(script, "utf16le").toString("base64");
+    return run(command.executable, argv, { input: command.stdin, shell: false, windowsHide: false,
+      reject: false, timeout: 15000 });
+  }
+
+  test("shows readable project and action fields, preserves literal text, and never accepts Enter by default", async () => {
+    const result = await inspectWindow();
+    expect(result.exitCode, result.stderr).toBe(0);
+    const controls = JSON.parse(Buffer.from(result.stderr, "base64").toString("utf8"));
+    expect(controls).toMatchObject({ project: "C:/Projects/my-app", goal: 'Èlia & <test> $(not-a-command) 日本語',
+      commands: "node --test\r\nCartella: C:/Projects/my-app", projectScrollBars: "None",
+      approve: "Autorizza il piano", reject: "Annulla", details: 1, automaticAccept: false });
+  });
+
+  test("a wrapped project path fits its field at the minimum window width", async () => {
+    const result = await inspectWindow(false, true);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const controls = JSON.parse(Buffer.from(result.stderr, "base64").toString("utf8"));
+    expect(controls.projectLines).toBeGreaterThan(1);
+    expect(controls.projectHeight).toBeGreaterThanOrEqual(controls.projectLines * controls.projectFontHeight);
+  });
+
+  test("refuses a missing readable summary instead of showing an incomplete consent", async () => {
+    const result = await inspectWindow(true);
+    expect(result.exitCode).toBe(3);
+    expect(result.stdout).not.toContain("approved");
+  });
+});
 
 /** A clean run of the dialog that reported the given stdout, and nothing else. */
 function clean(stdout: string): DialogOutcome {
@@ -268,11 +409,8 @@ describe("a window that was never realized cannot have been answered", () => {
   });
 
   test("the handler is subscribed before anything could create the handle", () => {
-    // Nothing before `ShowDialog` realizes a handle today — `Controls.AddRange`,
-    // `SetBounds`, `Width`/`Height`/`StartPosition` and `CancelButton` are all handle-free.
-    // A later edit that touches `.Handle`, calls `Show()`, or sets a recreating property
-    // earlier would make `realized:` never appear, and then every genuine approval becomes
-    // `FY_CONFIRMATION_UNAVAILABLE` — the consent channel silently dead, with no red.
+    // The layout measures wrapped lines through native TextBox handles. Subscribe on the
+    // Form immediately after construction, before that layout can realize its handle.
     const script = shippedScript();
 
     expect(script.indexOf("Add_HandleCreated")).toBeGreaterThan(0);
@@ -346,11 +484,9 @@ describe("the argument vector is bounded, so any plan can be confirmed", () => {
     // stronger than comparing the two lengths.
     expect(huge.argv).toEqual(tiny.argv);
 
-    // The numeric bound has a different job, and it is not about the message: it catches
-    // the *constant script* growing toward the Windows cap. A script edited up to 25 000
-    // characters would keep the equality above green while making every dialog fail to
-    // launch on every machine. It is 4828 today; the cap is 32 767.
-    expect(width(huge.argv)).toBeLessThan(8192);
+    // Leave room for the executable/quoting below Windows' 32 767 character cap.
+    // The native layout is constant; no project text is embedded in these arguments.
+    expect(width(huge.argv)).toBeLessThan(30000);
   });
 
   test("and the whole text still reaches the person, byte for byte", () => {
