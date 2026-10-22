@@ -190,8 +190,9 @@ export function dialogFailureCause(report: DialogProcessReport): string {
 }
 
 const powershellDialogSpawn: DialogSpawn = async (command) => {
+  // execa's default hides WinForms too; -WindowStyle Hidden already hides only the console.
   const result = await execa(command.executable, [...command.argv],
-    { shell: false, input: command.stdin, reject: false, timeout: DIALOG_TIMEOUT_MS });
+    { shell: false, windowsHide: false, input: command.stdin, reject: false, timeout: DIALOG_TIMEOUT_MS });
   if (!result.failed) return { exitCode: result.exitCode, stdout: result.stdout };
   return { exitCode: result.exitCode, stdout: result.stdout, failure: dialogFailureCause(result) };
 };

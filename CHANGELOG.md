@@ -57,6 +57,10 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 
 ### Corretto
 
+- Su Windows l'avvio del consenso ereditava `windowsHide: true` da `execa`,
+  nascondendo anche la finestra WinForms. L'avvio disabilita questa opzione;
+  la console PowerShell resta nascosta. Nessun consenso è dedotto dalla sola
+  creazione o visibilità della finestra.
 - Le istruzioni sempre installate rimandavano a due seed che solo il pack `delivery`
   installa: con il profilo `minimal` la forgia consegnava percorsi inesistenti. Trovato
   dal lint dell'imbracatura al primo giro.

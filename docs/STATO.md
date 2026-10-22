@@ -1,5 +1,31 @@
 # Stato di Forgeyard
 
+## Collaudo del 22 ottobre 2026: visibilità del consenso Windows
+
+La ripetizione ha isolato un difetto concreto nell'avvio della finestra: `execa`
+usa `windowsHide: true` per impostazione predefinita. Con lo stesso script e lo
+stesso piano, WinForms dichiarava `Visible: true`, ma Windows riportava
+`IsWindowVisible: false`. Cambiando soltanto l'opzione in `windowsHide: false`,
+il controllo Windows è diventato vero. `-WindowStyle Hidden` resta per nascondere
+la console di PowerShell, non il dialogo.
+
+La correzione è coperta da un test prima rosso e poi verde sul contratto di avvio.
+La finestra del comando reale corretto espone ora titolo e handle e risulta
+visibile secondo le API di Windows. **L'utente non ha però
+confermato di vederla né effettuato un clic**; il tentativo è scaduto senza
+decisione, senza consenso e senza cambiare il writer o i sorgenti di prova.
+La causa della mancata visibilità dal lato utente resta da chiarire: questa
+correzione non dimostra il giro completo con Codex.
+
+Non sono stati azzerati il limite temporale del vecchio piano, i permessi o le
+verifiche del consenso. Il vecchio collaudo resta in pausa; per ripartire serve
+la riconciliazione umana e un nuovo piano entro il proprio limite temporale.
+
+Verifica locale: `npm run verify` con uscita 0, 85 file di test,
+664 prove superate e una saltata; fase test in 219,55 s. Catalogo, provenienza,
+audit di release e contenuto del pacchetto verificati. Non è un esito di CI o
+una consegna certificata del prodotto di prova.
+
 ## Collaudo del 21 ottobre 2026: pacchetto e Codex
 
 Il pacchetto npm locale è stato installato in una directory temporanea separata dal

@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import { execa } from "execa";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Capsule, CapsulePolicy, GateDefinition } from "../../../src/capsule/capsule.js";
 import type { ProductPlan } from "../../../src/native/contracts.js";
@@ -6,6 +7,11 @@ import type { DialogOutcome } from "../../../src/native/confirmation.js";
 import { dialogDecision, dialogFailureCause, localDialogConfirmation, windowsDialogCommand, windowsDialogConfirmation } from "../../../src/native/confirmation.js";
 import { ForgeyardError } from "../../../src/core/errors.js";
 import { canonicalJson, sha256Text } from "../../../src/core/hash.js";
+
+// Replace only process creation: unit tests must never display a consent dialog.
+vi.mock("execa", () => ({
+  execa: vi.fn(async () => ({ failed: false, exitCode: 0, stdout: "realized:rejected" })),
+}));
 
 const policy: CapsulePolicy = {
   mutableRoots: ["src"], protectedPaths: [".git"], maxConcurrency: 2, timeboxMinutes: 300,
@@ -120,6 +126,17 @@ function thrownBy(outcome: DialogOutcome): unknown {
 }
 
 describe("a dialog nobody saw is not a person who said no", () => {
+  test("the launcher leaves the consent window visible while PowerShell hides its console", async () => {
+    // Measured on Windows: execa's windowsHide default suppresses the first WinForms
+    // window too. Form.Visible was true, but Win32 IsWindowVisible was false.
+    await expect(windowsDialogConfirmation(input("x")))
+      .resolves.toEqual({ accepted: false, channel: "local-dialog" });
+
+    expect(execa).toHaveBeenCalledWith(expect.any(String),
+      expect.arrayContaining(["-WindowStyle", "Hidden"]),
+      expect.objectContaining({ shell: false, windowsHide: false }));
+  });
+
   test("a launch failure is declared unavailable instead of counted as a refusal", async () => {
     // `execa` runs with `reject: false`, so a dialog that never started arrives here as a
     // resolved value with no exit code. Reading that as `accepted: false` makes the caller
