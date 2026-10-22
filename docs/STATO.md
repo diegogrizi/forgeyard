@@ -7,6 +7,13 @@ file interessati, comandi previsti, limiti e autorizzazioni escluse. Preparazion
 approvazione del piano, ripresa e recuperi hanno testi e pulsanti specifici. Nei recuperi
 che non autorizzano sviluppo, i comandi non sono presentati come eseguibili.
 
+Il primo restyling non bastava: il testo del collaudo era ancora scritto per sviluppatori.
+La finestra distingue ora il permesso (modificare i file elencati ed eseguire i controlli)
+dal lavoro proposto. Il clic sul piano registra il consenso, non esegue subito la modifica.
+Le indicazioni di `fy_plan` chiedono una descrizione comprensibile del risultato, con esempi
+prima/dopo quando utili. È una guida per l'assistente, non una garanzia automatica di
+comprensibilità: il testo salvato resta integrale, senza riscritture nascoste.
+
 La finestra resta nativa, senza browser, server o nuove dipendenze. I dettagli tecnici
 conservano piano esatto, impronte, informazioni della richiesta e politica completa in
 sola lettura. Il testo del progetto resta un dato, mai codice da eseguire. Nessun pulsante
@@ -25,7 +32,7 @@ approvazione. Il prodotto temporaneo non è stato implementato e il giro complet
 Codex resta non verificato.
 
 Verifica della nuova interfaccia: `npm run verify` con uscita 0, 85 file di test,
-674 prove superate e una saltata; fase test in 198,13 s. Superati anche catalogo,
+674 prove superate e una saltata; ultima fase test in 57,81 s. Superati anche catalogo,
 provenienza, audit di release e controllo del pacchetto. Nessuna nuova dipendenza.
 
 ## Collaudo del 22 ottobre 2026: visibilità del consenso Windows

@@ -14,7 +14,9 @@ const criterion = object({ id, description: text(), gateIds: array(id, 1, 32) })
 const task = object({ id, title: text(200), objective: text(), role: text(128),
   requirementIds: array(id, 1), dependsOn: array(id), writeScopes: array(text(4096)),
   criteria: array(criterion, 1) });
-const plan = object({ id, request: text(20000), risk: { enum: ["low", "medium", "high"] },
+const plan = object({ id, request: { ...text(20000), description:
+  "Testo mostrato integralmente alla persona nella finestra di consenso. Spiega nella lingua dell'utente cosa cambierà per chi usa il software, con un esempio prima/dopo quando utile, e cosa resterà uguale. I dettagli di implementazione vanno nelle attività. File, comandi e limiti autorizzati sono mostrati separatamente: questo testo non aggiunge permessi." },
+  risk: { enum: ["low", "medium", "high"] },
   requirements: array(object({ id, description: text() }), 1), tasks: array(task, 1, 128) });
 const mutation = { sessionId: id, expectedRevision: { type: "integer", minimum: 0 } };
 const runMutation = { ...mutation, runId: id };

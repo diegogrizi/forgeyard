@@ -6,9 +6,9 @@ import { requiredGates } from "./runs.js";
 type ConfirmationInput = Parameters<HumanConfirmation>[0];
 
 const ACTIONS: Record<ConfirmationKind, { heading: string; intro: string; approveLabel: string; goal?: string }> = {
-  plan: { heading: "Controlla il piano",
-    intro: "Autorizzi il lavoro descritto qui sotto e le verifiche previste, soltanto nel progetto indicato.",
-    approveLabel: "Autorizza il piano" },
+  plan: { heading: "Consenti questa modifica?",
+    intro: "L'assistente potrà modificare i file elencati e lanciare i controlli indicati, per svolgere il lavoro descritto sotto. Il clic registra il tuo permesso: non esegue subito la modifica.",
+    approveLabel: "Consenti la modifica" },
   resume: { heading: "Riprendi da dove eri rimasto",
     intro: "Confermi che la sessione precedente non sta più scrivendo. Questa sessione riprende lo stesso piano: non azzera tempi, spese registrate o verifiche già raccolte.",
     approveLabel: "Riprendi il lavoro" },

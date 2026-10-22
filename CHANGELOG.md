@@ -14,6 +14,8 @@ alla data, con la distinzione fra implementato, sul percorso e provato live, ved
 - Riepilogo del consenso Windows in italiano, con progetto, operazione, percorsi,
   comandi e limiti leggibili. Pulsanti specifici per ciascuna azione e dettagli completi
   in sola lettura, senza nuove dipendenze o modifiche alle regole di approvazione.
+  Il permesso è distinto dal lavoro proposto; `fy_plan` guida l'assistente a descrivere
+  il risultato per l'utente, invece di limitarsi a dettagli di implementazione.
 - Le garanzie meccaniche come moduli con i propri test: scala dell'evidenza e citazioni
   vive (`src/evidence/`), scansione della deriva (`src/drift/`), contabilità dichiarata
   (`src/measure/`) e coerenza dell'imbracatura generata (`src/doctor/harness-lint.ts`).

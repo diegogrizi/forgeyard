@@ -61,7 +61,9 @@ describe("a person can understand what the click authorizes", () => {
     const { view, message } = payload();
 
     expect(view).toMatchObject({ projectRoot: "C:/Projects/my-app", goal: "Correggere gli spazi nei nomi",
-      paths: ["src/native"], commands: ["node --test\nCartella: C:/Projects/my-app"], approveLabel: "Autorizza il piano" });
+      paths: ["src/native"], commands: ["node --test\nCartella: C:/Projects/my-app"], approveLabel: "Consenti la modifica" });
+    expect(view.intro).toContain("L'assistente potrà modificare i file elencati");
+    expect(view.intro).toContain("non esegue subito la modifica");
     expect(view.boundary).toContain("non autorizza");
     expect(view.boundary).toContain("push");
     expect(view.limits.join("\n")).toContain("non misurati");
@@ -142,9 +144,9 @@ describe.skipIf(process.platform !== "win32")("the real Windows controls, withou
       command.stdin = Buffer.from(JSON.stringify(data), "utf8").toString("base64");
     }
     const inspect = `
-      ${compact ? "$dialogForm.Size = New-Object Drawing.Size(660,600); $dialogForm.PerformLayout(); & $resize" : ""}
       $projectBox = $dialogForm.Controls.Find('project-root', $true)[0]
       $probe = @{ project = [string]($dialogForm.Controls.Find('project-root', $true).Text);
+        goalCaption = [string]($dialogForm.Controls.Find('requested-change', $true)[0].Parent.Controls[0].Text);
         goal = [string]($dialogForm.Controls.Find('requested-change', $true).Text);
         commands = [string]($dialogForm.Controls.Find('verification-commands', $true).Text);
         projectScrollBars = $dialogForm.Controls.Find('project-root', $true).ScrollBars.ToString();
@@ -152,12 +154,16 @@ describe.skipIf(process.platform !== "win32")("the real Windows controls, withou
         details = $dialogForm.Controls.Find('technical-details', $true).Count;
         automaticAccept = ($null -ne $dialogForm.AcceptButton);
         projectHeight = $projectBox.Height; projectFontHeight = $projectBox.Font.Height;
+        projectWidth = $projectBox.Width; formWidth = $dialogForm.Width; bodyWidth = $dialogBody.ClientSize.Width;
         projectLines = 1 + $projectBox.GetLineFromCharIndex($projectBox.TextLength-1) }
       [Console]::Error.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($probe | ConvertTo-Json -Compress))))
       $dialogForm.Dispose(); exit 0`;
-    const script = Buffer.from(command.argv[6]!, "base64").toString("utf16le")
+    let script = Buffer.from(command.argv[6]!, "base64").toString("utf16le")
       .replace("trap { exit 3 }", "trap { [Console]::Error.WriteLine($_.ToString() + $_.InvocationInfo.PositionMessage); exit 3 }")
       .replace("$dialogOutcome = $dialogForm.ShowDialog()", inspect);
+    // A never-shown Form does not complete nested resize layout. Set the initial viewport
+    // before constructing controls; actual post-Show resizing is checked in the preview.
+    if (compact) script = script.replace(/^\$dialogForm\.Size = .+$/m, "$dialogForm.Size = New-Object Drawing.Size(660,600)");
     const argv = [...command.argv]; argv[6] = Buffer.from(script, "utf16le").toString("base64");
     return run(command.executable, argv, { input: command.stdin, shell: false, windowsHide: false,
       reject: false, timeout: 15000 });
@@ -169,14 +175,14 @@ describe.skipIf(process.platform !== "win32")("the real Windows controls, withou
     const controls = JSON.parse(Buffer.from(result.stderr, "base64").toString("utf8"));
     expect(controls).toMatchObject({ project: "C:/Projects/my-app", goal: 'Èlia & <test> $(not-a-command) 日本語',
       commands: "node --test\r\nCartella: C:/Projects/my-app", projectScrollBars: "None",
-      approve: "Autorizza il piano", reject: "Annulla", details: 1, automaticAccept: false });
+      goalCaption: "Lavoro proposto", approve: "Consenti la modifica", reject: "Annulla", details: 1, automaticAccept: false });
   });
 
   test("a wrapped project path fits its field at the minimum window width", async () => {
     const result = await inspectWindow(false, true);
     expect(result.exitCode, result.stderr).toBe(0);
     const controls = JSON.parse(Buffer.from(result.stderr, "base64").toString("utf8"));
-    expect(controls.projectLines).toBeGreaterThan(1);
+    expect(controls.projectLines, JSON.stringify(controls)).toBeGreaterThan(1);
     expect(controls.projectHeight).toBeGreaterThanOrEqual(controls.projectLines * controls.projectFontHeight);
   });
 

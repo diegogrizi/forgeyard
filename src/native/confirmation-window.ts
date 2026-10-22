@@ -70,7 +70,7 @@ function New-FyCard($caption,$value,$name,$mono) {
   return $card
 }
 $dialogBody.Controls.Add((New-FyCard 'Progetto' $view.projectRoot 'project-root' $true))
-$dialogBody.Controls.Add((New-FyCard 'Cosa vuoi ottenere' $view.goal 'requested-change' $false))
+$dialogBody.Controls.Add((New-FyCard 'Lavoro proposto' $view.goal 'requested-change' $false))
 $pair = New-Object Windows.Forms.FlowLayoutPanel
 $pair.Name = 'paired'; $pair.FlowDirection = 'LeftToRight'; $pair.WrapContents = $false; $pair.Margin = 0
 $scopeText = $(if ($view.paths.Count -gt 0) { $view.paths -join [Environment]::NewLine } else { 'Nessuna nuova modifica ai file autorizzata da questa conferma.' })
